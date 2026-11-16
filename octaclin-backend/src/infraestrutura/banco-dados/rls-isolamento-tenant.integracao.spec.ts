@@ -85,6 +85,10 @@ import { SolicitacaoRestricaoPacienteOrm } from '../../modulos/planos-alimentare
 import { ServicoProfissionais } from '../../modulos/profissionais/aplicacao/servico-profissionais';
 import { RefreshTokenOrm } from '../../modulos/auth/infraestrutura/refresh-token.orm';
 import { DelegacaoCarteiraProfissionalOrm } from '../../modulos/profissionais/infraestrutura/delegacao-carteira-profissional.orm';
+import { VinculoRepresentacaoPacienteOrm } from '../../modulos/pacientes/infraestrutura/vinculo-representacao-paciente.orm';
+import { revogarVinculosPorAlteracaoAcesso, ServicoVinculosRepresentacao } from '../../modulos/pacientes/aplicacao/servico-vinculos-representacao';
+import { autorizarPacientePortal } from '../../modulos/planos-alimentares/aplicacao/autorizacao-paciente-portal';
+import { ServicoPortalRestricoes } from '../../modulos/planos-alimentares/aplicacao/servico-portal-restricoes';
 import { revogarDelegacoesPorAlteracaoAcesso, ServicoDelegacoesCarteira } from '../../modulos/profissionais/aplicacao/servico-delegacoes-carteira';
 import { cifrarConteudoRestricao, decifrarConteudoRestricao, cifrarCampo, decifrarCampo } from '../../modulos/planos-alimentares/infraestrutura/codec-conteudo-restricao';
 import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
@@ -296,6 +300,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
         ReconfirmacaoRestricoesOrm,
         SolicitacaoRestricaoPacienteOrm,
         DelegacaoCarteiraProfissionalOrm,
+        VinculoRepresentacaoPacienteOrm,
         RefreshTokenOrm,
         PermissaoIntegracaoProfissionalOrm,
         UserActionLogOrm,
@@ -2913,6 +2918,116 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     // Outro tenant não enxerga a delegação nem por SQL direto (RLS).
     await comoTenant(tenantB);
     expect((await cliente.query('select id from delegacoes_carteira_profissional where colaborador_usuario_id=$1', [colaboradorId])).rows).toEqual([]);
+  }, 120_000);
+
+  it('P2d-3a: vínculo de representação pela equipe e acesso do paciente no portal, sob RLS e locks reais', async () => {
+    if (!cliente || !executorTenant) throw new Error('ExecutorTenant da prova RLS nao foi inicializado.');
+    const tenant = randomUUID();
+    await cliente.query('insert into tenants (id, nome, slug) values ($1, $2, $3)', [tenant, 'Prova P2d-3a sintetica', `prova-p2d3a-${tenant}`]);
+    const dados = await prepararDadosRepresentativos(tenant, `p2d3a-${randomUUID()}`);
+    const outro = await prepararDadosRepresentativos(tenant, `p2d3a-outro-${randomUUID()}`);
+    const criarUsuario = async (t: string, role: string) => {
+      await comoTenant(t);
+      return (await cliente!.query<{ id: string }>(`insert into usuarios (tenant_id, email_hash, email_criptografado, senha_hash, role)
+        values ($1, $2, $3, 'prova-rls-senha', $4) returning id`, [t, `prova-p2d3a-${randomUUID()}`, Buffer.from('usuario-sintetico'), role])).rows[0].id;
+    };
+    const crypto = new CriptografiaDadosSensiveis();
+    const representanteId = await criarUsuario(tenant, 'Patient');
+    const contaPacienteId = await criarUsuario(tenant, 'Patient');
+    const colaboradorId = await criarUsuario(tenant, 'Collaborator');
+    const pacienteOutroTenant = await criarUsuario(tenantB, 'Patient');
+    await comoTenant(tenant);
+    await cliente.query('update pacientes set usuario_id=$2, nome_criptografado=$3 where id=$1', [dados.pacienteId, contaPacienteId, crypto.criptografar('Paciente sintético A')]);
+    await cliente.query('update pacientes set nome_criptografado=$2 where id=$1', [outro.pacienteId, crypto.criptografar('Paciente sintético B')]);
+    const comoUsuario = (usuarioId: string, papel: UsuarioAutenticado['papel']): UsuarioAutenticado => ({ tenantId: tenant, usuarioId, papel, emailHash: '', permissoes: [] });
+    const titular = comoUsuario(dados.usuarioId, 'Professional'), titularOutro = comoUsuario(outro.usuarioId, 'Professional');
+    const colaborador = comoUsuario(colaboradorId, 'Collaborator');
+    const representante = comoUsuario(representanteId, 'Patient'), contaPaciente = comoUsuario(contaPacienteId, 'Patient');
+    const vinculos = new ServicoVinculosRepresentacao(executorTenant);
+    const portal = new ServicoPortalRestricoes(executorTenant, crypto);
+    const acessar = (u: UsuarioAutenticado, paciente: string, executor: ExecutorTenant = executorTenant!) => executor.executar(tenant, g => autorizarPacientePortal(g, u, paciente));
+    const vigentes = async (paciente: string) => { await comoTenant(tenant); return (await cliente!.query('select id from vinculos_representacao_paciente where paciente_id=$1 and revogado_em is null', [paciente])).rows; };
+
+    // Conta do próprio paciente acessa sem vínculo; o representante ainda não.
+    await expect(acessar(contaPaciente, dados.pacienteId)).resolves.toBe('propria');
+    await expect(acessar(representante, dados.pacienteId)).rejects.toMatchObject({ status: 403 });
+    await expect(acessar(contaPaciente, outro.pacienteId)).rejects.toMatchObject({ status: 403 });
+    // Quem não é da equipe do paciente não registra: outro profissional, colaborador sem delegação.
+    await expect(vinculos.registrar(titularOutro, dados.pacienteId, representanteId, 'presencial')).rejects.toMatchObject({ status: 403 });
+    await expect(vinculos.registrar(colaborador, dados.pacienteId, representanteId, 'presencial')).rejects.toMatchObject({ status: 403 });
+    // Representantes inelegíveis: conta do próprio paciente, colaborador, conta de outro tenant.
+    for (const alvo of [contaPacienteId, colaboradorId, pacienteOutroTenant]) await expect(vinculos.registrar(titular, dados.pacienteId, alvo, 'presencial')).rejects.toMatchObject({ status: 403 });
+    expect(await vigentes(dados.pacienteId)).toEqual([]);
+    // Registros simultâneos deixam um único vínculo vigente.
+    const corrida = await Promise.allSettled([vinculos.registrar(titular, dados.pacienteId, representanteId, 'presencial'),
+      vinculos.registrar(titular, dados.pacienteId, representanteId, 'presencial')]);
+    expect(corrida.some(r => r.status === 'fulfilled')).toBe(true);
+    for (const r of corrida) if (r.status === 'rejected') expect(r.reason).toMatchObject({ status: 409 });
+    const [vinculoA] = await vigentes(dados.pacienteId); expect(await vigentes(dados.pacienteId)).toHaveLength(1);
+    expect((await cliente.query('select acao, metadados from user_action_logs where recurso_id=$1', [vinculoA.id])).rows)
+      .toEqual([{ acao: 'representacao.vinculo.registrar', metadados: {} }]);
+    // O colaborador delegado também registra (carteira do titular atual), mas não na carteira de outro profissional.
+    await new ServicoDelegacoesCarteira(executorTenant).conceder(titular, colaboradorId);
+    const segundoRep = await criarUsuario(tenant, 'Patient');
+    await expect(vinculos.registrar(colaborador, dados.pacienteId, segundoRep, 'documento_apresentado')).resolves.toMatchObject({ representanteUsuarioId: segundoRep });
+    await expect(vinculos.registrar(colaborador, outro.pacienteId, representanteId, 'presencial')).rejects.toMatchObject({ status: 403 });
+    // Uma conta representa vários pacientes: o titular do outro paciente registra o mesmo representante.
+    await vinculos.registrar(titularOutro, outro.pacienteId, representanteId, 'procuracao');
+    await expect(acessar(representante, dados.pacienteId)).resolves.toBe('representante');
+    await expect(acessar(representante, outro.pacienteId)).resolves.toBe('representante');
+    await expect(acessar(representante, pacienteIdTenantB)).rejects.toMatchObject({ status: 403 });
+    expect((await portal.listarPacientes(representante)).map(p => [p.pacienteId, p.via, p.nome]).sort())
+      .toEqual([[dados.pacienteId, 'representante', 'Paciente sintético A'], [outro.pacienteId, 'representante', 'Paciente sintético B']].sort());
+    expect(await portal.listarPacientes(contaPaciente)).toEqual([{ pacienteId: dados.pacienteId, via: 'propria', nome: 'Paciente sintético A' }]);
+    // Lista da equipe: só do paciente autorizado.
+    expect((await vinculos.listar(titular, dados.pacienteId)).map(v => v.representanteUsuarioId).sort()).toEqual([representanteId, segundoRep].sort());
+    await expect(vinculos.listar(titularOutro, dados.pacienteId)).rejects.toMatchObject({ status: 403 });
+    await expect(vinculos.revogar(titularOutro, outro.pacienteId, vinculoA.id)).rejects.toMatchObject({ status: 403 });
+
+    const prazo = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) => executorTenant!.executar(t, async g => { await g.query("set local lock_timeout = '200ms'"); return fn(g); }) };
+    // Corrida 1: acesso do representante em curso → a revogação espera.
+    let liberar!: () => void, avisar!: () => void;
+    const espera = new Promise<void>(r => { liberar = r; }), pronta = new Promise<void>(r => { avisar = r; });
+    const acesso = executorTenant.executar(tenant, async g => { const r = await autorizarPacientePortal(g, representante, dados.pacienteId); avisar(); await espera; return r; });
+    try {
+      await Promise.race([pronta, acesso.then(() => { throw new Error('Transação encerrou cedo.'); })]);
+      await expect(new ServicoVinculosRepresentacao(prazo as ExecutorTenant).revogar(titular, dados.pacienteId, vinculoA.id)).rejects.toMatchObject({ status: 409 });
+    } finally { liberar(); await acesso; }
+    // Corrida 2: revogação em curso → o acesso espera e, depois do commit, é negado com o mesmo token.
+    let liberarRev!: () => void, avisarRev!: () => void;
+    const esperaRev = new Promise<void>(r => { liberarRev = r; }), prontaRev = new Promise<void>(r => { avisarRev = r; });
+    const seguraRev = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) => executorTenant!.executar(t, async g => { const r = await fn(g); avisarRev(); await esperaRev; return r; }) };
+    const revogacao = new ServicoVinculosRepresentacao(seguraRev as ExecutorTenant).revogar(titular, dados.pacienteId, vinculoA.id);
+    try {
+      await Promise.race([prontaRev, revogacao.then(() => { throw new Error('Transação encerrou cedo.'); })]);
+      await expect(acessar(representante, dados.pacienteId, prazo as ExecutorTenant)).rejects.toMatchObject({ code: '55P03' });
+    } finally { liberarRev(); await revogacao; }
+    await expect(acessar(representante, dados.pacienteId)).rejects.toMatchObject({ status: 403 });
+    await expect(acessar(representante, outro.pacienteId)).resolves.toBe('representante');
+    expect((await portal.listarPacientes(representante)).map(p => p.pacienteId)).toEqual([outro.pacienteId]);
+    await expect(vinculos.revogar(titular, dados.pacienteId, vinculoA.id)).resolves.toEqual({ id: vinculoA.id, revogado: true });
+    await comoTenant(tenant);
+    await expect(cliente.query('update vinculos_representacao_paciente set revogado_por=null, revogado_em=null where id=$1', [vinculoA.id])).rejects.toMatchObject({ code: '23514' });
+
+    // Cascata: desativar a conta do representante derruba as representações restantes.
+    const pacientes = new ServicoPacientes(executorTenant, crypto, {} as ServicoPortalCliente);
+    await executorTenant.executar(tenant, async g => {
+      await g.query('update usuarios set ativo=false where id=$1', [representanteId]);
+      await revogarVinculosPorAlteracaoAcesso(g, tenant, representanteId, outro.usuarioId);
+    });
+    expect(await vigentes(outro.pacienteId)).toEqual([]);
+    await comoTenant(tenant); await cliente.query('update usuarios set ativo=true where id=$1', [representanteId]);
+    await expect(acessar(representante, outro.pacienteId)).rejects.toMatchObject({ status: 403 });
+    // Arquivar o paciente (serviço real) revoga as representações; restaurar não as revive.
+    expect(await vigentes(dados.pacienteId)).toHaveLength(1);
+    await pacientes.arquivar(tenant, dados.pacienteId, titular);
+    expect(await vigentes(dados.pacienteId)).toEqual([]);
+    await comoTenant(tenant); await cliente.query('update pacientes set arquivado_em=null where id=$1', [dados.pacienteId]);
+    await expect(acessar(comoUsuario(segundoRep, 'Patient'), dados.pacienteId)).rejects.toMatchObject({ status: 403 });
+    await expect(acessar(contaPaciente, dados.pacienteId)).resolves.toBe('propria');
+    // Outro tenant não enxerga os vínculos nem por SQL direto (RLS).
+    await comoTenant(tenantB);
+    expect((await cliente.query('select id from vinculos_representacao_paciente where representante_usuario_id=$1', [representanteId])).rows).toEqual([]);
   }, 120_000);
 
   it('FOOD03 protege favoritos com FORCE RLS e oculta registros ao trocar tenant', async () => {

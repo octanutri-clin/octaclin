@@ -1,5 +1,6 @@
 import { revogarConcessoesPorAlteracaoAcesso } from '../../auth/aplicacao/servico-concessoes-permissao';
 import { revogarDelegacoesPorAlteracaoAcesso } from '../../profissionais/aplicacao/servico-delegacoes-carteira';
+import { revogarVinculosPorAlteracaoAcesso } from '../../pacientes/aplicacao/servico-vinculos-representacao';
 import { bloquearContextoPiloto317, invalidarContextoPiloto317 } from '../../gamificacao/aplicacao/invalidar-contexto-piloto';
 import { createHash, randomBytes } from 'crypto';
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
@@ -363,6 +364,7 @@ export class ServicoUsuariosCliente {
   ): Promise<void> {
     await revogarConcessoesPorAlteracaoAcesso(gerenciador, tenantId, usuarioId, revogadorUsuarioId);
     await revogarDelegacoesPorAlteracaoAcesso(gerenciador, tenantId, usuarioId, revogadorUsuarioId);
+    await revogarVinculosPorAlteracaoAcesso(gerenciador, tenantId, usuarioId, revogadorUsuarioId);
     const perfis: {id:string}[] = await gerenciador.query('select id from profissionais where tenant_id=$1 and usuario_id=$2', [tenantId,usuarioId]);
     for (const perfil of perfis) await invalidarContextoPiloto317(gerenciador,tenantId,{profissionalId:perfil.id});
     const agora = new Date();

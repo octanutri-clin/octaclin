@@ -56,7 +56,19 @@ função pura (`dominio/projecao-portal-solicitacao.ts`). **Criar e cancelar pel
      invariante "cai se desativado" depende de todo escritor de `usuarios.ativo`/`role` chamar a cascata (hoje todos
      chamam); pendência do colaborador invalida avaliação `sem_restricoes_confirmadas` como a do profissional
      (conservador; **aceito pelo proprietário em 2026-11-16**); sem limite de taxa por colaborador.
-   - **P2d-3 (a seguir):** vínculo de representação e portal do paciente (criar/cancelar/listar pedidos e resumo Q11).
+   - **P2d-2 (#551, mergeada).**
+   - **P2d-3a (branch `claude/food06-p2d3a-vinculos-paciente`):** `ServicoVinculosRepresentacao` (listar/registrar/revogar pela
+     equipe do paciente: Professional responsável ou Collaborator delegado, provado por `autorizarPendenciaRestricao`);
+     representante é conta `Patient` ativa do tenant, diferente de quem verifica e da conta do próprio paciente; idempotente;
+     cascata ao desativar a conta do paciente (`servico-pacientes.desativarContaAcesso`), na alteração de acesso
+     (`servico-usuarios-cliente`) e ao arquivar o paciente (restaurar não revive). `autorizarPacientePortal` prova, sob lock
+     (usuário → paciente → vínculo), que a conta `Patient` é a do próprio paciente ou tem vínculo vigente; o `pacienteId` é só
+     seletor. Seletor `POST portal/restricoes/pacientes/listar` e rotas `pacientes/:id/representantes/*`, atrás da flag.
+     Decisões do proprietário: duas PRs na P2d-3; declaração nova do paciente = pendência direta (`declaracao_paciente`);
+     resumo Q11 sem observação. A regra de menores/representantes legais (ATV-6) continua de produto e privacidade.
+   - **P2d-3b (a seguir):** declaração, pedidos (criar, cancelar pelo autor, listar) e resumo Q11 no portal; encerra a P2.
+   - **Backlog para a P3 (decisão do proprietário, 2026-11-16):** limitar a concessão a 100 delegações vigentes por titular
+     (409 acima disso), para a lista nunca cortar sem aviso; se a tela mostrar o histórico de delegações, consulta paginada própria.
 4. Depois: P3 (telas, UX B/C) e P4 (M04/M12, apply com impressão e invalidação de prévias).
 
 

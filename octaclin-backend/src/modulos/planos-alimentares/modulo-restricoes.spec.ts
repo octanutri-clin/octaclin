@@ -15,6 +15,10 @@ import { ControladorRestricoesClinicas } from './apresentacao/controlador-restri
 import { ControladorRestricoesColaborador } from './apresentacao/controlador-restricoes-colaborador';
 import { ControladorDelegacoesCarteira } from '../profissionais/apresentacao/controlador-delegacoes-carteira';
 import { ServicoDelegacoesCarteira } from '../profissionais/aplicacao/servico-delegacoes-carteira';
+import { ControladorRepresentantesPaciente } from '../pacientes/apresentacao/controlador-representantes-paciente';
+import { ControladorPortalRestricoes } from './apresentacao/controlador-portal-restricoes';
+import { ServicoVinculosRepresentacao } from '../pacientes/aplicacao/servico-vinculos-representacao';
+import { ServicoPortalRestricoes } from './aplicacao/servico-portal-restricoes';
 import { CHAVE_FEATURE_FLAG, GuardaFeatureFlag } from '../../infraestrutura/feature-flags/guarda-feature-flag';
 import { GuardaJwt } from '../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../auth/apresentacao/guarda-papeis';
@@ -29,7 +33,8 @@ class AuthSintetico {}
 
 describe('módulo de restrições clínicas', () => {
   it('publica só os controladores clínico, do colaborador e da delegação, todos atrás da flag restricoes.clinicas depois da guarda JWT (P2b/P2d-2)', () => {
-    const controladores = [ControladorRestricoesClinicas, ControladorRestricoesColaborador, ControladorDelegacoesCarteira];
+    const controladores = [ControladorRestricoesClinicas, ControladorRestricoesColaborador, ControladorDelegacoesCarteira,
+      ControladorRepresentantesPaciente, ControladorPortalRestricoes];
     expect(Reflect.getMetadata('controllers', ModuloRestricoes)).toEqual(controladores);
     for (const c of controladores) {
       expect(Reflect.getMetadata(CHAVE_FEATURE_FLAG, c)).toBe('restricoes.clinicas');
@@ -56,7 +61,9 @@ describe('módulo de restrições clínicas', () => {
         expect(servico.cripto).toBeInstanceOf(CriptografiaDadosSensiveis);
         if (tipo !== ServicoRegistroPendenciaRestricao) expect(servico.concessoes).toBe(concessoes);
       }
-      expect((escopo.get(ServicoDelegacoesCarteira, { strict: true }) as unknown as { executor: unknown }).executor).toBe(executor);
+      for (const tipo of [ServicoDelegacoesCarteira, ServicoVinculosRepresentacao, ServicoPortalRestricoes]) {
+        expect((escopo.get(tipo, { strict: true }) as unknown as { executor: unknown }).executor).toBe(executor);
+      }
       expect(Reflect.getMetadata('exports', ModuloRestricoes) ?? []).toEqual([]);
     } finally { await modulo.close(); }
   });

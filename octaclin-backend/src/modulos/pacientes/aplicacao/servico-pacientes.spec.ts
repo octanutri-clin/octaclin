@@ -1,4 +1,5 @@
 import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import * as vinculosRepresentacao from './servico-vinculos-representacao';
 import { QueryFailedError } from 'typeorm';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
@@ -861,9 +862,13 @@ describe('ServicoPacientes', () => {
         limitesPermitidos as never
       );
 
+      const cascata = jest.spyOn(vinculosRepresentacao, 'revogarVinculosDoPaciente');
       await servico.arquivar('tenant-1', 'paciente-1', usuarioColaborador);
 
       expect(repositorio.update).toHaveBeenCalledWith(expect.any(Object), { arquivadoEm: expect.any(Date) });
+      // FOOD06 P2d-3a: arquivar encerra as representações; restaurar não as revive.
+      expect(cascata).toHaveBeenCalledWith(expect.anything(), 'tenant-1', 'paciente-1', usuarioColaborador.usuarioId);
+      cascata.mockRestore();
     });
 
     it('restaura paciente arquivado somente se houver vaga no plano', async () => {
@@ -3744,12 +3749,17 @@ describe('ServicoPacientes - LGPD retencao e eliminacao', () => {
         paciente: { id: 'paciente-1', tenantId: 'tenant-1', usuarioId: 'usuario-paciente-1' }
       });
 
+    const cascata = jest.spyOn(vinculosRepresentacao, 'revogarVinculosPorAlteracaoAcesso');
     await servico.desativarContaAcesso('tenant-1', 'paciente-1', usuarioColaborador);
 
     expect(repositorioUsuario.update).toHaveBeenCalledWith(
       { id: 'usuario-paciente-1', tenantId: 'tenant-1' },
       { ativo: false }
     );
+    // FOOD06 P2d-3a: a conta desativada perde as representações de outros pacientes.
+    expect(cascata).toHaveBeenCalledWith(expect.anything(), 'tenant-1', 'usuario-paciente-1', usuarioColaborador.usuarioId);
+    expect(repositorioUsuario.update.mock.invocationCallOrder[0]).toBeLessThan(cascata.mock.invocationCallOrder[0]);
+    cascata.mockRestore();
     expect(repositorioRefreshToken.update).toHaveBeenCalledWith(
       { tenantId: 'tenant-1', usuarioId: 'usuario-paciente-1' },
       expect.objectContaining({ revogadoEm: expect.any(Date) })

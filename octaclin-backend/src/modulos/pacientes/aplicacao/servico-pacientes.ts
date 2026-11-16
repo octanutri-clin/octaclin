@@ -1,4 +1,5 @@
 import { criarEvolucaoNoContexto } from './criar-evolucao-no-contexto';
+import { revogarVinculosDoPaciente, revogarVinculosPorAlteracaoAcesso } from './servico-vinculos-representacao';
 import { bloquearContextoPiloto317, invalidarContextoPiloto317 } from '../../gamificacao/aplicacao/invalidar-contexto-piloto';
 import { projetarResultadoAntropometrico, projetarMedidasAntropometricas } from '../dominio/projecao-antropometria';
 import { registrarContextoPediatrico, projetarPediatrico } from '../dominio/antropometria-pediatrica';
@@ -440,6 +441,8 @@ export class ServicoPacientes {
       if (!resultado.affected) {
         throw new NotFoundException('Paciente nao encontrado.');
       }
+      // FOOD06 P2d-3a: arquivar encerra as representações no portal; restaurar não as revive.
+      await revogarVinculosDoPaciente(gerenciador, tenantId, pacienteId, usuario.usuarioId);
       await invalidarContextoPiloto317(gerenciador, tenantId, { pacienteId });
       const perfil = await gerenciador.getRepository(PerfilCadastroPacienteOrm).findOne({ where: { tenantId, pacienteId } });
       const dataRevisao = lerDataRevisaoPerfil(this.criptografia, perfil?.operacaoCriptografada);
@@ -572,6 +575,8 @@ export class ServicoPacientes {
         { id: paciente.usuarioId, tenantId },
         { ativo: false }
       );
+      // FOOD06 P2d-3a: a conta do paciente pode representar outros pacientes; essas representações caem junto.
+      await revogarVinculosPorAlteracaoAcesso(gerenciador, tenantId, paciente.usuarioId, usuario.usuarioId);
       await gerenciador.getRepository(RefreshTokenOrm).update(
         { tenantId, usuarioId: paciente.usuarioId },
         { revogadoEm: agora }
