@@ -870,7 +870,9 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
       const semExclusao = ['restricoes_pacientes', 'avaliacoes_restricoes_pacientes',
         'solicitacoes_restricoes_pacientes',
         // Auth-1 (1084): revogar preserva a concessão e seu histórico; DELETE é proibido.
-        'concessoes_permissao_usuario'].includes(tabela.tabela);
+        'concessoes_permissao_usuario',
+        // FOOD06 P2d-1 (1085): revogar delegação ou vínculo preserva o histórico; DELETE é proibido.
+        'delegacoes_carteira_profissional', 'vinculos_representacao_paciente'].includes(tabela.tabela);
       const estadoSemExclusao = semExclusao && politicas.length === 3 &&
         politicaPorComando('SELECT') && politicaPorComando('INSERT') && politicaPorComando('UPDATE');
       const policyCompleta = appendOnly

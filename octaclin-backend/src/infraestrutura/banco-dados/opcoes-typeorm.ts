@@ -1,5 +1,8 @@
 import { ConcessaoPermissaoUsuarioOrm } from '../../modulos/auth/infraestrutura/concessao-permissao-usuario.orm';
 import { ConcessoesPermissaoUsuario1720000001084 } from './migracoes/1720000001084-ConcessoesPermissaoUsuario';
+import { DelegacoesCarteiraEVinculosRepresentacao1720000001085 } from './migracoes/1720000001085-DelegacoesCarteiraEVinculosRepresentacao';
+import { DelegacaoCarteiraProfissionalOrm } from '../../modulos/profissionais/infraestrutura/delegacao-carteira-profissional.orm';
+import { VinculoRepresentacaoPacienteOrm } from '../../modulos/pacientes/infraestrutura/vinculo-representacao-paciente.orm';
 import { RegistrosAnalisesFactuais1720000001081 } from './migracoes/1720000001081-RegistrosAnalisesFactuais';
 import { RegistrosFactuaisAppendOnly1720000001082 } from './migracoes/1720000001082-RegistrosFactuaisAppendOnly';
 import { RegistroAnaliseFactualOrm } from '../../modulos/planos-alimentares/infraestrutura/registro-analise-factual.orm';
@@ -284,6 +287,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
     ...conexao,
     entities: [
       ConcessaoPermissaoUsuarioOrm,
+      DelegacaoCarteiraProfissionalOrm,
+      VinculoRepresentacaoPacienteOrm,
       RegistroAnaliseFactualOrm,
       RestricaoPacienteOrm,
       RevisaoRestricaoPacienteOrm,
@@ -507,7 +512,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
         RegistrosAnalisesFactuais1720000001081,
         RegistrosFactuaisAppendOnly1720000001082,
         RestricoesAlimentares1720000001083,
-        ConcessoesPermissaoUsuario1720000001084
+        ConcessoesPermissaoUsuario1720000001084,
+        DelegacoesCarteiraEVinculosRepresentacao1720000001085
       ],
     migrationsRun: executarMigracoesNoBoot(),
     synchronize: false,
