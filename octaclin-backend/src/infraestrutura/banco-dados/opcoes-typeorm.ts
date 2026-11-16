@@ -511,7 +511,9 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       ],
     migrationsRun: executarMigracoesNoBoot(),
     synchronize: false,
-    logging: process.env.NODE_ENV !== 'production',
+    // Queries e erros podem conter parâmetros clínicos ou identificadores em
+    // qualquer ambiente; o logger padrão do TypeORM não os redige.
+    logging: false,
     extra: criarOpcoesPoolPostgres()
   };
 }

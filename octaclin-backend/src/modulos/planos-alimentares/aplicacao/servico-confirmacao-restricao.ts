@@ -1,0 +1,237 @@
+import { BadRequestException, ConflictException, ForbiddenException, Injectable } from '@nestjs/common';
+import { isUUID } from 'class-validator';
+import type { EntityManager } from 'typeorm';
+import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
+import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
+import { ServicoConcessoesPermissao } from '../../auth/aplicacao/servico-concessoes-permissao';
+import type { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
+import { registrarAuditoriaNaTransacao } from '../../../infraestrutura/auditoria/servico-auditoria';
+import { RestricaoPacienteOrm } from '../infraestrutura/restricao-paciente.orm';
+import { RevisaoRestricaoPacienteOrm } from '../infraestrutura/revisao-restricao-paciente.orm';
+import { AvaliacaoRestricoesPacienteOrm } from '../infraestrutura/avaliacao-restricoes-paciente.orm';
+import { RevisaoAvaliacaoRestricoesOrm } from '../infraestrutura/revisao-avaliacao-restricoes.orm';
+import { cifrarCampo, cifrarConteudoRestricao, decifrarConteudoRestricao } from '../infraestrutura/codec-conteudo-restricao';
+import { avaliarInativacao, InativacaoInvalidaError } from '../dominio/inativacao-restricao-protegida';
+import { validarTextoProtegido } from '../dominio/conteudo-restricao';
+import { autorizarRestricaoClinica } from './autorizacao-restricao-clinica';
+import { falharRestricao } from './falha-restricao';
+import { exigirHistoricoConsistente, exigirReadCommitted } from './integridade-avaliacao-restricoes';
+
+function normalizarIdentidade(usuario: UsuarioAutenticado, pacienteId: string, restricaoId: string) {
+  if (!usuario || !isUUID(usuario.tenantId) || !isUUID(usuario.usuarioId) || !isUUID(pacienteId) || !isUUID(restricaoId)) {
+    throw new BadRequestException('Solicitação inválida.');
+  }
+  return { usuario: { ...usuario, tenantId: usuario.tenantId.toLowerCase(), usuarioId: usuario.usuarioId.toLowerCase() },
+    pacienteId: pacienteId.toLowerCase(), restricaoId: restricaoId.toLowerCase() };
+}
+
+/**
+ * O último evento do histórico precisa ser compatível com o estado da linha, e o conteúdo atual precisa ser
+ * idêntico ao snapshot daquela revisão; caso contrário, nenhuma decisão clínica é gravada (revisão R4 da P2a).
+ */
+async function conteudoCoerenteComHistorico(g: EntityManager, cripto: CriptografiaDadosSensiveis, linha: RestricaoPacienteOrm,
+  base: { tenantId: string; pacienteId: string; restricaoId: string }, revisao: number, eventosRecusados: readonly string[]) {
+  const anterior = await g.getRepository(RevisaoRestricaoPacienteOrm).findOne({ where: { ...base, numero: revisao } });
+  if (!anterior || eventosRecusados.includes(anterior.evento)) throw new ConflictException('Restrição alterada ou indisponível.');
+  const conteudo = decifrarConteudoRestricao(cripto, linha.conteudoCriptografado, { ...base, revisao, finalidade: 'restricao' });
+  const snapshot = decifrarConteudoRestricao(cripto, anterior.conteudoCriptografado, { ...base, revisao, finalidade: 'revisao_restricao' });
+  if (JSON.stringify(conteudo) !== JSON.stringify(snapshot)) throw new ConflictException('Restrição alterada ou indisponível.');
+  return conteudo;
+}
+
+@Injectable()
+export class ServicoConfirmacaoRestricao {
+  constructor(private readonly executor: ExecutorTenant, private readonly cripto: CriptografiaDadosSensiveis,
+    private readonly concessoes: ServicoConcessoesPermissao) {}
+  async alterarReavaliacao(usuario: UsuarioAutenticado, pacienteId: string, restricaoId: string, revisao: number,
+    destino: 'em_reavaliacao' | 'ativa'): Promise<unknown> {
+    ({ usuario, pacienteId, restricaoId } = normalizarIdentidade(usuario, pacienteId, restricaoId));
+    if (!Number.isSafeInteger(revisao) || revisao < 1 || !['em_reavaliacao', 'ativa'].includes(destino)) throw new BadRequestException('Solicitação inválida.');
+    try { return await this.executor.executar(usuario.tenantId, async g => {
+      await exigirReadCommitted(g);
+      await autorizarRestricaoClinica(g, this.concessoes, usuario, pacienteId);
+      const avaliacao = await g.getRepository(AvaliacaoRestricoesPacienteOrm).findOne({ where: { tenantId: usuario.tenantId, pacienteId }, lock: { mode: 'pessimistic_write' } });
+      if (avaliacao) {
+        await exigirHistoricoConsistente(g, usuario.tenantId, pacienteId, avaliacao);
+        if (avaliacao.situacao === 'sem_restricoes_confirmadas') throw new ConflictException('Avaliação inconsistente.');
+      }
+      const repo = g.getRepository(RestricaoPacienteOrm);
+      const where = { id: restricaoId, tenantId: usuario.tenantId, pacienteId };
+      const linha = await repo.findOne({ where, lock: { mode: 'pessimistic_write' } });
+      if (!linha) throw new ForbiddenException('Operação não autorizada.');
+      const origem = destino === 'ativa' ? 'em_reavaliacao' : 'ativa';
+      if (linha.revisao !== revisao || linha.confirmacao !== 'confirmada' || linha.estado !== origem) throw new ConflictException('Restrição alterada ou indisponível.');
+      const base = { tenantId: usuario.tenantId, pacienteId, restricaoId };
+      const historico = g.getRepository(RevisaoRestricaoPacienteOrm);
+      const anterior = await historico.findOne({ where: { ...base, numero: revisao } });
+      if (!anterior || ['inativacao', 'rejeicao'].includes(anterior.evento)) throw new ConflictException('Restrição alterada ou indisponível.');
+      const conteudo = decifrarConteudoRestricao(this.cripto, linha.conteudoCriptografado, { ...base, revisao, finalidade: 'restricao' });
+      const snapshotAnterior = decifrarConteudoRestricao(this.cripto, anterior.conteudoCriptografado, { ...base, revisao, finalidade: 'revisao_restricao' });
+      if (conteudo.natureza === 'preferencia' || JSON.stringify(conteudo) !== JSON.stringify(snapshotAnterior)) throw new ConflictException('Restrição alterada ou indisponível.');
+      const proxima = revisao + 1;
+      const atual = cifrarConteudoRestricao(this.cripto, conteudo, { ...base, revisao: proxima, finalidade: 'restricao' });
+      const snapshot = cifrarConteudoRestricao(this.cripto, conteudo, { ...base, revisao: proxima, finalidade: 'revisao_restricao' });
+      const alterado = await repo.update({ ...where, revisao }, { revisao: proxima, estado: destino, conteudoCriptografado: atual, atualizadoEm: () => 'clock_timestamp()' });
+      if (alterado.affected !== 1) throw new ConflictException('Restrição alterada ou indisponível.');
+      await historico.insert({ tenantId: usuario.tenantId, pacienteId, restricaoId, numero: proxima,
+        evento: destino === 'ativa' ? 'reativacao' : 'reavaliacao', autorUsuarioId: usuario.usuarioId, conteudoCriptografado: snapshot });
+      await registrarAuditoriaNaTransacao(g, { tenantId: usuario.tenantId, usuarioId: usuario.usuarioId,
+        acao: destino === 'ativa' ? 'restricoes.reativar' : 'restricoes.reavaliar', recursoTipo: 'restricao_paciente', recursoId: restricaoId, metadados: {} });
+      return { id: restricaoId, revisao: proxima, estado: destino };
+    }); } catch (erro) { return falharRestricao(erro); }
+  }
+  async rejeitar(usuario: UsuarioAutenticado, pacienteId: string, restricaoId: string, revisao: number, dados: unknown): Promise<unknown> {
+    ({ usuario, pacienteId, restricaoId } = normalizarIdentidade(usuario, pacienteId, restricaoId));
+    if (!Number.isSafeInteger(revisao) || revisao < 1 || !dados || typeof dados !== 'object' || Array.isArray(dados) ||
+      ![Object.prototype, null].includes(Object.getPrototypeOf(dados))) throw new BadRequestException('Solicitação inválida.');
+    const descritores = Object.getOwnPropertyDescriptors(dados);
+    if (Reflect.ownKeys(descritores).some(k => k !== 'justificativa') || !Object.hasOwn(descritores, 'justificativa') ||
+      !descritores.justificativa.enumerable || !Object.hasOwn(descritores.justificativa, 'value')) throw new BadRequestException('Solicitação inválida.');
+    let justificativa: string;
+    try { justificativa = validarTextoProtegido(descritores.justificativa.value); } catch { throw new BadRequestException('Solicitação inválida.'); }
+    try { return await this.executor.executar(usuario.tenantId, async g => {
+      await exigirReadCommitted(g);
+      await autorizarRestricaoClinica(g, this.concessoes, usuario, pacienteId);
+      const avaliacoes = g.getRepository(AvaliacaoRestricoesPacienteOrm);
+      const avaliacao = await avaliacoes.findOne({ where: { tenantId: usuario.tenantId, pacienteId }, lock: { mode: 'pessimistic_write' } });
+      if (avaliacao) await exigirHistoricoConsistente(g, usuario.tenantId, pacienteId, avaliacao);
+      const repo = g.getRepository(RestricaoPacienteOrm);
+      const where = { id: restricaoId, tenantId: usuario.tenantId, pacienteId };
+      const linha = await repo.findOne({ where, lock: { mode: 'pessimistic_write' } });
+      if (!linha) throw new ForbiddenException('Operação não autorizada.');
+      if (linha.revisao !== revisao || linha.confirmacao !== 'pendente' || linha.estado !== 'ativa') throw new ConflictException('Restrição alterada ou indisponível.');
+      const base = { tenantId: usuario.tenantId, pacienteId, restricaoId };
+      const anterior = await g.getRepository(RevisaoRestricaoPacienteOrm).findOne({ where: { ...base, numero: revisao } });
+      if (!anterior || ['inativacao', 'rejeicao', 'confirmacao'].includes(anterior.evento)) throw new ConflictException('Restrição alterada ou indisponível.');
+      const conteudo = decifrarConteudoRestricao(this.cripto, linha.conteudoCriptografado, { ...base, revisao, finalidade: 'restricao' });
+      const conteudoAnterior = decifrarConteudoRestricao(this.cripto, anterior.conteudoCriptografado, { ...base, revisao, finalidade: 'revisao_restricao' });
+      if (JSON.stringify(conteudo) !== JSON.stringify(conteudoAnterior)) throw new ConflictException('Restrição alterada ou indisponível.');
+      if (conteudo.natureza === 'preferencia') throw new ConflictException('Preferência não requer decisão clínica.');
+      const proxima = revisao + 1;
+      const atual = cifrarConteudoRestricao(this.cripto, conteudo, { ...base, revisao: proxima, finalidade: 'restricao' });
+      const snapshot = cifrarConteudoRestricao(this.cripto, conteudo, { ...base, revisao: proxima, finalidade: 'revisao_restricao' });
+      const motivo = cifrarCampo(this.cripto, 'restricoes_pacientes_revisoes.justificativa_criptografada', justificativa,
+        { tenantId: usuario.tenantId, pacienteId, registroId: restricaoId, revisao: proxima });
+      const mudou = await repo.update({ ...where, revisao }, { revisao: proxima, confirmacao: 'rejeitada', conteudoCriptografado: atual, atualizadoEm: () => 'clock_timestamp()' });
+      if (mudou.affected !== 1) throw new ConflictException('Restrição alterada ou indisponível.');
+      if (avaliacao && avaliacao.situacao !== 'nao_informado') {
+        const revisaoAvaliacao = avaliacao.revisao + 1;
+        const alterada = await avaliacoes.update({ id: avaliacao.id, tenantId: usuario.tenantId, pacienteId, revisao: avaliacao.revisao },
+          { situacao: 'nao_informado', revisao: revisaoAvaliacao, confirmadoPorUsuarioId: null, confirmadoEm: null, venceEm: null, atualizadoEm: () => 'clock_timestamp()' });
+        if (alterada.affected !== 1) throw new ConflictException('Avaliação alterada ou indisponível.');
+        await g.getRepository(RevisaoAvaliacaoRestricoesOrm).insert({ tenantId: usuario.tenantId, pacienteId, avaliacaoId: avaliacao.id,
+          numero: revisaoAvaliacao, situacao: 'nao_informado', autorUsuarioId: usuario.usuarioId, venceEm: null });
+        await registrarAuditoriaNaTransacao(g, { tenantId: usuario.tenantId, usuarioId: usuario.usuarioId,
+          acao: 'restricoes.avaliacao_invalidada', recursoTipo: 'avaliacao_restricoes', recursoId: avaliacao.id, metadados: {} });
+      }
+      await g.getRepository(RevisaoRestricaoPacienteOrm).insert({ tenantId: usuario.tenantId, pacienteId, restricaoId, numero: proxima,
+        evento: 'rejeicao', autorUsuarioId: usuario.usuarioId, conteudoCriptografado: snapshot, justificativaCriptografada: motivo });
+      await registrarAuditoriaNaTransacao(g, { tenantId: usuario.tenantId, usuarioId: usuario.usuarioId,
+        acao: 'restricoes.rejeitar', recursoTipo: 'restricao_paciente', recursoId: restricaoId, metadados: {} });
+      return { id: restricaoId, revisao: proxima, confirmacao: 'rejeitada' };
+    }); } catch (erro) { return falharRestricao(erro); }
+  }
+  async inativar(usuario: UsuarioAutenticado, pacienteId: string, restricaoId: string, revisao: number,
+    dados: { motivo: string; justificativa: string; confirmacaoEmDoisPassos: boolean }): Promise<unknown> {
+    ({ usuario, pacienteId, restricaoId } = normalizarIdentidade(usuario, pacienteId, restricaoId));
+    const motivos = ['registro_incorreto', 'informacao_clinica_revisada', 'solicitacao_fundamentada', 'outro'] as const;
+    if (!Number.isSafeInteger(revisao) || revisao < 1 || !dados || typeof dados !== 'object' || Array.isArray(dados) ||
+      Reflect.ownKeys(dados).some(k => typeof k !== 'string' || !['motivo', 'justificativa', 'confirmacaoEmDoisPassos'].includes(k)) ||
+      !motivos.includes(dados.motivo as typeof motivos[number]) || dados.confirmacaoEmDoisPassos !== true) throw new BadRequestException('Solicitação inválida.');
+    let justificativa: string;
+    try { justificativa = validarTextoProtegido(dados.justificativa); } catch { throw new BadRequestException('Solicitação inválida.'); }
+    try { return await this.executor.executar(usuario.tenantId, async g => {
+      await exigirReadCommitted(g);
+      await autorizarRestricaoClinica(g, this.concessoes, usuario, pacienteId);
+      const avaliacoes = g.getRepository(AvaliacaoRestricoesPacienteOrm);
+      const avaliacao = await avaliacoes.findOne({ where: { tenantId: usuario.tenantId, pacienteId }, lock: { mode: 'pessimistic_write' } });
+      if (avaliacao) await exigirHistoricoConsistente(g, usuario.tenantId, pacienteId, avaliacao);
+      const repo = g.getRepository(RestricaoPacienteOrm);
+      const historico = g.getRepository(RevisaoRestricaoPacienteOrm);
+      const where = { id: restricaoId, tenantId: usuario.tenantId, pacienteId };
+      const linha = await repo.findOne({ where, lock: { mode: 'pessimistic_write' } });
+      if (!linha) throw new ForbiddenException('Operação não autorizada.');
+      if (linha.revisao !== revisao || linha.confirmacao !== 'confirmada' || linha.estado === 'inativa') throw new ConflictException('Restrição alterada ou indisponível.');
+      if (avaliacao?.situacao === 'sem_restricoes_confirmadas') throw new ConflictException('Avaliação inconsistente; confira o estado.');
+      const base = { tenantId: usuario.tenantId, pacienteId, restricaoId };
+      const conteudo = await conteudoCoerenteComHistorico(g, this.cripto, linha, base, revisao, ['criacao', 'rejeicao', 'inativacao']);
+      let avaliacaoPedido: ReturnType<typeof avaliarInativacao>;
+      try {
+        avaliacaoPedido = avaliarInativacao({ restricao: { id: restricaoId, revisao, natureza: conteudo.natureza,
+          ...(conteudo.subtipoClinico ? { subtipoClinico: conteudo.subtipoClinico } : {}), ...(conteudo.gravidade ? { gravidade: conteudo.gravidade } : {}),
+          confirmacao: linha.confirmacao, estado: linha.estado }, motivo: dados.motivo, justificativa,
+          confirmacaoEmDoisPassos: dados.confirmacaoEmDoisPassos, impressoesAfetadas: [] });
+      } catch (erro) {
+        if (erro instanceof InativacaoInvalidaError) throw new BadRequestException('Solicitação inválida.');
+        throw erro;
+      }
+      if (!avaliacaoPedido.permitida) throw new ConflictException('Inativação indisponível.');
+      const proxima = revisao + 1;
+      const atual = cifrarConteudoRestricao(this.cripto, conteudo, { ...base, revisao: proxima, finalidade: 'restricao' });
+      const snapshot = cifrarConteudoRestricao(this.cripto, conteudo, { ...base, revisao: proxima, finalidade: 'revisao_restricao' });
+      const motivoCifrado = cifrarCampo(this.cripto, 'restricoes_pacientes_revisoes.justificativa_criptografada', justificativa,
+        { tenantId: usuario.tenantId, pacienteId, registroId: restricaoId, revisao: proxima });
+      const alterado = await repo.update({ ...where, revisao }, { revisao: proxima, estado: 'inativa', conteudoCriptografado: atual, atualizadoEm: () => 'clock_timestamp()' });
+      if (alterado.affected !== 1) throw new ConflictException('Restrição alterada ou indisponível.');
+      if (avaliacao?.situacao === 'restricoes_registradas') {
+        const filtro = { id: avaliacao.id, tenantId: usuario.tenantId, pacienteId, revisao: avaliacao.revisao };
+        const mudou = await avaliacoes.update(filtro, { situacao: 'nao_informado', revisao: avaliacao.revisao + 1,
+          confirmadoPorUsuarioId: null, confirmadoEm: null, venceEm: null, atualizadoEm: () => 'clock_timestamp()' });
+        if (mudou.affected !== 1) throw new ConflictException('Avaliação alterada; tente novamente.');
+        await g.getRepository(RevisaoAvaliacaoRestricoesOrm).insert({ tenantId: usuario.tenantId, pacienteId,
+          avaliacaoId: avaliacao.id, numero: avaliacao.revisao + 1, situacao: 'nao_informado', autorUsuarioId: usuario.usuarioId, venceEm: null });
+        await registrarAuditoriaNaTransacao(g, { tenantId: usuario.tenantId, usuarioId: usuario.usuarioId,
+          acao: 'restricoes.avaliacao_invalidada', recursoTipo: 'avaliacao_restricoes', recursoId: avaliacao.id, metadados: {} });
+      }
+      await historico.insert({ tenantId: usuario.tenantId, pacienteId, restricaoId, numero: proxima, evento: 'inativacao',
+        motivoInativacao: dados.motivo as typeof motivos[number], confirmacaoDoisPassos: true,
+        autorUsuarioId: usuario.usuarioId, conteudoCriptografado: snapshot, justificativaCriptografada: motivoCifrado });
+      await registrarAuditoriaNaTransacao(g, { tenantId: usuario.tenantId, usuarioId: usuario.usuarioId,
+        acao: 'restricoes.inativar', recursoTipo: 'restricao_paciente', recursoId: restricaoId, metadados: {} });
+      return { id: restricaoId, revisao: proxima, estado: 'inativa' };
+    }); } catch (erro) { return falharRestricao(erro); }
+  }
+  async confirmar(usuario: UsuarioAutenticado, pacienteId: string, restricaoId: string, revisao: number): Promise<unknown> {
+    ({ usuario, pacienteId, restricaoId } = normalizarIdentidade(usuario, pacienteId, restricaoId));
+    if (!Number.isSafeInteger(revisao) || revisao < 1) throw new ConflictException('Revisão inválida.');
+    try { return await this.executor.executar(usuario.tenantId, async g => {
+      await exigirReadCommitted(g);
+      await autorizarRestricaoClinica(g, this.concessoes, usuario, pacienteId);
+      // Todos os escritores de avaliação/restrição devem serializar pelo paciente.
+      const avaliacoes = g.getRepository(AvaliacaoRestricoesPacienteOrm);
+      const avaliacao = await avaliacoes.findOne({
+        where: { tenantId: usuario.tenantId, pacienteId }, lock: { mode: 'pessimistic_write' }
+      });
+      if (avaliacao) await exigirHistoricoConsistente(g, usuario.tenantId, pacienteId, avaliacao);
+      const repo = g.getRepository(RestricaoPacienteOrm);
+      const historico = g.getRepository(RevisaoRestricaoPacienteOrm);
+      const where = { id: restricaoId, tenantId: usuario.tenantId, pacienteId };
+      const linha = await repo.findOne({ where, lock: { mode: 'pessimistic_write' } });
+      if (!linha) throw new ForbiddenException('Operação não autorizada.');
+      if (linha.revisao !== revisao || linha.confirmacao !== 'pendente' || linha.estado !== 'ativa') {
+        throw new ConflictException('Restrição alterada ou indisponível.');
+      }
+      const base = { tenantId: usuario.tenantId, pacienteId, restricaoId };
+      const conteudo = await conteudoCoerenteComHistorico(g, this.cripto, linha, base, revisao, ['confirmacao', 'rejeicao', 'inativacao']);
+      if (conteudo.natureza === 'preferencia') throw new ConflictException('Preferência não requer confirmação clínica.');
+      const proxima = revisao + 1;
+      const atual = cifrarConteudoRestricao(this.cripto, conteudo, { ...base, revisao: proxima, finalidade: 'restricao' });
+      const snapshot = cifrarConteudoRestricao(this.cripto, conteudo, { ...base, revisao: proxima, finalidade: 'revisao_restricao' });
+      const alterado = await repo.update({ ...where, revisao }, { revisao: proxima, confirmacao: 'confirmada', confirmadoPorUsuarioId: usuario.usuarioId, confirmadoEm: new Date(), conteudoCriptografado: atual, atualizadoEm: () => 'clock_timestamp()' });
+      if (alterado.affected !== 1) throw new ConflictException('Restrição alterada ou indisponível.');
+      if (avaliacao?.situacao === 'sem_restricoes_confirmadas') {
+        const filtro = { id: avaliacao.id, tenantId: usuario.tenantId, pacienteId, revisao: avaliacao.revisao };
+        const mudou = await avaliacoes.update(filtro, { situacao: 'nao_informado', revisao: avaliacao.revisao + 1,
+          confirmadoPorUsuarioId: null, confirmadoEm: null, venceEm: null, atualizadoEm: () => 'clock_timestamp()' });
+        if (mudou.affected !== 1) throw new ConflictException('Avaliação alterada; tente novamente.');
+        await g.getRepository(RevisaoAvaliacaoRestricoesOrm).insert({ tenantId: usuario.tenantId, pacienteId,
+          avaliacaoId: avaliacao.id, numero: avaliacao.revisao + 1, situacao: 'nao_informado', autorUsuarioId: usuario.usuarioId, venceEm: null });
+        await registrarAuditoriaNaTransacao(g, { tenantId: usuario.tenantId, usuarioId: usuario.usuarioId,
+          acao: 'restricoes.avaliacao_invalidada', recursoTipo: 'avaliacao_restricoes', recursoId: avaliacao.id, metadados: {} });
+      }
+      await historico.insert({ tenantId: usuario.tenantId, pacienteId, restricaoId, numero: proxima, evento: 'confirmacao', autorUsuarioId: usuario.usuarioId, conteudoCriptografado: snapshot });
+      await registrarAuditoriaNaTransacao(g, { tenantId: usuario.tenantId, usuarioId: usuario.usuarioId, acao: 'restricoes.confirmar', recursoTipo: 'restricao_paciente', recursoId: restricaoId, metadados: {} });
+      return { id: restricaoId, revisao: proxima, confirmacao: 'confirmada' };
+    }); } catch (erro) { return falharRestricao(erro); }
+  }
+}

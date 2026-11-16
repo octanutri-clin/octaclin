@@ -272,3 +272,21 @@ Controle: incluir a tabela na lista nominal de estado sem exclusão, que exige
 exatamente as três políticas isoladas e recusa DELETE/ALL. Ao adicionar uma tabela
 com retenção, executar também o inventário agregado; a prova dedicada da migration
 não substitui esse gate. Nunca ampliar privilégios para satisfazer o verificador.
+
+## 2026-11-13 — Sanitização de erro não protege parâmetros do logger SQL
+
+Na revisão da P2, a configuração compartilhada habilitava o logger padrão do
+TypeORM fora de `production`. Uma consulta ou falha poderia imprimir parâmetros
+antes de o serviço sanitizar sua resposta; a reprodução usou apenas um canário
+sintético e não demonstra vazamento em ambiente real. Controle: manter o logging
+SQL do TypeORM desabilitado em todos os ambientes e testar a configuração e o
+comportamento do logger com parâmetro sintético. Reativá-lo sem redação efetiva
+reintroduz o risco; os testes não comprovam configuração ou logs de provedores.
+
+## 2026-11-14 — Parâmetro SQL reutilizado em fixture PostgreSQL
+
+Na prova sintética de ausência FOOD06, o mesmo parâmetro era usado como coluna
+varchar e em comparações condicionais, e o PostgreSQL recusou a inferência de
+tipos; o Backend falhou antes de percorrer as combinações. A fixture passou a
+enviar autor e instante confirmados em parâmetros próprios. O controle é executar
+as combinações no PostgreSQL do CI: typecheck e mocks não validam inferência SQL.

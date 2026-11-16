@@ -68,6 +68,29 @@ import { AdicionarEncaminhamentoDocumento1720000001067 } from './migracoes/17200
 import { PlanoAlimentarOrm } from '../../modulos/planos-alimentares/infraestrutura/plano-alimentar.orm';
 import { PlanoAlimentarVersaoOrm } from '../../modulos/planos-alimentares/infraestrutura/plano-alimentar-versao.orm';
 import { ServicoPlanosAlimentares } from '../../modulos/planos-alimentares/aplicacao/servico-planos-alimentares';
+import { autorizarRestricaoClinica } from '../../modulos/planos-alimentares/aplicacao/autorizacao-restricao-clinica';
+import { autorizarPendenciaRestricao } from '../../modulos/planos-alimentares/aplicacao/autorizacao-pendencia-restricao';
+import { ServicoConcessoesPermissao } from '../../modulos/auth/aplicacao/servico-concessoes-permissao';
+import { ConcessaoPermissaoUsuarioOrm } from '../../modulos/auth/infraestrutura/concessao-permissao-usuario.orm';
+import { ServicoConfirmacaoRestricao } from '../../modulos/planos-alimentares/aplicacao/servico-confirmacao-restricao';
+import { ServicoRegistroPendenciaRestricao } from '../../modulos/planos-alimentares/aplicacao/servico-registro-pendencia-restricao';
+import { ServicoReconfirmacaoRestricao } from '../../modulos/planos-alimentares/aplicacao/servico-reconfirmacao-restricao';
+import { ServicoLeituraRestricao } from '../../modulos/planos-alimentares/aplicacao/servico-leitura-restricao';
+import { RestricaoPacienteOrm } from '../../modulos/planos-alimentares/infraestrutura/restricao-paciente.orm';
+import { RevisaoRestricaoPacienteOrm } from '../../modulos/planos-alimentares/infraestrutura/revisao-restricao-paciente.orm';
+import { AvaliacaoRestricoesPacienteOrm } from '../../modulos/planos-alimentares/infraestrutura/avaliacao-restricoes-paciente.orm';
+import { RevisaoAvaliacaoRestricoesOrm } from '../../modulos/planos-alimentares/infraestrutura/revisao-avaliacao-restricoes.orm';
+import { ReconfirmacaoRestricoesOrm } from '../../modulos/planos-alimentares/infraestrutura/reconfirmacao-restricoes.orm';
+import { cifrarConteudoRestricao, decifrarConteudoRestricao, cifrarCampo, decifrarCampo } from '../../modulos/planos-alimentares/infraestrutura/codec-conteudo-restricao';
+import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import { Test } from '@nestjs/testing';
+import type { NestExpressApplication } from '@nestjs/platform-express';
+import type { AddressInfo } from 'node:net';
+import { GuardaJwt } from '../../modulos/auth/apresentacao/guarda-jwt';
+import { ServicoAuditoria } from '../auditoria/servico-auditoria';
+import { criarPipeValidacaoHttp } from '../http/pipe-validacao-http';
+import { middlewareErroRestricoesClinicas, middlewareRestricoesClinicas } from '../http/middleware-restricoes-clinicas';
+import { ControladorRestricoesClinicas } from '../../modulos/planos-alimentares/apresentacao/controlador-restricoes-clinicas';
 
 /**
  * Prova integral de isolamento por tenant em Postgres real (PR 43).
@@ -256,6 +279,12 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
         TenantConfiguracaoOrm,
         ConsentimentoLgpdOrm,
         UsuarioOrm,
+        ConcessaoPermissaoUsuarioOrm,
+        RestricaoPacienteOrm,
+        RevisaoRestricaoPacienteOrm,
+        AvaliacaoRestricoesPacienteOrm,
+        RevisaoAvaliacaoRestricoesOrm,
+        ReconfirmacaoRestricoesOrm,
         PermissaoIntegracaoProfissionalOrm,
         UserActionLogOrm,
         NotificacaoOrm,
@@ -278,7 +307,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
         OutboxEventoOrm,
         MensagemNotificacaoOrm
       ],
-      extra: { max: 2 }
+      extra: { max: 2, connectionTimeoutMillis: 10_000 }
     });
     await fonteDados.initialize();
     return fonteDados;
@@ -565,6 +594,31 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     await encerrarRecursos();
   }, 30_000);
 
+  it('não registra parâmetros sintéticos em consulta PostgreSQL ou erro', async () => {
+    if (!configuracaoRuntime) throw new Error('Conexao da prova RLS nao foi inicializada.');
+    const saida = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+    const erros = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    const avisos = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const fonte = new DataSource({
+      ...criarOpcoesTypeOrm(),
+      type: 'postgres', host: configuracaoRuntime.host, port: configuracaoRuntime.porta,
+      username: configuracaoRuntime.usuario, password: configuracaoRuntime.senha,
+      database: configuracaoRuntime.banco, ssl: false, entities: [], migrations: [],
+      migrationsRun: false, synchronize: false
+    } as DataSourceOptions);
+    try {
+      await fonte.initialize();
+      await fonte.query('SELECT $1::text', ['CANARIO_SINTETICO_SQL']);
+      await expect(fonte.query('SELECT $1::integer', ['CANARIO_SINTETICO_SQL'])).rejects.toThrow();
+      expect(JSON.stringify([saida.mock.calls, erros.mock.calls, avisos.mock.calls])).not.toContain('CANARIO_SINTETICO_SQL');
+    } finally {
+      if (fonte.isInitialized) await fonte.destroy();
+      saida.mockRestore();
+      erros.mockRestore();
+      avisos.mockRestore();
+    }
+  });
+
   it('usa role runtime restrita, sem ownership, SUPERUSER ou BYPASSRLS', async () => {
     if (!cliente || !configuracaoRuntime) throw new Error('Cliente da prova RLS nao foi inicializado.');
     const papel = await cliente.query<{
@@ -820,6 +874,1765 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
       );
     }
   });
+
+  it('P2 exige concessão e carteira na mesma transação com RLS real', async () => {
+    if (!cliente || !executorTenant) throw new Error('ExecutorTenant da prova RLS nao foi inicializado.');
+    const tenantP2 = randomUUID();
+    await cliente.query('insert into tenants (id, nome, slug) values ($1, $2, $3)',
+      [tenantP2, 'Prova P2 sintetica', `prova-p2-${tenantP2}`]);
+    const dados = await prepararDadosRepresentativos(tenantP2, `p2-${randomUUID()}`);
+    const outro = await prepararDadosRepresentativos(tenantP2, `p2-outro-${randomUUID()}`);
+    const usuario: UsuarioAutenticado = {
+      tenantId: tenantP2, usuarioId: dados.usuarioId, papel: 'Professional', emailHash: '', permissoes: []
+    };
+    const concessoes = new ServicoConcessoesPermissao(executorTenant);
+    const pendencia = (paciente: string) => executorTenant!.executar(tenantP2, g =>
+      autorizarPendenciaRestricao(g, usuario, paciente));
+    await expect(pendencia(dados.pacienteId)).resolves.toBe('profissional');
+    await expect(pendencia(outro.pacienteId)).rejects.toMatchObject({ status: 403 });
+    await expect(pendencia(pacienteIdTenantB)).rejects.toMatchObject({ status: 403 });
+    const crypto = new CriptografiaDadosSensiveis();
+    const registro = new ServicoRegistroPendenciaRestricao(executorTenant, crypto);
+    const chave = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+    const conteudo = { schemaVersao: 1, natureza: 'clinica', subtipoClinico: 'alergia_alimentar', alvo: { tipo: 'alimento', id: 'alvo-sintetico' } };
+    const simultaneos = await Promise.all([
+      registro.registrar(usuario, dados.pacienteId, { chaveCriacao: chave, conteudo }),
+      registro.registrar(usuario, dados.pacienteId.toUpperCase(), { chaveCriacao: chave.toUpperCase(), conteudo })
+    ]);
+    expect(simultaneos[0]).toEqual(simultaneos[1]);
+    const pendenteId = (simultaneos[0] as { id: string }).id;
+    await comoTenant(tenantP2);
+    const pendente = await cliente.query('select confirmacao,revisao from restricoes_pacientes where id=$1', [pendenteId]);
+    expect(pendente.rows).toEqual([{ confirmacao: 'pendente', revisao: 1 }]);
+    expect((await cliente.query('select numero,evento from restricoes_pacientes_revisoes where restricao_id=$1', [pendenteId])).rows)
+      .toEqual([{ numero: 1, evento: 'criacao' }]);
+    expect((await cliente.query("select id from user_action_logs where recurso_id=$1 and acao='restricoes.registrar_pendencia'", [pendenteId])).rows).toHaveLength(1);
+    const pacienteAvaliacao = randomUUID();
+    await cliente.query('insert into pacientes(id,tenant_id,profissional_responsavel_id,nome_criptografado) values ($1,$2,$3,$4)',
+      [pacienteAvaliacao, tenantP2, dados.profissionalId, Buffer.from('paciente-sintetico')]);
+    const avalPendente = await cliente.query<{ id: string }>(`insert into avaliacoes_restricoes_pacientes
+      (tenant_id,paciente_id,situacao,confirmado_por_usuario_id,confirmado_em,vence_em)
+      values ($1,$2,'sem_restricoes_confirmadas',$3,now(),now() + interval '10 days') returning id`,
+      [tenantP2, pacienteAvaliacao, dados.usuarioId]);
+    await registro.registrar(usuario, pacienteAvaliacao,
+      { chaveCriacao: 'ffffffff-ffff-4fff-8fff-ffffffffffff', conteudo });
+    expect((await cliente.query('select situacao,revisao,confirmado_em,vence_em from avaliacoes_restricoes_pacientes where id=$1', [avalPendente.rows[0].id])).rows)
+      .toEqual([{ situacao: 'nao_informado', revisao: 2, confirmado_em: null, vence_em: null }]);
+    expect((await cliente.query('select numero,situacao from avaliacoes_restricoes_revisoes where avaliacao_id=$1', [avalPendente.rows[0].id])).rows)
+      .toEqual([{ numero: 2, situacao: 'nao_informado' }]);
+    expect((await cliente.query("select metadados from user_action_logs where recurso_id=$1 and acao='restricoes.avaliacao_invalidada'", [avalPendente.rows[0].id])).rows)
+      .toEqual([{ metadados: {} }]);
+    const outroDaCarteira = randomUUID();
+    await cliente.query('insert into pacientes(id,tenant_id,profissional_responsavel_id,nome_criptografado) values ($1,$2,$3,$4)',
+      [outroDaCarteira, tenantP2, dados.profissionalId, Buffer.from('paciente-sintetico')]);
+    const chaveConcorrente = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+    let liberarChave!: () => void;
+    let avisarChave!: () => void;
+    const esperarChave = new Promise<void>(resolve => { liberarChave = resolve; });
+    const chaveBloqueada = new Promise<void>(resolve => { avisarChave = resolve; });
+    const detentorChave = executorTenant.executar(tenantP2, async g => {
+      await g.query('select pg_advisory_xact_lock(hashtextextended($1, 0))', [`registro:${tenantP2}:${dados.usuarioId}:${chaveConcorrente}`]);
+      avisarChave(); await esperarChave;
+    });
+    try {
+      await Promise.race([chaveBloqueada, detentorChave.then(() => { throw new Error('Transação encerrou cedo.'); })]);
+      const executorPrazo = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) =>
+        executorTenant!.executar(t, async g => { await g.query("set local lock_timeout = '200ms'"); return fn(g); }) };
+      const registroPrazo = new ServicoRegistroPendenciaRestricao(executorPrazo as ExecutorTenant, crypto);
+      await expect(registroPrazo.registrar(usuario, outroDaCarteira, { chaveCriacao: chaveConcorrente.toUpperCase(), conteudo }))
+        .rejects.toMatchObject({ status: 409, message: 'Operação concorrente. Tente novamente.' });
+    } finally { liberarChave(); await detentorChave; }
+    await registro.registrar(usuario, dados.pacienteId, { chaveCriacao: chaveConcorrente, conteudo });
+    await expect(registro.registrar(usuario, outroDaCarteira, { chaveCriacao: chaveConcorrente.toUpperCase(), conteudo }))
+      .rejects.toMatchObject({ status: 409 });
+    expect((await cliente.query('select count(*)::int n from restricoes_pacientes where tenant_id=$1 and autor_usuario_id=$2 and chave_criacao=$3',
+      [tenantP2, dados.usuarioId, chaveConcorrente])).rows).toEqual([{ n: 1 }]);
+    const conferir = (paciente: string) => executorTenant!.executar(tenantP2, g =>
+      autorizarRestricaoClinica(g, concessoes, usuario, paciente));
+    await expect(conferir(dados.pacienteId)).rejects.toMatchObject({ status: 403 });
+    const reconfirmarSemConcessao = new ServicoReconfirmacaoRestricao(executorTenant, crypto, concessoes);
+    await expect(new ServicoLeituraRestricao(executorTenant, crypto, concessoes).consultar(usuario, dados.pacienteId, pendenteId))
+      .rejects.toMatchObject({ status: 403, message: 'Operação não autorizada.' });
+    await expect(reconfirmarSemConcessao.garantirAvaliacaoInicial(usuario, dados.pacienteId)).rejects.toMatchObject({ status: 403 });
+    await expect(reconfirmarSemConcessao.registrarAusenciaDeclarada(usuario, dados.pacienteId,
+      { avaliacaoId: randomUUID(), revisaoAvaliacao: 1, chaveIdempotencia: randomUUID(), meio: 'teleconsulta', atestacao: true, confirmacaoExplicitaAusencia: true }))
+      .rejects.toMatchObject({ status: 403 });
+    await expect(reconfirmarSemConcessao.registrarPendencia(usuario, dados.pacienteId,
+      { avaliacaoId: randomUUID(), revisaoAvaliacao: 1, chaveIdempotencia: randomUUID(), meio: 'teleconsulta', atestacao: true }))
+      .rejects.toMatchObject({ status: 403 });
+    await comoTenant(tenantP2);
+    const linha = await cliente.query<{ id: string }>(`insert into concessoes_permissao_usuario
+      (tenant_id, usuario_id, permissao, concedida_por, motivo)
+      values ($1, $2, 'restricoes.confirmar', $2, 'habilitacao_administrativa') returning id`,
+      [tenantP2, dados.usuarioId]);
+    await expect(conferir(dados.pacienteId)).resolves.toBeUndefined();
+    await expect(conferir(outro.pacienteId)).rejects.toMatchObject({ status: 403 });
+    await expect(conferir(pacienteIdTenantB)).rejects.toMatchObject({ status: 403 });
+    const restricaoId = randomUUID();
+    const vinculo = { tenantId: tenantP2, pacienteId: dados.pacienteId, restricaoId, revisao: 1 };
+    const cifra = cifrarConteudoRestricao(crypto, conteudo, { ...vinculo, finalidade: 'restricao' });
+    await cliente.query(`insert into restricoes_pacientes
+      (id, tenant_id, paciente_id, autor_usuario_id, chave_criacao, origem, conteudo_criptografado)
+      values ($1,$2,$3,$4,$5,'profissional',$6)`,
+      [restricaoId, tenantP2, dados.pacienteId, dados.usuarioId, randomUUID(), cifra]);
+    // Como o registro real: linha e histórico de criação com o mesmo conteúdo (revisão R4 da P2a).
+    await cliente.query(`insert into restricoes_pacientes_revisoes
+      (tenant_id,paciente_id,restricao_id,numero,evento,autor_usuario_id,conteudo_criptografado)
+      values ($1,$2,$3,1,'criacao',$4,$5)`, [tenantP2, dados.pacienteId, restricaoId, dados.usuarioId,
+      cifrarConteudoRestricao(crypto, conteudo, { ...vinculo, finalidade: 'revisao_restricao' })]);
+    const avaliacao = await cliente.query<{ id: string }>(`insert into avaliacoes_restricoes_pacientes
+      (tenant_id,paciente_id,situacao,confirmado_por_usuario_id,confirmado_em,vence_em)
+      values ($1,$2,'sem_restricoes_confirmadas',$3,now(),now() + interval '10 days') returning id`,
+      [tenantP2, dados.pacienteId, dados.usuarioId]);
+    await cliente.query(`insert into avaliacoes_restricoes_revisoes
+      (tenant_id,paciente_id,avaliacao_id,numero,situacao,autor_usuario_id,vence_em)
+      select tenant_id,paciente_id,id,1,situacao,$2,vence_em from avaliacoes_restricoes_pacientes where id=$1`,
+      [avaliacao.rows[0].id, dados.usuarioId]);
+    const confirmar = new ServicoConfirmacaoRestricao(executorTenant, crypto, concessoes);
+    await expect(confirmar.confirmar(usuario, dados.pacienteId, restricaoId, 1)).resolves.toEqual({ id: restricaoId, revisao: 2, confirmacao: 'confirmada' });
+    await expect(confirmar.confirmar(usuario, dados.pacienteId, restricaoId, 1)).rejects.toMatchObject({ status: 409 });
+    const persistida = await cliente.query<{ revisao: number; conteudo_criptografado: Buffer }>(
+      'select revisao, conteudo_criptografado from restricoes_pacientes where id=$1', [restricaoId]);
+    expect(persistida.rows[0].revisao).toBe(2);
+    expect(decifrarConteudoRestricao(crypto, persistida.rows[0].conteudo_criptografado,
+      { ...vinculo, revisao: 2, finalidade: 'restricao' })).toEqual(conteudo);
+    const historico = await cliente.query('select numero, evento from restricoes_pacientes_revisoes where restricao_id=$1 order by numero', [restricaoId]);
+    expect(historico.rows).toEqual([{ numero: 1, evento: 'criacao' }, { numero: 2, evento: 'confirmacao' }]);
+    const avaliada = await cliente.query('select situacao,revisao,confirmado_por_usuario_id,confirmado_em,vence_em from avaliacoes_restricoes_pacientes where id=$1', [avaliacao.rows[0].id]);
+    expect(avaliada.rows).toEqual([{ situacao: 'nao_informado', revisao: 2, confirmado_por_usuario_id: null, confirmado_em: null, vence_em: null }]);
+    const historicoAvaliacao = await cliente.query('select numero,situacao from avaliacoes_restricoes_revisoes where avaliacao_id=$1 order by numero', [avaliacao.rows[0].id]);
+    expect(historicoAvaliacao.rows).toEqual([{ numero: 1, situacao: 'sem_restricoes_confirmadas' }, { numero: 2, situacao: 'nao_informado' }]);
+    const auditorias = await cliente.query('select acao,usuario_id,tenant_id,metadados from user_action_logs where recurso_id = any($1::uuid[]) order by acao', [[avaliacao.rows[0].id, restricaoId]]);
+    expect(auditorias.rows).toEqual([
+      { acao: 'restricoes.avaliacao_invalidada', usuario_id: dados.usuarioId, tenant_id: tenantP2, metadados: {} },
+      { acao: 'restricoes.confirmar', usuario_id: dados.usuarioId, tenant_id: tenantP2, metadados: {} }
+    ]);
+    const reconfirmar = new ServicoReconfirmacaoRestricao(executorTenant, crypto, concessoes);
+    const pedidoIndividual = { avaliacaoId: avaliacao.rows[0].id, revisaoAvaliacao: 2, restricaoId, revisaoRestricao: 2,
+      chaveIdempotencia: randomUUID(), meio: 'teleconsulta', atestacao: true };
+    const individuais = await Promise.all([
+      reconfirmar.registrarSemAlteracaoIndividual(usuario, dados.pacienteId, pedidoIndividual),
+      reconfirmar.registrarSemAlteracaoIndividual(usuario, dados.pacienteId, pedidoIndividual)
+    ]);
+    expect(individuais[0]).toEqual(individuais[1]);
+    const individual = individuais[0] as { id: string; resultado: string; escopo: string; revisaoAvaliacao: number; revisaoRestricao: number };
+    expect(individual).toEqual({ id: expect.any(String), resultado: 'sem_alteracao', escopo: 'restricao_individual', revisaoAvaliacao: 2, revisaoRestricao: 2 });
+    const linhaIndividual = await cliente.query('select avaliacao_id,revisao_avaliacao,restricao_id,revisao_restricao,vence_em,resultado_criptografado from reconfirmacoes_restricoes where id=$1', [individual.id]);
+    expect(linhaIndividual.rows[0]).toMatchObject({ avaliacao_id: avaliacao.rows[0].id, revisao_avaliacao: 2, restricao_id: restricaoId, revisao_restricao: 2, vence_em: null });
+    expect(decifrarCampo(crypto, 'reconfirmacoes_restricoes.resultado_criptografado', linhaIndividual.rows[0].resultado_criptografado,
+      { tenantId: tenantP2, pacienteId: dados.pacienteId, registroId: individual.id, revisao: 1 })).toEqual({ resultado: 'sem_alteracao' });
+    expect((await cliente.query('select situacao,revisao,confirmado_por_usuario_id,confirmado_em,vence_em from avaliacoes_restricoes_pacientes where id=$1', [avaliacao.rows[0].id])).rows).toEqual(avaliada.rows);
+    expect((await cliente.query('select revisao,conteudo_criptografado from restricoes_pacientes where id=$1', [restricaoId])).rows).toEqual(persistida.rows);
+    expect((await cliente.query("select id from user_action_logs where recurso_id=$1 and acao='restricoes.reconfirmacao_individual'", [individual.id])).rows).toHaveLength(1);
+    await expect(reconfirmar.registrarSemAlteracao(usuario, dados.pacienteId,
+      { avaliacaoId: pedidoIndividual.avaliacaoId, revisaoAvaliacao: 2, chaveIdempotencia: pedidoIndividual.chaveIdempotencia, meio: 'teleconsulta', atestacao: true }))
+      .rejects.toMatchObject({ status: 409 });
+    await expect(reconfirmar.registrarSemAlteracaoIndividual(usuario, outro.pacienteId, pedidoIndividual)).rejects.toMatchObject({ status: 403 });
+    await expect(reconfirmar.registrarSemAlteracaoIndividual(usuario, pacienteIdTenantB, pedidoIndividual)).rejects.toMatchObject({ status: 403 });
+    await expect(reconfirmar.registrarSemAlteracaoIndividual(usuario, dados.pacienteId, { ...pedidoIndividual, restricaoId: randomUUID(), chaveIdempotencia: randomUUID() }))
+      .rejects.toMatchObject({ status: 409 });
+    const restricaoOutroPaciente = randomUUID();
+    const cifraOutroPaciente = cifrarConteudoRestricao(crypto, conteudo,
+      { tenantId: tenantP2, pacienteId: outroDaCarteira, restricaoId: restricaoOutroPaciente, revisao: 1, finalidade: 'restricao' });
+    const historicoOutroPaciente = cifrarConteudoRestricao(crypto, conteudo,
+      { tenantId: tenantP2, pacienteId: outroDaCarteira, restricaoId: restricaoOutroPaciente, revisao: 1, finalidade: 'revisao_restricao' });
+    await cliente.query(`insert into restricoes_pacientes
+      (id,tenant_id,paciente_id,autor_usuario_id,chave_criacao,origem,confirmacao,confirmado_por_usuario_id,confirmado_em,conteudo_criptografado)
+      values ($1,$2,$3,$4,$5,'profissional','confirmada',$4,now(),$6)`, [restricaoOutroPaciente, tenantP2, outroDaCarteira, dados.usuarioId, randomUUID(), cifraOutroPaciente]);
+    await cliente.query(`insert into restricoes_pacientes_revisoes
+      (tenant_id,paciente_id,restricao_id,numero,evento,autor_usuario_id,conteudo_criptografado)
+      values ($1,$2,$3,1,'confirmacao',$4,$5)`, [tenantP2, outroDaCarteira, restricaoOutroPaciente, dados.usuarioId, historicoOutroPaciente]);
+    await expect(reconfirmar.registrarSemAlteracaoIndividual(usuario, dados.pacienteId,
+      { ...pedidoIndividual, restricaoId: restricaoOutroPaciente, revisaoRestricao: 1, chaveIdempotencia: randomUUID() })).rejects.toMatchObject({ status: 409 });
+    const restricaoOutroTenant = randomUUID();
+    const cifraOutroTenant = cifrarConteudoRestricao(crypto, conteudo,
+      { tenantId: tenantB, pacienteId: pacienteIdTenantB, restricaoId: restricaoOutroTenant, revisao: 1, finalidade: 'restricao' });
+    const historicoOutroTenant = cifrarConteudoRestricao(crypto, conteudo,
+      { tenantId: tenantB, pacienteId: pacienteIdTenantB, restricaoId: restricaoOutroTenant, revisao: 1, finalidade: 'revisao_restricao' });
+    await comoTenant(tenantB);
+    await cliente.query(`insert into restricoes_pacientes
+      (id,tenant_id,paciente_id,autor_usuario_id,chave_criacao,origem,confirmacao,confirmado_por_usuario_id,confirmado_em,conteudo_criptografado)
+      values ($1,$2,$3,$4,$5,'profissional','confirmada',$4,now(),$6)`, [restricaoOutroTenant, tenantB, pacienteIdTenantB, usuarioIdTenantB, randomUUID(), cifraOutroTenant]);
+    await cliente.query(`insert into restricoes_pacientes_revisoes
+      (tenant_id,paciente_id,restricao_id,numero,evento,autor_usuario_id,conteudo_criptografado)
+      values ($1,$2,$3,1,'confirmacao',$4,$5)`, [tenantB, pacienteIdTenantB, restricaoOutroTenant, usuarioIdTenantB, historicoOutroTenant]);
+    await comoTenant(tenantP2);
+    await expect(reconfirmar.registrarSemAlteracaoIndividual(usuario, dados.pacienteId,
+      { ...pedidoIndividual, restricaoId: restricaoOutroTenant, revisaoRestricao: 1, chaveIdempotencia: randomUUID() })).rejects.toMatchObject({ status: 409 });
+    for (const caso of ['divergente', 'cifra_ilegivel', 'preferencia', 'inativa', 'pendente', 'rejeitada', 'em_reavaliacao', 'evento_inativacao', 'evento_rejeicao', 'evento_confirmacao', 'evento_edicao', 'evento_reavaliacao'] as const) {
+      const pacienteCaso = randomUUID(), idCaso = randomUUID();
+      await cliente.query('insert into pacientes(id,tenant_id,profissional_responsavel_id,nome_criptografado) values ($1,$2,$3,$4)',
+        [pacienteCaso, tenantP2, dados.profissionalId, Buffer.from('paciente-sintetico')]);
+      const avaliacaoCaso = await reconfirmar.garantirAvaliacaoInicial(usuario, pacienteCaso) as { id: string };
+      const conteudoAtual = caso === 'preferencia' ? { schemaVersao: 1, natureza: 'preferencia', alvo: { tipo: 'alimento', id: 'sintetico' } } : conteudo;
+      const conteudoHistorico = caso === 'divergente' ? { schemaVersao: 1, natureza: 'escolha', alvo: { tipo: 'categoria_escolha', id: 'sem_carne' } } : conteudoAtual;
+      const baseCaso = { tenantId: tenantP2, pacienteId: pacienteCaso, restricaoId: idCaso, revisao: 1 };
+      const cifraAtual = cifrarConteudoRestricao(crypto, conteudoAtual, { ...baseCaso, finalidade: 'restricao' });
+      const cifraHistorica = caso === 'cifra_ilegivel' ? Buffer.alloc(64) : cifrarConteudoRestricao(crypto, conteudoHistorico, { ...baseCaso, finalidade: 'revisao_restricao' });
+      const estadoCaso = caso === 'inativa' ? 'inativa' : caso === 'em_reavaliacao' || caso === 'evento_reavaliacao' ? 'em_reavaliacao' : 'ativa';
+      const cadeiaOperacional = caso === 'evento_edicao' || caso === 'evento_reavaliacao';
+      const confirmacaoCaso = caso === 'pendente' || caso === 'evento_confirmacao' || cadeiaOperacional ? 'pendente' : caso === 'rejeitada' ? 'rejeitada' : 'confirmada';
+      await cliente.query(`insert into restricoes_pacientes
+        (id,tenant_id,paciente_id,autor_usuario_id,chave_criacao,origem,estado,confirmacao,confirmado_por_usuario_id,confirmado_em,conteudo_criptografado)
+        values ($1,$2,$3,$4,$5,'profissional',$6,$7,$8,$9,$10)`, [idCaso, tenantP2, pacienteCaso, dados.usuarioId, randomUUID(), cadeiaOperacional ? 'ativa' : estadoCaso, confirmacaoCaso,
+          confirmacaoCaso === 'confirmada' ? dados.usuarioId : null, confirmacaoCaso === 'confirmada' ? new Date() : null, cifraAtual]);
+      const eventoCaso = caso === 'evento_inativacao' ? 'inativacao' : caso === 'evento_rejeicao' ? 'rejeicao' : caso === 'evento_confirmacao' ? 'confirmacao'
+        : caso === 'evento_edicao' ? 'edicao' : caso === 'evento_reavaliacao' ? 'reavaliacao' : 'criacao';
+      const justificativaCaso = eventoCaso === 'inativacao' ? cifrarCampo(crypto, 'restricoes_pacientes_revisoes.justificativa_criptografada', 'Justificativa sintética',
+        { tenantId: tenantP2, pacienteId: pacienteCaso, registroId: idCaso, revisao: 1 }) : null;
+      await cliente.query(`insert into restricoes_pacientes_revisoes
+        (tenant_id,paciente_id,restricao_id,numero,evento,autor_usuario_id,conteudo_criptografado,motivo_inativacao,confirmacao_dois_passos,justificativa_criptografada)
+        values ($1,$2,$3,1,$4,$5,$6,$7,$8,$9)`, [tenantP2, pacienteCaso, idCaso, cadeiaOperacional ? 'criacao' : eventoCaso, dados.usuarioId, cifraHistorica,
+          eventoCaso === 'inativacao' ? 'outro' : null, eventoCaso === 'inativacao', justificativaCaso]);
+      const chaveCaso = randomUUID();
+      if (cadeiaOperacional) {
+        await expect(confirmar.confirmar(usuario, pacienteCaso, idCaso, 1)).resolves.toEqual({ id: idCaso, revisao: 2, confirmacao: 'confirmada' });
+        const atual3 = cifrarConteudoRestricao(crypto, conteudoAtual, { ...baseCaso, revisao: 3, finalidade: 'restricao' });
+        const historico3 = cifrarConteudoRestricao(crypto, conteudoHistorico, { ...baseCaso, revisao: 3, finalidade: 'revisao_restricao' });
+        await cliente.query('update restricoes_pacientes set revisao=3,estado=$2,conteudo_criptografado=$3 where id=$1', [idCaso, estadoCaso, atual3]);
+        await cliente.query(`insert into restricoes_pacientes_revisoes
+          (tenant_id,paciente_id,restricao_id,numero,evento,autor_usuario_id,conteudo_criptografado)
+          values ($1,$2,$3,3,$4,$5,$6)`, [tenantP2, pacienteCaso, idCaso, eventoCaso, dados.usuarioId, historico3]);
+      }
+      if (caso === 'em_reavaliacao' || caso === 'evento_edicao' || caso === 'evento_reavaliacao') {
+        await expect(reconfirmar.registrarSemAlteracaoIndividual(usuario, pacienteCaso, { ...pedidoIndividual, avaliacaoId: avaliacaoCaso.id,
+          revisaoAvaliacao: 1, restricaoId: idCaso, revisaoRestricao: cadeiaOperacional ? 3 : 1, chaveIdempotencia: chaveCaso }))
+          .resolves.toMatchObject({ escopo: 'restricao_individual', resultado: 'sem_alteracao' });
+        expect((await cliente.query('select situacao,revisao from avaliacoes_restricoes_pacientes where id=$1', [avaliacaoCaso.id])).rows)
+          .toEqual([{ situacao: 'nao_informado', revisao: 1 }]);
+        continue;
+      }
+      const entradaCaso = { ...pedidoIndividual, avaliacaoId: avaliacaoCaso.id, revisaoAvaliacao: 1, restricaoId: idCaso, revisaoRestricao: 1, chaveIdempotencia: chaveCaso };
+      const operacaoCaso = caso === 'evento_confirmacao' ? reconfirmar.registrarPendenciaIndividual(usuario, pacienteCaso, entradaCaso)
+        : reconfirmar.registrarSemAlteracaoIndividual(usuario, pacienteCaso, entradaCaso);
+      await expect(operacaoCaso)
+        .rejects.toMatchObject({ status: caso === 'cifra_ilegivel' ? 500 : 409 });
+      expect((await cliente.query('select id from reconfirmacoes_restricoes where tenant_id=$1 and chave_idempotencia=$2', [tenantP2, chaveCaso])).rows).toEqual([]);
+    }
+    const pacienteInicial = randomUUID();
+    await cliente.query('insert into pacientes(id,tenant_id,profissional_responsavel_id,nome_criptografado) values ($1,$2,$3,$4)',
+      [pacienteInicial, tenantP2, dados.profissionalId, Buffer.from('paciente-sintetico')]);
+    let liberarInicial!: () => void;
+    let avisarInicial!: (pid: number) => void;
+    let avisarPidInicial!: (pid: number) => void;
+    const esperaInicial = new Promise<void>(resolve => { liberarInicial = resolve; });
+    const inicialPronta = new Promise<number>(resolve => { avisarInicial = resolve; });
+    const pidInicial = new Promise<number>(resolve => { avisarPidInicial = resolve; });
+    async function limitarEsperaInicial<T>(promessa: Promise<T>): Promise<T> {
+      let prazo: ReturnType<typeof setTimeout> | undefined;
+      try {
+        return await Promise.race([promessa, new Promise<never>((_resolve, rejeitar) => {
+          prazo = setTimeout(() => rejeitar(new Error('Prazo da prova de avaliação inicial esgotado.')), 15_000);
+        })]);
+      } finally { if (prazo) clearTimeout(prazo); }
+    }
+    const executorInicial = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) =>
+      executorTenant!.executar(t, async g => { await g.query("set local statement_timeout = '12s'");
+        const pid = await g.query('select pg_backend_pid()::int as pid');
+        const r = await fn(g); avisarInicial(pid[0].pid as number); await esperaInicial; return r; }) };
+    const primeiraInicial = new ServicoReconfirmacaoRestricao(executorInicial as ExecutorTenant, crypto, concessoes)
+      .garantirAvaliacaoInicial(usuario, pacienteInicial);
+    let segundaInicial: Promise<PromiseSettledResult<unknown>[]> | undefined;
+    let primeiroResultado: unknown;
+    try {
+      const pidEscritor = await limitarEsperaInicial(Promise.race([inicialPronta, primeiraInicial.then(() => { throw new Error('Transação encerrou cedo.'); })]));
+      const executorObservadoInicial = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) =>
+        executorTenant!.executar(t, async g => { await g.query("set local statement_timeout = '12s'"); await g.query("set local lock_timeout = '10s'");
+          const pid = await g.query('select pg_backend_pid()::int as pid'); avisarPidInicial(pid[0].pid as number); return fn(g); }) };
+      const aguardandoInicial = new ServicoReconfirmacaoRestricao(executorObservadoInicial as ExecutorTenant, crypto, concessoes)
+        .garantirAvaliacaoInicial(usuario, pacienteInicial);
+      segundaInicial = Promise.allSettled([aguardandoInicial]);
+      const pid = await limitarEsperaInicial(Promise.race([pidInicial, aguardandoInicial.then(() => { throw new Error('Operação encerrou cedo.'); })]));
+      await esperarBloqueioReal(pid, pidEscritor);
+    } finally {
+      liberarInicial();
+      const limpezas = await Promise.allSettled([limitarEsperaInicial(primeiraInicial), ...(segundaInicial ? [limitarEsperaInicial(segundaInicial)] : [])]);
+      if (limpezas[0].status === 'rejected') throw limpezas[0].reason;
+      primeiroResultado = limpezas[0].value;
+      if (limpezas[1]?.status === 'rejected') throw limpezas[1].reason;
+    }
+    const segundoResultado = (await segundaInicial!)[0];
+    expect(segundoResultado.status).toBe('fulfilled');
+    if (segundoResultado.status !== 'fulfilled') throw new Error('A segunda inicialização deveria suceder.');
+    const iniciais = [primeiroResultado, segundoResultado.value];
+    expect(iniciais[0]).toEqual(iniciais[1]);
+    const inicial = iniciais[0] as { id: string; revisao: number; situacao: string };
+    expect(inicial).toEqual({ id: expect.any(String), revisao: 1, situacao: 'nao_informado' });
+    expect((await cliente.query('select situacao,revisao,confirmado_em,vence_em from avaliacoes_restricoes_pacientes where id=$1', [inicial.id])).rows)
+      .toEqual([{ situacao: 'nao_informado', revisao: 1, confirmado_em: null, vence_em: null }]);
+    expect((await cliente.query('select count(*)::int n from avaliacoes_restricoes_pacientes where tenant_id=$1 and paciente_id=$2', [tenantP2, pacienteInicial])).rows).toEqual([{ n: 1 }]);
+    expect((await cliente.query('select numero,situacao from avaliacoes_restricoes_revisoes where avaliacao_id=$1', [inicial.id])).rows)
+      .toEqual([{ numero: 1, situacao: 'nao_informado' }]);
+    expect((await cliente.query("select id from user_action_logs where recurso_id=$1 and acao='restricoes.avaliacao_iniciada'", [inicial.id])).rows).toHaveLength(1);
+    const pedidoAusenciaInicial = { avaliacaoId: inicial.id, revisaoAvaliacao: 1, chaveIdempotencia: randomUUID(), meio: 'teleconsulta', atestacao: true, confirmacaoExplicitaAusencia: true };
+    await expect(reconfirmar.registrarAusenciaDeclarada(usuario, pacienteInicial, { ...pedidoAusenciaInicial, confirmacaoExplicitaAusencia: false })).rejects.toMatchObject({ status: 400 });
+    const declaracoes = await Promise.all([
+      reconfirmar.registrarAusenciaDeclarada(usuario, pacienteInicial, pedidoAusenciaInicial),
+      reconfirmar.registrarAusenciaDeclarada(usuario, pacienteInicial, pedidoAusenciaInicial)
+    ]);
+    expect(declaracoes[0]).toEqual(declaracoes[1]);
+    const declaracaoInicial = declaracoes[0] as { id: string; resultado: string };
+    expect(declaracaoInicial.resultado).toBe('sem_restricoes_declaradas');
+    expect((await cliente.query(`select situacao,revisao,extract(epoch from (vence_em-confirmado_em))::int prazo
+      from avaliacoes_restricoes_pacientes where id=$1`, [inicial.id])).rows)
+      .toEqual([{ situacao: 'sem_restricoes_confirmadas', revisao: 2, prazo: 180 * 86_400 }]);
+    expect((await cliente.query('select numero,situacao from avaliacoes_restricoes_revisoes where avaliacao_id=$1 order by numero', [inicial.id])).rows)
+      .toEqual([{ numero: 1, situacao: 'nao_informado' }, { numero: 2, situacao: 'sem_restricoes_confirmadas' }]);
+    expect((await cliente.query("select id from user_action_logs where recurso_id=$1 and acao='restricoes.reconfirmacao_ausencia'", [declaracaoInicial.id])).rows).toHaveLength(1);
+    await expect(reconfirmar.garantirAvaliacaoInicial(usuario, outro.pacienteId)).rejects.toMatchObject({ status: 403 });
+    await expect(reconfirmar.garantirAvaliacaoInicial(usuario, pacienteIdTenantB)).rejects.toMatchObject({ status: 403 });
+    await expect(reconfirmar.registrarAusenciaDeclarada(usuario, outro.pacienteId, pedidoAusenciaInicial)).rejects.toMatchObject({ status: 403 });
+    await expect(reconfirmar.registrarAusenciaDeclarada(usuario, pacienteIdTenantB, pedidoAusenciaInicial)).rejects.toMatchObject({ status: 403 });
+    const pedidoReconfirmacao = { avaliacaoId: avaliacao.rows[0].id, revisaoAvaliacao: 2, chaveIdempotencia: randomUUID(), meio: 'teleconsulta', atestacao: true };
+    const repeticoes = await Promise.all([
+      reconfirmar.registrarPendencia(usuario, dados.pacienteId, pedidoReconfirmacao),
+      reconfirmar.registrarPendencia(usuario, dados.pacienteId, pedidoReconfirmacao)
+    ]);
+    expect(repeticoes[0]).toEqual(repeticoes[1]);
+    const reconfirmacaoId = (repeticoes[0] as { id: string }).id;
+    const reconfirmada = await cliente.query('select revisao_avaliacao,vence_em,resultado_criptografado from reconfirmacoes_restricoes where id=$1', [reconfirmacaoId]);
+    expect(reconfirmada.rows).toHaveLength(1);
+    expect(reconfirmada.rows[0]).toMatchObject({ revisao_avaliacao: 2, vence_em: null });
+    expect(decifrarCampo(crypto, 'reconfirmacoes_restricoes.resultado_criptografado', reconfirmada.rows[0].resultado_criptografado,
+      { tenantId: tenantP2, pacienteId: dados.pacienteId, registroId: reconfirmacaoId, revisao: 1 })).toEqual({ resultado: 'pendencia_mantida' });
+    expect((await cliente.query('select situacao,revisao,confirmado_por_usuario_id,confirmado_em,vence_em from avaliacoes_restricoes_pacientes where id=$1', [avaliacao.rows[0].id])).rows).toEqual(avaliada.rows);
+    expect((await cliente.query("select id from user_action_logs where recurso_id=$1 and acao='restricoes.reconfirmacao_pendencia'", [reconfirmacaoId])).rows).toHaveLength(1);
+    const pedidoAlteracao = { ...pedidoReconfirmacao, chaveIdempotencia: randomUUID() };
+    const alteracao = await reconfirmar.registrarAlteracaoInformada(usuario, dados.pacienteId, pedidoAlteracao) as { id: string; resultado: string };
+    expect(alteracao.resultado).toBe('alteracao_informada');
+    const cifraAlteracao = await cliente.query('select resultado_criptografado,vence_em from reconfirmacoes_restricoes where id=$1', [alteracao.id]);
+    expect(cifraAlteracao.rows[0].vence_em).toBeNull();
+    expect(decifrarCampo(crypto, 'reconfirmacoes_restricoes.resultado_criptografado', cifraAlteracao.rows[0].resultado_criptografado,
+      { tenantId: tenantP2, pacienteId: dados.pacienteId, registroId: alteracao.id, revisao: 1 })).toEqual({ resultado: 'alteracao_informada' });
+    expect((await cliente.query("select id from user_action_logs where recurso_id=$1 and acao='restricoes.reconfirmacao_alteracao'", [alteracao.id])).rows).toHaveLength(1);
+    expect((await cliente.query('select situacao,revisao,confirmado_por_usuario_id,confirmado_em,vence_em from avaliacoes_restricoes_pacientes where id=$1', [avaliacao.rows[0].id])).rows).toEqual(avaliada.rows);
+    await expect(reconfirmar.registrarPendencia(usuario, dados.pacienteId, pedidoAlteracao)).rejects.toMatchObject({ status: 409 });
+    await expect(reconfirmar.registrarPendencia(usuario, outro.pacienteId, pedidoReconfirmacao)).rejects.toMatchObject({ status: 403 });
+    await expect(reconfirmar.registrarPendencia(usuario, pacienteIdTenantB, pedidoReconfirmacao)).rejects.toMatchObject({ status: 403 });
+    await expect(reconfirmar.registrarPendencia(usuario, outroDaCarteira, pedidoReconfirmacao)).rejects.toMatchObject({ status: 409 });
+    const chaveBarreiraRecon = randomUUID();
+    let liberarRecon!: () => void;
+    let avisarRecon!: () => void;
+    const esperaRecon = new Promise<void>(resolve => { liberarRecon = resolve; });
+    const bloqueioRecon = new Promise<void>(resolve => { avisarRecon = resolve; });
+    const detentorRecon = executorTenant.executar(tenantP2, async g => {
+      await g.query('select pg_advisory_xact_lock(hashtextextended($1, 0))', [`reconfirmacao:${tenantP2}:${dados.usuarioId}:${chaveBarreiraRecon}`]);
+      avisarRecon(); await esperaRecon;
+    });
+    try {
+      await Promise.race([bloqueioRecon, detentorRecon.then(() => { throw new Error('Transação encerrou cedo.'); })]);
+      const executorPrazoRecon = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) =>
+        executorTenant!.executar(t, async g => { await g.query("set local lock_timeout = '200ms'"); return fn(g); }) };
+      const comPrazoRecon = new ServicoReconfirmacaoRestricao(executorPrazoRecon as ExecutorTenant, crypto, concessoes);
+      await expect(comPrazoRecon.registrarPendencia(usuario, outroDaCarteira, { ...pedidoReconfirmacao, chaveIdempotencia: chaveBarreiraRecon.toUpperCase() }))
+        .rejects.toMatchObject({ status: 409, message: 'Operação concorrente. Tente novamente.' });
+    } finally { liberarRecon(); await detentorRecon; }
+    const vencedorRecon = await reconfirmar.registrarPendencia(usuario, dados.pacienteId, { ...pedidoReconfirmacao, chaveIdempotencia: chaveBarreiraRecon }) as { id: string };
+    await expect(reconfirmar.registrarPendencia(usuario, outroDaCarteira, { ...pedidoReconfirmacao, chaveIdempotencia: chaveBarreiraRecon.toUpperCase() }))
+      .rejects.toMatchObject({ status: 409 });
+    expect((await cliente.query('select count(*)::int n from reconfirmacoes_restricoes where tenant_id=$1 and atestado_por_usuario_id=$2 and chave_idempotencia=$3',
+      [tenantP2, dados.usuarioId, chaveBarreiraRecon])).rows).toEqual([{ n: 1 }]);
+    expect((await cliente.query("select id from user_action_logs where recurso_id=$1 and acao='restricoes.reconfirmacao_pendencia'", [vencedorRecon.id])).rows).toHaveLength(1);
+    const outraAvaliacao = await cliente.query<{ id: string }>(`insert into avaliacoes_restricoes_pacientes
+      (tenant_id,paciente_id,situacao) values ($1,$2,'nao_informado') returning id`, [tenantP2, outroDaCarteira]);
+    await cliente.query(`insert into avaliacoes_restricoes_revisoes
+      (tenant_id,paciente_id,avaliacao_id,numero,situacao,autor_usuario_id)
+      values ($1,$2,$3,1,'nao_informado',$4)`, [tenantP2, outroDaCarteira, outraAvaliacao.rows[0].id, dados.usuarioId]);
+    const chaveDuasChamadas = randomUUID();
+    let avisarDuas!: () => void;
+    let chegaram = 0;
+    const duasNoLock = new Promise<void>(resolve => { avisarDuas = resolve; });
+    let operacoes: Promise<PromiseSettledResult<unknown>[]> | undefined;
+    let prazoDuas: ReturnType<typeof setTimeout> | undefined;
+    await cliente.query('begin');
+    try {
+      // O cliente pg é uma conexão separada: o pool TypeORM da prova tem só duas.
+      await cliente.query('select pg_advisory_xact_lock(hashtextextended($1, 0))', [`reconfirmacao:${tenantP2}:${dados.usuarioId}:${chaveDuasChamadas}`]);
+      const executorObservado = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) =>
+        executorTenant!.executar(t, async g => {
+          await g.query("set local lock_timeout = '5s'");
+          const original = g.query.bind(g);
+          const spy = jest.spyOn(g, 'query').mockImplementation(async (...args) => {
+            if (String(args[0]).includes('pg_advisory_xact_lock') && ++chegaram === 2) avisarDuas();
+            return original(...args);
+          });
+          try { return await fn(g); } finally { spy.mockRestore(); }
+        }) };
+      const observado = new ServicoReconfirmacaoRestricao(executorObservado as ExecutorTenant, crypto, concessoes);
+      const primeira = observado.registrarPendencia(usuario, dados.pacienteId, { ...pedidoReconfirmacao, chaveIdempotencia: chaveDuasChamadas });
+      const segunda = observado.registrarPendencia(usuario, outroDaCarteira, { ...pedidoReconfirmacao, avaliacaoId: outraAvaliacao.rows[0].id,
+        revisaoAvaliacao: 1, chaveIdempotencia: chaveDuasChamadas.toUpperCase() });
+      operacoes = Promise.allSettled([primeira, segunda]);
+      const prazo = new Promise<never>((_resolve, rejeitar) => { prazoDuas = setTimeout(() => rejeitar(new Error('Duas operações não chegaram à barreira.')), 10_000); });
+      await Promise.race([duasNoLock, primeira.then(() => { throw new Error('Primeira operação não aguardou.'); }),
+        segunda.then(() => { throw new Error('Segunda operação não aguardou.'); }), prazo]);
+    } finally {
+      if (prazoDuas) clearTimeout(prazoDuas);
+      await cliente.query('commit');
+      if (operacoes) await operacoes;
+    }
+    const resultadosDuas = await operacoes!;
+    const sucessoDuas = resultadosDuas.filter((r): r is PromiseFulfilledResult<unknown> => r.status === 'fulfilled');
+    const falhaDuas = resultadosDuas.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
+    expect(sucessoDuas).toHaveLength(1); expect(falhaDuas).toHaveLength(1);
+    expect(falhaDuas[0].reason).toMatchObject({ status: 409 });
+    const sucessoDuasId = (sucessoDuas[0].value as { id: string }).id;
+    expect((await cliente.query('select count(*)::int n from reconfirmacoes_restricoes where tenant_id=$1 and atestado_por_usuario_id=$2 and chave_idempotencia=$3',
+      [tenantP2, dados.usuarioId, chaveDuasChamadas])).rows).toEqual([{ n: 1 }]);
+    expect((await cliente.query("select id from user_action_logs where recurso_id=$1 and acao='restricoes.reconfirmacao_pendencia'", [sucessoDuasId])).rows).toHaveLength(1);
+    let chamadasAuditoriaFalha = 0;
+    const executorAuditoriaFalha = { executar: <T>(tenantId: string, fn: (g: EntityManager) => Promise<T>) =>
+      executorTenant!.executar(tenantId, async g => {
+        const repoAuditoria = g.getRepository(UserActionLogOrm);
+        const spy = jest.spyOn(repoAuditoria, 'save').mockImplementation((async () => {
+          chamadasAuditoriaFalha += 1; throw new Error('auditoria sintética indisponível');
+        }) as typeof repoAuditoria.save);
+        try { return await fn(g); } finally { spy.mockRestore(); }
+      }) };
+    const falhaReconfirmacao = new ServicoReconfirmacaoRestricao(executorAuditoriaFalha as ExecutorTenant, crypto, concessoes);
+    const pacienteFalhaInicial = randomUUID();
+    await cliente.query('insert into pacientes(id,tenant_id,profissional_responsavel_id,nome_criptografado) values ($1,$2,$3,$4)',
+      [pacienteFalhaInicial, tenantP2, dados.profissionalId, Buffer.from('paciente-sintetico')]);
+    const auditoriasIniciaisAntes = await cliente.query("select count(*)::int n from user_action_logs where tenant_id=$1 and usuario_id=$2 and acao='restricoes.avaliacao_iniciada'", [tenantP2, dados.usuarioId]);
+    await expect(falhaReconfirmacao.garantirAvaliacaoInicial(usuario, pacienteFalhaInicial))
+      .rejects.toMatchObject({ status: 500, message: 'Operação indisponível.' });
+    expect(chamadasAuditoriaFalha).toBe(1);
+    expect((await cliente.query('select id from avaliacoes_restricoes_pacientes where tenant_id=$1 and paciente_id=$2', [tenantP2, pacienteFalhaInicial])).rows).toEqual([]);
+    expect((await cliente.query('select id from avaliacoes_restricoes_revisoes where tenant_id=$1 and paciente_id=$2', [tenantP2, pacienteFalhaInicial])).rows).toEqual([]);
+    expect((await cliente.query("select count(*)::int n from user_action_logs where tenant_id=$1 and usuario_id=$2 and acao='restricoes.avaliacao_iniciada'", [tenantP2, dados.usuarioId])).rows).toEqual(auditoriasIniciaisAntes.rows);
+    const inicialRecuperada = await reconfirmar.garantirAvaliacaoInicial(usuario, pacienteFalhaInicial) as { id: string; revisao: number; situacao: string };
+    expect(inicialRecuperada).toEqual({ id: expect.any(String), revisao: 1, situacao: 'nao_informado' });
+    expect((await cliente.query('select numero,situacao from avaliacoes_restricoes_revisoes where avaliacao_id=$1', [inicialRecuperada.id])).rows)
+      .toEqual([{ numero: 1, situacao: 'nao_informado' }]);
+    expect((await cliente.query("select id from user_action_logs where recurso_id=$1 and acao='restricoes.avaliacao_iniciada'", [inicialRecuperada.id])).rows).toHaveLength(1);
+    const chaveFalhaIndividual = randomUUID();
+    await expect(falhaReconfirmacao.registrarSemAlteracaoIndividual(usuario, dados.pacienteId,
+      { ...pedidoIndividual, chaveIdempotencia: chaveFalhaIndividual })).rejects.toMatchObject({ status: 500, message: 'Operação indisponível.' });
+    expect(chamadasAuditoriaFalha).toBe(2);
+    expect((await cliente.query('select id from reconfirmacoes_restricoes where tenant_id=$1 and chave_idempotencia=$2', [tenantP2, chaveFalhaIndividual])).rows).toEqual([]);
+    expect((await cliente.query('select situacao,revisao,confirmado_por_usuario_id,confirmado_em,vence_em from avaliacoes_restricoes_pacientes where id=$1', [avaliacao.rows[0].id])).rows).toEqual(avaliada.rows);
+    expect((await cliente.query('select revisao,conteudo_criptografado from restricoes_pacientes where id=$1', [restricaoId])).rows).toEqual(persistida.rows);
+    const chaveFalhaReconfirmacao = randomUUID();
+    await expect(falhaReconfirmacao.registrarPendencia(usuario, dados.pacienteId, { ...pedidoReconfirmacao, chaveIdempotencia: chaveFalhaReconfirmacao }))
+      .rejects.toMatchObject({ status: 500, message: 'Operação indisponível.' });
+    expect((await cliente.query('select id from reconfirmacoes_restricoes where tenant_id=$1 and chave_idempotencia=$2', [tenantP2, chaveFalhaReconfirmacao])).rows).toEqual([]);
+    expect((await cliente.query('select situacao,revisao,confirmado_por_usuario_id,confirmado_em,vence_em from avaliacoes_restricoes_pacientes where id=$1', [avaliacao.rows[0].id])).rows).toEqual(avaliada.rows);
+    const chaveFalhaCifra = randomUUID();
+    const cifraFalha = jest.spyOn(crypto, 'criptografar').mockImplementation(() => { throw new Error('cifra sintética indisponível'); });
+    try {
+      await expect(reconfirmar.registrarPendencia(usuario, dados.pacienteId, { ...pedidoReconfirmacao, chaveIdempotencia: chaveFalhaCifra }))
+        .rejects.toMatchObject({ status: 500, message: 'Operação indisponível.' });
+    } finally { cifraFalha.mockRestore(); }
+    expect((await cliente.query('select id from reconfirmacoes_restricoes where tenant_id=$1 and chave_idempotencia=$2', [tenantP2, chaveFalhaCifra])).rows).toEqual([]);
+    const idRollback = randomUUID();
+    const pacienteRollback = randomUUID();
+    await cliente.query(`insert into pacientes(id,tenant_id,profissional_responsavel_id,nome_criptografado)
+      values ($1,$2,$3,$4)`, [pacienteRollback, tenantP2, dados.profissionalId, Buffer.from('paciente-sintetico')]);
+    const avaliacaoRollback = await cliente.query<{ id: string }>(`insert into avaliacoes_restricoes_pacientes
+      (tenant_id,paciente_id,situacao,confirmado_por_usuario_id,confirmado_em,vence_em)
+      values ($1,$2,'sem_restricoes_confirmadas',$3,now(),now() + interval '10 days') returning id`,
+      [tenantP2, pacienteRollback, dados.usuarioId]);
+    await cliente.query(`insert into avaliacoes_restricoes_revisoes
+      (tenant_id,paciente_id,avaliacao_id,numero,situacao,autor_usuario_id,vence_em)
+      select tenant_id,paciente_id,id,revisao,situacao,$2,vence_em from avaliacoes_restricoes_pacientes where id=$1`,
+      [avaliacaoRollback.rows[0].id, dados.usuarioId]);
+    const antesRollback = await cliente.query('select situacao,revisao,confirmado_por_usuario_id,confirmado_em,vence_em from avaliacoes_restricoes_pacientes where id=$1', [avaliacaoRollback.rows[0].id]);
+    const cifraRollback = cifrarConteudoRestricao(crypto, conteudo,
+      { ...vinculo, pacienteId: pacienteRollback, restricaoId: idRollback, finalidade: 'restricao' });
+    await cliente.query(`insert into restricoes_pacientes
+      (id, tenant_id, paciente_id, autor_usuario_id, chave_criacao, origem, conteudo_criptografado)
+      values ($1,$2,$3,$4,$5,'profissional',$6)`,
+      [idRollback, tenantP2, pacienteRollback, dados.usuarioId, randomUUID(), cifraRollback]);
+    await cliente.query(`insert into restricoes_pacientes_revisoes
+      (tenant_id,paciente_id,restricao_id,numero,evento,autor_usuario_id,conteudo_criptografado)
+      values ($1,$2,$3,1,'criacao',$4,$5)`, [tenantP2, pacienteRollback, idRollback, dados.usuarioId,
+      cifrarConteudoRestricao(crypto, conteudo, { ...vinculo, pacienteId: pacienteRollback, restricaoId: idRollback, finalidade: 'revisao_restricao' })]);
+    let auditoriasObservadas = 0;
+    const executorFalho = { executar: <T>(tenantId: string, fn: (g: EntityManager) => Promise<T>) =>
+      executorTenant!.executar(tenantId, async g => {
+        const original = g.getRepository.bind(g);
+        let auditorias = 0;
+        auditoriasObservadas = 0;
+        let preparado = false;
+        const spy = jest.spyOn(g, 'getRepository').mockImplementation(((entidade: unknown) => {
+          const repo = original(entidade as never);
+          if (entidade === UserActionLogOrm && !preparado) {
+            preparado = true;
+            const salvar = repo.save.bind(repo);
+            jest.spyOn(repo, 'save').mockImplementation((async (valor: never) => {
+              auditorias += 1;
+              auditoriasObservadas = auditorias;
+              if (auditorias === 2) throw new Error('auditoria sintética indisponível');
+              return salvar(valor);
+            }) as typeof repo.save);
+          }
+          return repo;
+        }) as typeof g.getRepository);
+        try { return await fn(g); } finally { spy.mockRestore(); }
+      }) };
+    async function prepararRejeicao() {
+      const paciente = randomUUID();
+      await cliente!.query('insert into pacientes(id,tenant_id,profissional_responsavel_id,nome_criptografado) values ($1,$2,$3,$4)',
+        [paciente, tenantP2, dados.profissionalId, Buffer.from('paciente-sintetico')]);
+      const avaliacao = await reconfirmar.garantirAvaliacaoInicial(usuario, paciente) as { id: string };
+      const restricao = await registro.registrar(usuario, paciente, { chaveCriacao: randomUUID(), conteudo }) as { id: string };
+      return { paciente, avaliacaoId: avaliacao.id, restricaoId: restricao.id };
+    }
+    // Controlador real e serviços reais contra runtime/RLS; apenas autenticação é sintética.
+    const pacienteHttp = randomUUID();
+    await cliente.query('insert into pacientes(id,tenant_id,profissional_responsavel_id,nome_criptografado) values ($1,$2,$3,$4)',
+      [pacienteHttp, tenantP2, dados.profissionalId, Buffer.from('paciente-sintetico')]);
+    await cliente.query(`insert into concessoes_permissao_usuario (tenant_id,usuario_id,permissao,concedida_por,motivo)
+      values ($1,$2,'restricoes.confirmar',$3,'habilitacao_administrativa')`, [tenantP2, outro.usuarioId, dados.usuarioId]);
+    const tenantHttpOutro = randomUUID();
+    await cliente.query('insert into tenants(id,nome,slug) values ($1,$2,$3)', [tenantHttpOutro, 'Outro tenant HTTP sintético', `http-sintetico-${tenantHttpOutro}`]);
+    await comoTenant(tenantHttpOutro);
+    const usuarioHttpTenantB = randomUUID(), profissionalHttpTenantB = randomUUID();
+    await cliente.query(`insert into usuarios(id,tenant_id,email_hash,email_criptografado,senha_hash,role)
+      values ($1,$2,$3,$4,'senha-sintetica','Professional')`, [usuarioHttpTenantB, tenantHttpOutro, `http-sintetico-${randomUUID()}`, Buffer.from('usuario-sintetico')]);
+    await cliente.query('insert into profissionais(id,tenant_id,usuario_id,nome_criptografado) values ($1,$2,$3,$4)',
+      [profissionalHttpTenantB, tenantHttpOutro, usuarioHttpTenantB, Buffer.from('profissional-sintetico')]);
+    await cliente.query(`insert into concessoes_permissao_usuario (tenant_id,usuario_id,permissao,concedida_por,motivo)
+      values ($1,$2,'restricoes.confirmar',$2,'habilitacao_administrativa')`, [tenantHttpOutro, usuarioHttpTenantB]);
+    await comoTenant(tenantP2);
+    const usuarioSemConcessao = randomUUID(), profissionalSemConcessao = randomUUID(), pacienteSemConcessao = randomUUID();
+    await cliente.query(`insert into usuarios(id,tenant_id,email_hash,email_criptografado,senha_hash,role)
+      values ($1,$2,$3,$4,'senha-sintetica','Professional')`, [usuarioSemConcessao, tenantP2, `http-sem-concessao-${randomUUID()}`, Buffer.from('usuario-sintetico')]);
+    await cliente.query('insert into profissionais(id,tenant_id,usuario_id,nome_criptografado) values ($1,$2,$3,$4)',
+      [profissionalSemConcessao, tenantP2, usuarioSemConcessao, Buffer.from('profissional-sintetico')]);
+    await cliente.query('insert into pacientes(id,tenant_id,profissional_responsavel_id,nome_criptografado) values ($1,$2,$3,$4)',
+      [pacienteSemConcessao, tenantP2, profissionalSemConcessao, Buffer.from('paciente-sintetico')]);
+    const atorOutro: UsuarioAutenticado = { tenantId: tenantP2, usuarioId: outro.usuarioId, papel: 'Professional', emailHash: '', permissoes: ['pacientes.ler', 'pacientes.gerenciar'] };
+    const atorHttp: UsuarioAutenticado = { ...usuario, permissoes: ['pacientes.ler', 'pacientes.gerenciar'] };
+    const atorTenantB: UsuarioAutenticado = { tenantId: tenantHttpOutro, usuarioId: usuarioHttpTenantB, papel: 'Professional', emailHash: '', permissoes: ['pacientes.ler', 'pacientes.gerenciar'] };
+    const atorSemConcessao: UsuarioAutenticado = { tenantId: tenantP2, usuarioId: usuarioSemConcessao, papel: 'Professional', emailHash: '', permissoes: ['pacientes.ler', 'pacientes.gerenciar'] };
+    const moduloHttp = await Test.createTestingModule({ controllers: [ControladorRestricoesClinicas], providers: [
+      { provide: ServicoLeituraRestricao, useValue: new ServicoLeituraRestricao(executorTenant, crypto, concessoes) },
+      { provide: ServicoConfirmacaoRestricao, useValue: confirmar }, { provide: ServicoRegistroPendenciaRestricao, useValue: registro },
+      { provide: ServicoReconfirmacaoRestricao, useValue: reconfirmar }, { provide: ServicoAuditoria, useValue: { registrar: async () => undefined } }
+    ] }).overrideGuard(GuardaJwt).useValue({ canActivate(contexto: ExecutionContext) {
+      const req = contexto.switchToHttp().getRequest();
+      const identidade = req.headers['x-identidade-sintetica'];
+      if (!identidade) throw new UnauthorizedException();
+      req.usuarioAutenticado = identidade === 'titular' ? atorHttp : identidade === 'sem-concessao' ? atorSemConcessao : identidade === 'outra-carteira' ? atorOutro :
+        identidade === 'outro-tenant' ? atorTenantB : { ...atorHttp, papel: 'Patient' };
+      return true;
+    } }).compile();
+    const appHttp = moduloHttp.createNestApplication<NestExpressApplication>({ rawBody: true, logger: false });
+    appHttp.use(middlewareRestricoesClinicas); appHttp.useBodyParser('json', { limit: '100kb' }); appHttp.use(middlewareErroRestricoesClinicas);
+    appHttp.useGlobalPipes(criarPipeValidacaoHttp());
+    try {
+      await appHttp.listen(0, '127.0.0.1');
+      const baseHttp = `http://127.0.0.1:${(appHttp.getHttpServer().address() as AddressInfo).port}/pacientes/${pacienteHttp}/restricoes`;
+      const chamada = (caminho: string, body: unknown, identidade = 'titular') => fetch(`${baseHttp}${caminho}`, { method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-identidade-sintetica': identidade }, body: JSON.stringify(body) });
+      const chaveHttp = randomUUID();
+      const primeiraHttp = await chamada('/registrar', { chaveCriacao: chaveHttp, conteudo });
+      expect(primeiraHttp.status).toBe(200); expect(primeiraHttp.headers.get('cache-control')).toBe('private, no-store');
+      const pendenciaHttp = await primeiraHttp.json() as { id: string; revisao: number; estado: string; confirmacao: string };
+      expect(pendenciaHttp).toEqual({ id: expect.any(String), revisao: 1, estado: 'ativa', confirmacao: 'pendente' });
+      const replayHttp = await chamada('/registrar', { chaveCriacao: chaveHttp, conteudo });
+      expect(replayHttp.status).toBe(200); expect(await replayHttp.json()).toEqual(pendenciaHttp);
+      expect((await cliente.query('select numero,evento from restricoes_pacientes_revisoes where restricao_id=$1', [pendenciaHttp.id])).rows)
+        .toEqual([{ numero: 1, evento: 'criacao' }]);
+      expect((await cliente.query("select id from user_action_logs where recurso_id=$1 and acao='restricoes.registrar_pendencia'", [pendenciaHttp.id])).rows).toHaveLength(1);
+      const outraCarteiraMesmoTitular = await fetch(`http://127.0.0.1:${(appHttp.getHttpServer().address() as AddressInfo).port}/pacientes/${outroDaCarteira}/restricoes/registrar`, {
+        method: 'POST', headers: { 'content-type': 'application/json', 'x-identidade-sintetica': 'titular' }, body: JSON.stringify({ chaveCriacao: chaveHttp, conteudo }) });
+      expect(outraCarteiraMesmoTitular.status).toBe(409);
+      expect((await cliente.query('select count(*)::int n from restricoes_pacientes where tenant_id=$1 and autor_usuario_id=$2 and chave_criacao=$3', [tenantP2, dados.usuarioId, chaveHttp])).rows).toEqual([{ n: 1 }]);
+      const propriaHttp = await chamada('/consultar', { restricaoId: pendenciaHttp.id });
+      expect(propriaHttp.status).toBe(200); expect(await propriaHttp.json()).toEqual({ ...pendenciaHttp, origem: 'profissional', conteudo });
+      const ausenteHttp = await chamada('/consultar', { restricaoId: randomUUID() });
+      expect(ausenteHttp.status).toBe(403); const respostaNegada = await ausenteHttp.json();
+      for (const identidade of ['outra-carteira', 'outro-tenant', 'patient']) {
+        const negada = await chamada('/consultar', { restricaoId: pendenciaHttp.id }, identidade);
+        expect(negada.status).toBe(403); expect(negada.headers.get('cache-control')).toBe('private, no-store');
+        expect(await negada.json()).toEqual(respostaNegada);
+      }
+      const inicialHttp = await chamada('/avaliacao/inicial', {});
+      expect(inicialHttp.status).toBe(200);
+      const avaliacaoHttp = await inicialHttp.json() as { id: string; revisao: number; situacao: string };
+      expect(avaliacaoHttp).toEqual({ id: expect.any(String), revisao: 1, situacao: 'nao_informado' });
+      const atestacaoHttp = { avaliacaoId: avaliacaoHttp.id, revisaoAvaliacao: 1, chaveIdempotencia: randomUUID(), meio: 'teleconsulta', atestacao: true, resultado: 'pendencia_mantida' };
+      const primeiraAtestacao = await chamada('/reconfirmar', atestacaoHttp); expect(primeiraAtestacao.status).toBe(200);
+      const ack = await primeiraAtestacao.json() as { id: string; resultado: string }; expect(ack).toEqual({ id: expect.any(String), resultado: 'pendencia_mantida' });
+      const repeticaoAtestacao = await chamada('/reconfirmar', atestacaoHttp); expect(repeticaoAtestacao.status).toBe(200); expect(await repeticaoAtestacao.json()).toEqual(ack);
+      expect((await cliente.query('select count(*)::int n from reconfirmacoes_restricoes where tenant_id=$1 and chave_idempotencia=$2', [tenantP2, atestacaoHttp.chaveIdempotencia])).rows).toEqual([{ n: 1 }]);
+      expect((await cliente.query("select id from user_action_logs where recurso_id=$1 and acao='restricoes.reconfirmacao_pendencia'", [ack.id])).rows).toHaveLength(1);
+      const confirmadaHttp = await chamada(`/${pendenciaHttp.id}/confirmar`, { revisao: 1 });
+      expect(confirmadaHttp.status).toBe(200); expect(await confirmadaHttp.json()).toEqual({ id: pendenciaHttp.id, revisao: 2, confirmacao: 'confirmada' });
+      expect((await chamada(`/${pendenciaHttp.id}/confirmar`, { revisao: 1 })).status).toBe(409);
+      const replayConfirmado = await chamada('/registrar', { chaveCriacao: chaveHttp, conteudo });
+      expect(replayConfirmado.status).toBe(200); expect(await replayConfirmado.json()).toEqual({ id: pendenciaHttp.id, revisao: 2, estado: 'ativa', confirmacao: 'confirmada' });
+      expect((await chamada('/reconfirmar', { ...atestacaoHttp, chaveIdempotencia: randomUUID(), resultado: 'sem_restricoes_declaradas', confirmacaoExplicitaAusencia: true })).status).toBe(409);
+      const reavaliadaHttp = await chamada(`/${pendenciaHttp.id}/reavaliar`, { revisao: 2, destino: 'em_reavaliacao' });
+      expect(reavaliadaHttp.status).toBe(200); expect(await reavaliadaHttp.json()).toEqual({ id: pendenciaHttp.id, revisao: 3, estado: 'em_reavaliacao' });
+      const inativadaHttp = await chamada(`/${pendenciaHttp.id}/inativar`, { revisao: 3, motivo: 'outro', justificativa: 'Justificativa sintética', confirmacaoEmDoisPassos: true });
+      expect(inativadaHttp.status).toBe(200); expect(await inativadaHttp.json()).toEqual({ id: pendenciaHttp.id, revisao: 4, estado: 'inativa' });
+      const baseSemConcessao = `http://127.0.0.1:${(appHttp.getHttpServer().address() as AddressInfo).port}/pacientes/${pacienteSemConcessao}/restricoes`;
+      const registrarSemConcessao = await fetch(`${baseSemConcessao}/registrar`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-identidade-sintetica': 'sem-concessao' },
+        body: JSON.stringify({ chaveCriacao: randomUUID(), conteudo }) });
+      expect(registrarSemConcessao.status).toBe(200);
+      const criadaSemConcessao = await registrarSemConcessao.json() as { id: string };
+      const negarConfirmacao = await fetch(`${baseSemConcessao}/${criadaSemConcessao.id}/confirmar`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-identidade-sintetica': 'sem-concessao' }, body: JSON.stringify({ revisao: 1 }) });
+      expect(negarConfirmacao.status).toBe(403); expect((await cliente.query('select confirmacao,revisao from restricoes_pacientes where id=$1', [criadaSemConcessao.id])).rows).toEqual([{ confirmacao: 'pendente', revisao: 1 }]);
+    } finally { await appHttp.close(); }
+    const casoLeitura = await prepararRejeicao();
+    const leitura = new ServicoLeituraRestricao(executorTenant, crypto, concessoes);
+    const projetada = await leitura.consultar(usuario, casoLeitura.paciente, casoLeitura.restricaoId);
+    expect(projetada).toEqual({ id: casoLeitura.restricaoId, revisao: 1, origem: 'profissional', estado: 'ativa', confirmacao: 'pendente', conteudo });
+    expect(JSON.stringify(projetada)).not.toMatch(/conteudoCriptografado|chaveCriacao|tenantId|pacienteId/);
+    await expect(leitura.consultar(usuario, casoLeitura.paciente, randomUUID())).rejects.toMatchObject({ status: 403, message: 'Operação não autorizada.' });
+    await expect(leitura.consultar(usuario, outroDaCarteira, casoLeitura.restricaoId)).rejects.toMatchObject({ status: 403, message: 'Operação não autorizada.' });
+    await expect(leitura.consultar(usuario, outro.pacienteId, casoLeitura.restricaoId)).rejects.toMatchObject({ status: 403, message: 'Operação não autorizada.' });
+    await expect(leitura.consultar(usuario, pacienteIdTenantB, casoLeitura.restricaoId)).rejects.toMatchObject({ status: 403, message: 'Operação não autorizada.' });
+    const auditoriasLeitura = await cliente.query("select acao,metadados from user_action_logs where recurso_id=$1 and acao='restricoes.consultar'", [casoLeitura.restricaoId]);
+    expect(auditoriasLeitura.rows).toEqual([{ acao: 'restricoes.consultar', metadados: {} }]);
+    await expect(new ServicoLeituraRestricao(executorAuditoriaFalha as ExecutorTenant, crypto, concessoes).consultar(usuario, casoLeitura.paciente, casoLeitura.restricaoId))
+      .rejects.toMatchObject({ status: 500, message: 'Operação indisponível.' });
+    expect((await cliente.query("select acao,metadados from user_action_logs where recurso_id=$1 and acao='restricoes.consultar'", [casoLeitura.restricaoId])).rows).toEqual(auditoriasLeitura.rows);
+    for (const isolamento of ['REPEATABLE READ', 'SERIALIZABLE'] as const) {
+      const isolado = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) => fonteDadosRuntime!.transaction(isolamento, async g => {
+        await g.query("select set_config('app.tenant_id', $1, true)", [t]); return fn(g);
+      }) };
+      await expect(new ServicoLeituraRestricao(isolado as ExecutorTenant, crypto, concessoes).consultar(usuario, casoLeitura.paciente, casoLeitura.restricaoId)).rejects.toMatchObject({ status: 409 });
+    }
+    const idDivergente = randomUUID();
+    const vinculoDivergente = { tenantId: tenantP2, pacienteId: casoLeitura.paciente, restricaoId: idDivergente, revisao: 1 };
+    const atualDivergente = cifrarConteudoRestricao(crypto, conteudo, { ...vinculoDivergente, finalidade: 'restricao' });
+    const historicoDivergente = cifrarConteudoRestricao(crypto, { ...conteudo, alvo: { tipo: 'alimento', id: 'outro-sintetico' } }, { ...vinculoDivergente, finalidade: 'revisao_restricao' });
+    await cliente.query(`insert into restricoes_pacientes (id,tenant_id,paciente_id,autor_usuario_id,chave_criacao,origem,conteudo_criptografado)
+      values ($1,$2,$3,$4,$5,'profissional',$6)`, [idDivergente, tenantP2, casoLeitura.paciente, dados.usuarioId, randomUUID(), atualDivergente]);
+    await cliente.query(`insert into restricoes_pacientes_revisoes (tenant_id,paciente_id,restricao_id,numero,evento,autor_usuario_id,conteudo_criptografado)
+      values ($1,$2,$3,1,'criacao',$4,$5)`, [tenantP2, casoLeitura.paciente, idDivergente, dados.usuarioId, historicoDivergente]);
+    await expect(leitura.consultar(usuario, casoLeitura.paciente, idDivergente)).rejects.toMatchObject({ status: 409 });
+    expect((await cliente.query("select id from user_action_logs where recurso_id=$1 and acao='restricoes.consultar'", [idDivergente])).rows).toEqual([]);
+    const idIlegivel = randomUUID();
+    const vinculoIlegivel = { tenantId: tenantP2, pacienteId: casoLeitura.paciente, restricaoId: idIlegivel, revisao: 1 };
+    const cifraIlegivel = cifrarConteudoRestricao(crypto, conteudo, { ...vinculoIlegivel, finalidade: 'restricao' });
+    cifraIlegivel[cifraIlegivel.length - 1] ^= 1;
+    const historicoIlegivel = cifrarConteudoRestricao(crypto, conteudo, { ...vinculoIlegivel, finalidade: 'revisao_restricao' });
+    await cliente.query(`insert into restricoes_pacientes (id,tenant_id,paciente_id,autor_usuario_id,chave_criacao,origem,conteudo_criptografado)
+      values ($1,$2,$3,$4,$5,'profissional',$6)`, [idIlegivel, tenantP2, casoLeitura.paciente, dados.usuarioId, randomUUID(), cifraIlegivel]);
+    await cliente.query(`insert into restricoes_pacientes_revisoes (tenant_id,paciente_id,restricao_id,numero,evento,autor_usuario_id,conteudo_criptografado)
+      values ($1,$2,$3,1,'criacao',$4,$5)`, [tenantP2, casoLeitura.paciente, idIlegivel, dados.usuarioId, historicoIlegivel]);
+    await expect(leitura.consultar(usuario, casoLeitura.paciente, idIlegivel)).rejects.toMatchObject({ status: 500, message: 'Operação indisponível.' });
+    expect((await cliente.query("select id from user_action_logs where recurso_id=$1 and acao='restricoes.consultar'", [idIlegivel])).rows).toEqual([]);
+    const idContraditorio = randomUUID();
+    const vinculoContraditorio = { tenantId: tenantP2, pacienteId: casoLeitura.paciente, restricaoId: idContraditorio, revisao: 1 };
+    const atualContraditoria = cifrarConteudoRestricao(crypto, conteudo, { ...vinculoContraditorio, finalidade: 'restricao' });
+    const historicoContraditorio = cifrarConteudoRestricao(crypto, conteudo, { ...vinculoContraditorio, finalidade: 'revisao_restricao' });
+    await cliente.query(`insert into restricoes_pacientes (id,tenant_id,paciente_id,autor_usuario_id,chave_criacao,origem,estado,confirmacao,confirmado_por_usuario_id,confirmado_em,conteudo_criptografado)
+      values ($1,$2,$3,$4,$5,'profissional','inativa','confirmada',$4,now(),$6)`, [idContraditorio, tenantP2, casoLeitura.paciente, dados.usuarioId, randomUUID(), atualContraditoria]);
+    await cliente.query(`insert into restricoes_pacientes_revisoes (tenant_id,paciente_id,restricao_id,numero,evento,autor_usuario_id,conteudo_criptografado)
+      values ($1,$2,$3,1,'criacao',$4,$5)`, [tenantP2, casoLeitura.paciente, idContraditorio, dados.usuarioId, historicoContraditorio]);
+    await expect(leitura.consultar(usuario, casoLeitura.paciente, idContraditorio)).rejects.toMatchObject({ status: 409 });
+    expect((await cliente.query("select id from user_action_logs where recurso_id=$1 and acao='restricoes.consultar'", [idContraditorio])).rows).toEqual([]);
+    async function provarCorridaLeitura(primeiro: 'ler' | 'inativar') {
+      const caso = await prepararRejeicao();
+      await confirmar.confirmar(usuario, caso.paciente, caso.restricaoId, 1);
+      let liberar!: () => void, avisarEscritor!: (pid: number) => void, avisarObservado!: (pid: number) => void;
+      const espera = new Promise<void>(resolve => { liberar = resolve; });
+      const escritorPronto = new Promise<number>(resolve => { avisarEscritor = resolve; });
+      const observadoPronto = new Promise<number>(resolve => { avisarObservado = resolve; });
+      const segurado = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) => executorTenant!.executar(t, async g => {
+        await g.query("set local statement_timeout = '12s'"); const pid = await g.query('select pg_backend_pid()::int as pid');
+        const resposta = await fn(g); avisarEscritor(pid[0].pid as number); await espera; return resposta;
+      }) };
+      const observado = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) => executorTenant!.executar(t, async g => {
+        await g.query("set local statement_timeout = '12s'"); await g.query("set local lock_timeout = '10s'");
+        const pid = await g.query('select pg_backend_pid()::int as pid'); avisarObservado(pid[0].pid as number); return fn(g);
+      }) };
+      const executar = (tipo: 'ler' | 'inativar', executor: ExecutorTenant) => tipo === 'ler'
+        ? new ServicoLeituraRestricao(executor, crypto, concessoes).consultar(usuario, caso.paciente, caso.restricaoId)
+        : new ServicoConfirmacaoRestricao(executor, crypto, concessoes).inativar(usuario, caso.paciente, caso.restricaoId, 2,
+          { motivo: 'outro', justificativa: 'Justificativa sintética', confirmacaoEmDoisPassos: true });
+      const primeira = executar(primeiro, segurado as ExecutorTenant);
+      let segundaResultado: Promise<PromiseSettledResult<unknown>[]> | undefined, respostaPrimeira: unknown;
+      try {
+        const pidEscritor = await limitarEsperaInicial(Promise.race([escritorPronto, primeira.then(() => { throw new Error('Escritor encerrou cedo.'); })]));
+        const segunda = executar(primeiro === 'ler' ? 'inativar' : 'ler', observado as ExecutorTenant);
+        segundaResultado = Promise.allSettled([segunda]);
+        const pid = await limitarEsperaInicial(Promise.race([observadoPronto, segunda.then(() => { throw new Error('Operação encerrou cedo.'); })]));
+        await esperarBloqueioReal(pid, pidEscritor);
+      } finally {
+        liberar();
+        const encerradas = await Promise.allSettled([limitarEsperaInicial(primeira), ...(segundaResultado ? [limitarEsperaInicial(segundaResultado)] : [])]);
+        for (const encerrada of encerradas) if (encerrada.status === 'rejected') throw encerrada.reason;
+        if (encerradas[0].status === 'fulfilled') respostaPrimeira = encerradas[0].value;
+      }
+      const [segunda] = await segundaResultado!;
+      expect(segunda.status).toBe('fulfilled');
+      if (segunda.status !== 'fulfilled') throw new Error('Operação serializada deveria concluir.');
+      const respostaLeitura = primeiro === 'ler' ? respostaPrimeira : segunda.value;
+      expect(respostaLeitura).toEqual({ id: caso.restricaoId, revisao: primeiro === 'ler' ? 2 : 3, origem: 'profissional',
+        estado: primeiro === 'ler' ? 'ativa' : 'inativa', confirmacao: 'confirmada', conteudo });
+      expect((await cliente!.query("select id from user_action_logs where recurso_id=$1 and acao='restricoes.consultar'", [caso.restricaoId])).rows).toHaveLength(1);
+      expect((await cliente!.query('select estado,revisao from restricoes_pacientes where id=$1', [caso.restricaoId])).rows).toEqual([{ estado: 'inativa', revisao: 3 }]);
+    }
+    await provarCorridaLeitura('ler');
+    await provarCorridaLeitura('inativar');
+    const casoReavaliacao = await prepararRejeicao();
+    await confirmar.confirmar(usuario, casoReavaliacao.paciente, casoReavaliacao.restricaoId, 1);
+    for (const pacienteAlheio of [outro.pacienteId, pacienteIdTenantB]) {
+      await expect(confirmar.alterarReavaliacao(usuario, pacienteAlheio, casoReavaliacao.restricaoId, 2, 'em_reavaliacao')).rejects.toMatchObject({ status: 403 });
+    }
+    for (const isolamento of ['REPEATABLE READ', 'SERIALIZABLE'] as const) {
+      const isolado = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) => fonteDadosRuntime!.transaction(isolamento, async g => {
+        await g.query("select set_config('app.tenant_id', $1, true)", [t]); return fn(g);
+      }) };
+      await expect(new ServicoConfirmacaoRestricao(isolado as ExecutorTenant, crypto, concessoes)
+        .alterarReavaliacao(usuario, casoReavaliacao.paciente, casoReavaliacao.restricaoId, 2, 'em_reavaliacao')).rejects.toMatchObject({ status: 409 });
+    }
+    const antesReavaliacao = await cliente.query('select estado,revisao,conteudo_criptografado from restricoes_pacientes where id=$1', [casoReavaliacao.restricaoId]);
+    await expect(new ServicoConfirmacaoRestricao(executorAuditoriaFalha as ExecutorTenant, crypto, concessoes)
+      .alterarReavaliacao(usuario, casoReavaliacao.paciente, casoReavaliacao.restricaoId, 2, 'em_reavaliacao'))
+      .rejects.toMatchObject({ status: 500, message: 'Operação indisponível.' });
+    expect((await cliente.query('select estado,revisao,conteudo_criptografado from restricoes_pacientes where id=$1', [casoReavaliacao.restricaoId])).rows).toEqual(antesReavaliacao.rows);
+    expect((await cliente.query('select numero from restricoes_pacientes_revisoes where restricao_id=$1 order by numero', [casoReavaliacao.restricaoId])).rows).toEqual([{ numero: 1 }, { numero: 2 }]);
+    await expect(confirmar.alterarReavaliacao(usuario, casoReavaliacao.paciente, casoReavaliacao.restricaoId, 2, 'em_reavaliacao'))
+      .resolves.toEqual({ id: casoReavaliacao.restricaoId, revisao: 3, estado: 'em_reavaliacao' });
+    await expect(confirmar.alterarReavaliacao(usuario, casoReavaliacao.paciente, casoReavaliacao.restricaoId, 2, 'em_reavaliacao')).rejects.toMatchObject({ status: 409 });
+    const registroReavaliado = await cliente.query('select estado,confirmacao,revisao,conteudo_criptografado from restricoes_pacientes where id=$1', [casoReavaliacao.restricaoId]);
+    expect(registroReavaliado.rows[0]).toMatchObject({ estado: 'em_reavaliacao', confirmacao: 'confirmada', revisao: 3 });
+    const baseReavaliacao = { tenantId: tenantP2, pacienteId: casoReavaliacao.paciente, restricaoId: casoReavaliacao.restricaoId, revisao: 3 };
+    expect(decifrarConteudoRestricao(crypto, registroReavaliado.rows[0].conteudo_criptografado, { ...baseReavaliacao, finalidade: 'restricao' })).toEqual(conteudo);
+    const revisaoReavaliada = await cliente.query("select conteudo_criptografado from restricoes_pacientes_revisoes where restricao_id=$1 and numero=3 and evento='reavaliacao'", [casoReavaliacao.restricaoId]);
+    expect(revisaoReavaliada.rows).toHaveLength(1);
+    expect(decifrarConteudoRestricao(crypto, revisaoReavaliada.rows[0].conteudo_criptografado, { ...baseReavaliacao, finalidade: 'revisao_restricao' })).toEqual(conteudo);
+    await expect(confirmar.alterarReavaliacao(usuario, casoReavaliacao.paciente, casoReavaliacao.restricaoId, 3, 'ativa'))
+      .resolves.toEqual({ id: casoReavaliacao.restricaoId, revisao: 4, estado: 'ativa' });
+    expect((await cliente.query('select numero,evento from restricoes_pacientes_revisoes where restricao_id=$1 order by numero', [casoReavaliacao.restricaoId])).rows)
+      .toEqual([{ numero: 1, evento: 'criacao' }, { numero: 2, evento: 'confirmacao' }, { numero: 3, evento: 'reavaliacao' }, { numero: 4, evento: 'reativacao' }]);
+    expect((await cliente.query("select acao from user_action_logs where recurso_id=$1 and acao in ('restricoes.reavaliar','restricoes.reativar') order by acao", [casoReavaliacao.restricaoId])).rows)
+      .toEqual([{ acao: 'restricoes.reativar' }, { acao: 'restricoes.reavaliar' }]);
+    async function provarCorridaReavaliacao(primeiro: 'reavaliar' | 'inativar') {
+      const caso = await prepararRejeicao();
+      await confirmar.confirmar(usuario, caso.paciente, caso.restricaoId, 1);
+      let liberar!: () => void, avisarEscritor!: (pid: number) => void, avisarObservado!: (pid: number) => void;
+      const espera = new Promise<void>(resolve => { liberar = resolve; });
+      const escritorPronto = new Promise<number>(resolve => { avisarEscritor = resolve; });
+      const observadoPronto = new Promise<number>(resolve => { avisarObservado = resolve; });
+      const segurado = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) => executorTenant!.executar(t, async g => {
+        await g.query("set local statement_timeout = '12s'"); const pid = await g.query('select pg_backend_pid()::int as pid');
+        const resposta = await fn(g); avisarEscritor(pid[0].pid as number); await espera; return resposta;
+      }) };
+      const observado = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) => executorTenant!.executar(t, async g => {
+        await g.query("set local statement_timeout = '12s'"); await g.query("set local lock_timeout = '10s'");
+        const pid = await g.query('select pg_backend_pid()::int as pid'); avisarObservado(pid[0].pid as number); return fn(g);
+      }) };
+      const executar = (tipo: 'reavaliar' | 'inativar', executor: ExecutorTenant) => {
+        const servico = new ServicoConfirmacaoRestricao(executor, crypto, concessoes);
+        return tipo === 'reavaliar' ? servico.alterarReavaliacao(usuario, caso.paciente, caso.restricaoId, 2, 'em_reavaliacao')
+          : servico.inativar(usuario, caso.paciente, caso.restricaoId, 2, { motivo: 'outro', justificativa: 'Justificativa sintética', confirmacaoEmDoisPassos: true });
+      };
+      const primeira = executar(primeiro, segurado as ExecutorTenant);
+      let resultadoSegundo: Promise<PromiseSettledResult<unknown>[]> | undefined;
+      try {
+        const pidEscritor = await limitarEsperaInicial(Promise.race([escritorPronto, primeira.then(() => { throw new Error('Escritor encerrou cedo.'); })]));
+        const segunda = executar(primeiro === 'reavaliar' ? 'inativar' : 'reavaliar', observado as ExecutorTenant);
+        resultadoSegundo = Promise.allSettled([segunda]);
+        const pid = await limitarEsperaInicial(Promise.race([observadoPronto, segunda.then(() => { throw new Error('Operação encerrou cedo.'); })]));
+        await esperarBloqueioReal(pid, pidEscritor);
+      } finally {
+        liberar();
+        const encerradas = await Promise.allSettled([limitarEsperaInicial(primeira), ...(resultadoSegundo ? [limitarEsperaInicial(resultadoSegundo)] : [])]);
+        for (const encerrada of encerradas) if (encerrada.status === 'rejected') throw encerrada.reason;
+      }
+      const [segunda] = await resultadoSegundo!;
+      expect(segunda.status).toBe('rejected');
+      if (segunda.status !== 'rejected') throw new Error('Transição concorrente deveria falhar.');
+      expect(segunda.reason).toMatchObject({ status: 409 });
+      expect((await cliente!.query('select estado,revisao from restricoes_pacientes where id=$1', [caso.restricaoId])).rows)
+        .toEqual([{ estado: primeiro === 'reavaliar' ? 'em_reavaliacao' : 'inativa', revisao: 3 }]);
+    }
+    await provarCorridaReavaliacao('reavaliar');
+    await provarCorridaReavaliacao('inativar');
+    async function provarCorridaReavaliacaoReconfirmacao(primeiro: 'reavaliar' | 'reconfirmar', resultado: 'sem_alteracao' | 'pendencia_mantida' | 'alteracao_informada', avaliacaoConfirmada: boolean) {
+      const caso = await prepararRejeicao();
+      await confirmar.confirmar(usuario, caso.paciente, caso.restricaoId, 1);
+      if (avaliacaoConfirmada) {
+        await cliente!.query(`update avaliacoes_restricoes_pacientes set situacao='restricoes_registradas',revisao=2,
+          confirmado_por_usuario_id=$2,confirmado_em=now(),vence_em=now()+interval '10 days' where id=$1`, [caso.avaliacaoId, dados.usuarioId]);
+        await cliente!.query(`insert into avaliacoes_restricoes_revisoes (tenant_id,paciente_id,avaliacao_id,numero,situacao,autor_usuario_id,vence_em)
+          select tenant_id,paciente_id,id,2,situacao,$2,vence_em from avaliacoes_restricoes_pacientes where id=$1`, [caso.avaliacaoId, dados.usuarioId]);
+      }
+      const revisaoAvaliacao = avaliacaoConfirmada ? 2 : 1;
+      const pedido = { avaliacaoId: caso.avaliacaoId, revisaoAvaliacao, restricaoId: caso.restricaoId, revisaoRestricao: 2,
+        chaveIdempotencia: randomUUID(), meio: 'teleconsulta', atestacao: true };
+      let liberar!: () => void, avisarEscritor!: (pid: number) => void, avisarObservado!: (pid: number) => void;
+      const espera = new Promise<void>(resolve => { liberar = resolve; });
+      const escritorPronto = new Promise<number>(resolve => { avisarEscritor = resolve; });
+      const observadoPronto = new Promise<number>(resolve => { avisarObservado = resolve; });
+      const segurado = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) => executorTenant!.executar(t, async g => {
+        await g.query("set local statement_timeout = '12s'"); const pid = await g.query('select pg_backend_pid()::int as pid');
+        const resposta = await fn(g); avisarEscritor(pid[0].pid as number); await espera; return resposta;
+      }) };
+      const observado = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) => executorTenant!.executar(t, async g => {
+        await g.query("set local statement_timeout = '12s'"); await g.query("set local lock_timeout = '10s'");
+        const pid = await g.query('select pg_backend_pid()::int as pid'); avisarObservado(pid[0].pid as number); return fn(g);
+      }) };
+      const executar = (tipo: 'reavaliar' | 'reconfirmar', executor: ExecutorTenant) => {
+        if (tipo === 'reavaliar') return new ServicoConfirmacaoRestricao(executor, crypto, concessoes)
+          .alterarReavaliacao(usuario, caso.paciente, caso.restricaoId, 2, 'em_reavaliacao');
+        const servico = new ServicoReconfirmacaoRestricao(executor, crypto, concessoes);
+        return resultado === 'sem_alteracao' ? servico.registrarSemAlteracaoIndividual(usuario, caso.paciente, pedido)
+          : resultado === 'pendencia_mantida' ? servico.registrarPendenciaIndividual(usuario, caso.paciente, pedido)
+            : servico.registrarAlteracaoInformadaIndividual(usuario, caso.paciente, pedido);
+      };
+      const primeira = executar(primeiro, segurado as ExecutorTenant);
+      let resultadoSegundo: Promise<PromiseSettledResult<unknown>[]> | undefined;
+      let respostaPrimeiro: unknown;
+      try {
+        const pidEscritor = await limitarEsperaInicial(Promise.race([escritorPronto, primeira.then(() => { throw new Error('Escritor encerrou cedo.'); })]));
+        const segunda = executar(primeiro === 'reavaliar' ? 'reconfirmar' : 'reavaliar', observado as ExecutorTenant);
+        resultadoSegundo = Promise.allSettled([segunda]);
+        const pid = await limitarEsperaInicial(Promise.race([observadoPronto, segunda.then(() => { throw new Error('Operação encerrou cedo.'); })]));
+        await esperarBloqueioReal(pid, pidEscritor);
+      } finally {
+        liberar();
+        const encerradas = await Promise.allSettled([limitarEsperaInicial(primeira), ...(resultadoSegundo ? [limitarEsperaInicial(resultadoSegundo)] : [])]);
+        for (const encerrada of encerradas) if (encerrada.status === 'rejected') throw encerrada.reason;
+        if (encerradas[0].status === 'fulfilled') respostaPrimeiro = encerradas[0].value;
+      }
+      const [segunda] = await resultadoSegundo!;
+      if (primeiro === 'reavaliar') {
+        expect(segunda.status).toBe('rejected');
+        if (segunda.status !== 'rejected') throw new Error('Reconfirmação obsoleta deveria falhar.');
+        expect(segunda.reason).toMatchObject({ status: 409 });
+        expect((await cliente!.query('select id from reconfirmacoes_restricoes where tenant_id=$1 and chave_idempotencia=$2', [tenantP2, pedido.chaveIdempotencia])).rows).toEqual([]);
+      } else {
+        expect(segunda.status).toBe('fulfilled');
+        const ack = respostaPrimeiro as { id: string; resultado: string; escopo: string; revisaoAvaliacao: number; revisaoRestricao: number };
+        expect(ack).toEqual({ id: expect.any(String), resultado, escopo: 'restricao_individual', revisaoAvaliacao, revisaoRestricao: 2 });
+        await expect(executar('reconfirmar', executorTenant!)).resolves.toEqual(ack);
+        expect((await cliente!.query("select id from user_action_logs where recurso_id=$1 and acao='restricoes.reconfirmacao_individual'", [ack.id])).rows).toHaveLength(1);
+      }
+      expect((await cliente!.query('select estado,confirmacao,revisao from restricoes_pacientes where id=$1', [caso.restricaoId])).rows)
+        .toEqual([{ estado: 'em_reavaliacao', confirmacao: 'confirmada', revisao: 3 }]);
+      const invalidada = avaliacaoConfirmada && primeiro === 'reconfirmar' && resultado !== 'sem_alteracao';
+      expect((await cliente!.query('select situacao,revisao from avaliacoes_restricoes_pacientes where id=$1', [caso.avaliacaoId])).rows)
+        .toEqual([{ situacao: invalidada || !avaliacaoConfirmada ? 'nao_informado' : 'restricoes_registradas', revisao: revisaoAvaliacao + (invalidada ? 1 : 0) }]);
+      const marcadores = await cliente!.query(`select confirmado_por_usuario_id is not null as autor, confirmado_em is not null as confirmado,
+        vence_em is not null as vencimento from avaliacoes_restricoes_pacientes where id=$1`, [caso.avaliacaoId]);
+      const confirmacaoPreservada = avaliacaoConfirmada && !invalidada;
+      expect(marcadores.rows).toEqual([{ autor: confirmacaoPreservada, confirmado: confirmacaoPreservada, vencimento: confirmacaoPreservada }]);
+      expect((await cliente!.query("select id from user_action_logs where recurso_id=$1 and acao='restricoes.avaliacao_invalidada'", [caso.avaliacaoId])).rows)
+        .toHaveLength(invalidada ? 1 : 0);
+      if (invalidada) expect((await cliente!.query('select situacao,vence_em from avaliacoes_restricoes_revisoes where avaliacao_id=$1 and numero=$2', [caso.avaliacaoId, revisaoAvaliacao + 1])).rows)
+        .toEqual([{ situacao: 'nao_informado', vence_em: null }]);
+    }
+    for (const avaliacaoConfirmada of [false, true]) {
+      for (const resultado of ['sem_alteracao', 'pendencia_mantida', 'alteracao_informada'] as const) {
+        await provarCorridaReavaliacaoReconfirmacao('reavaliar', resultado, avaliacaoConfirmada);
+        await provarCorridaReavaliacaoReconfirmacao('reconfirmar', resultado, avaliacaoConfirmada);
+      }
+    }
+    const casoRejeicao = await prepararRejeicao();
+    const justificativaRejeicao = { justificativa: 'Justificativa sintética' };
+    await expect(confirmar.rejeitar(usuario, outro.pacienteId, casoRejeicao.restricaoId, 1, justificativaRejeicao)).rejects.toMatchObject({ status: 403 });
+    await expect(confirmar.rejeitar(usuario, pacienteIdTenantB, casoRejeicao.restricaoId, 1, justificativaRejeicao)).rejects.toMatchObject({ status: 403 });
+    for (const isolamento of ['REPEATABLE READ', 'SERIALIZABLE'] as const) {
+      const isolado = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) => fonteDadosRuntime!.transaction(isolamento, async g => {
+        await g.query("select set_config('app.tenant_id', $1, true)", [t]); return fn(g);
+      }) };
+      await expect(new ServicoConfirmacaoRestricao(isolado as ExecutorTenant, crypto, concessoes)
+        .rejeitar(usuario, casoRejeicao.paciente, casoRejeicao.restricaoId, 1, justificativaRejeicao)).rejects.toMatchObject({ status: 409 });
+    }
+    await cliente.query(`update avaliacoes_restricoes_pacientes set situacao='sem_restricoes_confirmadas',revisao=2,
+      confirmado_por_usuario_id=$2,confirmado_em=now(),vence_em=now()+interval '10 days' where id=$1`, [casoRejeicao.avaliacaoId, dados.usuarioId]);
+    await cliente.query(`insert into avaliacoes_restricoes_revisoes (tenant_id,paciente_id,avaliacao_id,numero,situacao,autor_usuario_id,vence_em)
+      select tenant_id,paciente_id,id,2,situacao,$2,vence_em from avaliacoes_restricoes_pacientes where id=$1`, [casoRejeicao.avaliacaoId, dados.usuarioId]);
+    const estadoRejeicaoAntes = await cliente.query('select revisao,confirmacao,conteudo_criptografado from restricoes_pacientes where id=$1', [casoRejeicao.restricaoId]);
+    const avaliacaoRejeicaoAntes = await cliente.query('select situacao,revisao,vence_em from avaliacoes_restricoes_pacientes where id=$1', [casoRejeicao.avaliacaoId]);
+    await expect(new ServicoConfirmacaoRestricao(executorFalho as ExecutorTenant, crypto, concessoes)
+      .rejeitar(usuario, casoRejeicao.paciente, casoRejeicao.restricaoId, 1, justificativaRejeicao))
+      .rejects.toMatchObject({ status: 500, message: 'Operação indisponível.' });
+    expect(auditoriasObservadas).toBe(2);
+    expect((await cliente.query('select revisao,confirmacao,conteudo_criptografado from restricoes_pacientes where id=$1', [casoRejeicao.restricaoId])).rows).toEqual(estadoRejeicaoAntes.rows);
+    expect((await cliente.query('select situacao,revisao,vence_em from avaliacoes_restricoes_pacientes where id=$1', [casoRejeicao.avaliacaoId])).rows).toEqual(avaliacaoRejeicaoAntes.rows);
+    expect((await cliente.query('select numero from restricoes_pacientes_revisoes where restricao_id=$1 order by numero', [casoRejeicao.restricaoId])).rows).toEqual([{ numero: 1 }]);
+    expect((await cliente.query('select numero from avaliacoes_restricoes_revisoes where avaliacao_id=$1 order by numero', [casoRejeicao.avaliacaoId])).rows).toEqual([{ numero: 1 }, { numero: 2 }]);
+    await expect(confirmar.rejeitar(usuario, casoRejeicao.paciente, casoRejeicao.restricaoId, 1, justificativaRejeicao))
+      .resolves.toEqual({ id: casoRejeicao.restricaoId, revisao: 2, confirmacao: 'rejeitada' });
+    await expect(confirmar.rejeitar(usuario, casoRejeicao.paciente, casoRejeicao.restricaoId, 1, justificativaRejeicao)).rejects.toMatchObject({ status: 409 });
+    const rejeitada = await cliente.query('select revisao,confirmacao,conteudo_criptografado from restricoes_pacientes where id=$1', [casoRejeicao.restricaoId]);
+    expect(rejeitada.rows[0]).toMatchObject({ revisao: 2, confirmacao: 'rejeitada' });
+    const baseRejeicao = { tenantId: tenantP2, pacienteId: casoRejeicao.paciente, restricaoId: casoRejeicao.restricaoId, revisao: 2 };
+    expect(decifrarConteudoRestricao(crypto, rejeitada.rows[0].conteudo_criptografado, { ...baseRejeicao, finalidade: 'restricao' })).toEqual(conteudo);
+    const historicoRejeicao = await cliente.query("select conteudo_criptografado,justificativa_criptografada from restricoes_pacientes_revisoes where restricao_id=$1 and numero=2 and evento='rejeicao'", [casoRejeicao.restricaoId]);
+    expect(historicoRejeicao.rows).toHaveLength(1);
+    expect(decifrarConteudoRestricao(crypto, historicoRejeicao.rows[0].conteudo_criptografado, { ...baseRejeicao, finalidade: 'revisao_restricao' })).toEqual(conteudo);
+    expect(decifrarCampo(crypto, 'restricoes_pacientes_revisoes.justificativa_criptografada', historicoRejeicao.rows[0].justificativa_criptografada,
+      { tenantId: tenantP2, pacienteId: casoRejeicao.paciente, registroId: casoRejeicao.restricaoId, revisao: 2 })).toBe(justificativaRejeicao.justificativa);
+    expect((await cliente.query('select situacao,revisao from avaliacoes_restricoes_pacientes where id=$1', [casoRejeicao.avaliacaoId])).rows).toEqual([{ situacao: 'nao_informado', revisao: 3 }]);
+    expect((await cliente.query("select acao from user_action_logs where recurso_id=any($1::uuid[]) and acao in ('restricoes.avaliacao_invalidada','restricoes.rejeitar') order by acao", [[casoRejeicao.avaliacaoId, casoRejeicao.restricaoId]])).rows)
+      .toEqual([{ acao: 'restricoes.avaliacao_invalidada' }, { acao: 'restricoes.rejeitar' }]);
+    async function provarCorridaRejeicao(primeiro: 'confirmar' | 'rejeitar') {
+      const caso = await prepararRejeicao();
+      let liberar!: () => void, avisarEscritor!: (pid: number) => void, avisarObservado!: (pid: number) => void;
+      const espera = new Promise<void>(resolve => { liberar = resolve; });
+      const escritorPronto = new Promise<number>(resolve => { avisarEscritor = resolve; });
+      const observadoPronto = new Promise<number>(resolve => { avisarObservado = resolve; });
+      const segurado = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) => executorTenant!.executar(t, async g => {
+        await g.query("set local statement_timeout = '12s'");
+        const pid = await g.query('select pg_backend_pid()::int as pid');
+        const resposta = await fn(g); avisarEscritor(pid[0].pid as number); await espera; return resposta;
+      }) };
+      const observado = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) => executorTenant!.executar(t, async g => {
+        await g.query("set local statement_timeout = '12s'"); await g.query("set local lock_timeout = '10s'");
+        const pid = await g.query('select pg_backend_pid()::int as pid'); avisarObservado(pid[0].pid as number); return fn(g);
+      }) };
+      const executar = (tipo: 'confirmar' | 'rejeitar', executor: ExecutorTenant) => {
+        const servico = new ServicoConfirmacaoRestricao(executor, crypto, concessoes);
+        return tipo === 'confirmar' ? servico.confirmar(usuario, caso.paciente, caso.restricaoId, 1)
+          : servico.rejeitar(usuario, caso.paciente, caso.restricaoId, 1, justificativaRejeicao);
+      };
+      const primeira = executar(primeiro, segurado as ExecutorTenant);
+      let segundaResultado: Promise<PromiseSettledResult<unknown>[]> | undefined;
+      try {
+        const pidEscritor = await limitarEsperaInicial(Promise.race([escritorPronto, primeira.then(() => { throw new Error('Escritor encerrou cedo.'); })]));
+        const segunda = executar(primeiro === 'confirmar' ? 'rejeitar' : 'confirmar', observado as ExecutorTenant);
+        segundaResultado = Promise.allSettled([segunda]);
+        const pid = await limitarEsperaInicial(Promise.race([observadoPronto, segunda.then(() => { throw new Error('Operação encerrou cedo.'); })]));
+        await esperarBloqueioReal(pid, pidEscritor);
+      } finally {
+        liberar();
+        const encerradas = await Promise.allSettled([limitarEsperaInicial(primeira), ...(segundaResultado ? [limitarEsperaInicial(segundaResultado)] : [])]);
+        for (const encerrada of encerradas) if (encerrada.status === 'rejected') throw encerrada.reason;
+      }
+      const segunda = (await segundaResultado!)[0];
+      expect(segunda.status).toBe('rejected');
+      if (segunda.status !== 'rejected') throw new Error('Transição concorrente deveria falhar.');
+      expect(segunda.reason).toMatchObject({ status: 409 });
+      expect((await cliente!.query('select confirmacao,revisao from restricoes_pacientes where id=$1', [caso.restricaoId])).rows)
+        .toEqual([{ confirmacao: primeiro === 'confirmar' ? 'confirmada' : 'rejeitada', revisao: 2 }]);
+      expect((await cliente!.query('select numero,evento from restricoes_pacientes_revisoes where restricao_id=$1 order by numero', [caso.restricaoId])).rows)
+        .toEqual([{ numero: 1, evento: 'criacao' }, { numero: 2, evento: primeiro === 'confirmar' ? 'confirmacao' : 'rejeicao' }]);
+    }
+    await provarCorridaRejeicao('confirmar');
+    await provarCorridaRejeicao('rejeitar');
+    async function provarCorridaAusenciaRejeicao(primeiro: 'ausencia' | 'rejeicao') {
+      const caso = await prepararRejeicao();
+      const pedidoAusencia = { avaliacaoId: caso.avaliacaoId, revisaoAvaliacao: 1, chaveIdempotencia: randomUUID(),
+        meio: 'teleconsulta', atestacao: true, confirmacaoExplicitaAusencia: true };
+      let liberar!: () => void, avisarEscritor!: (pid: number) => void, avisarObservado!: (pid: number) => void;
+      const espera = new Promise<void>(resolve => { liberar = resolve; });
+      const escritorPronto = new Promise<number>(resolve => { avisarEscritor = resolve; });
+      const observadoPronto = new Promise<number>(resolve => { avisarObservado = resolve; });
+      const segurado = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) => executorTenant!.executar(t, async g => {
+        await g.query("set local statement_timeout = '12s'");
+        const pid = await g.query('select pg_backend_pid()::int as pid');
+        if (primeiro === 'ausencia') {
+          await autorizarRestricaoClinica(g, concessoes, usuario, caso.paciente);
+          avisarEscritor(pid[0].pid as number); await espera;
+          return fn(g);
+        }
+        const resposta = await fn(g); avisarEscritor(pid[0].pid as number); await espera; return resposta;
+      }) };
+      const observado = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) => executorTenant!.executar(t, async g => {
+        await g.query("set local statement_timeout = '12s'"); await g.query("set local lock_timeout = '10s'");
+        const pid = await g.query('select pg_backend_pid()::int as pid'); avisarObservado(pid[0].pid as number); return fn(g);
+      }) };
+      const executar = (tipo: 'ausencia' | 'rejeicao', executor: ExecutorTenant) => tipo === 'ausencia'
+        ? new ServicoReconfirmacaoRestricao(executor, crypto, concessoes).registrarAusenciaDeclarada(usuario, caso.paciente, pedidoAusencia)
+        : new ServicoConfirmacaoRestricao(executor, crypto, concessoes).rejeitar(usuario, caso.paciente, caso.restricaoId, 1, justificativaRejeicao);
+      const primeira = executar(primeiro, segurado as ExecutorTenant);
+      const resultadoPrimeiro = Promise.allSettled([primeira]);
+      let resultadoSegundo: Promise<PromiseSettledResult<unknown>[]> | undefined;
+      try {
+        const pidEscritor = await limitarEsperaInicial(Promise.race([escritorPronto, primeira.then(() => { throw new Error('Escritor encerrou cedo.'); })]));
+        const segunda = executar(primeiro === 'ausencia' ? 'rejeicao' : 'ausencia', observado as ExecutorTenant);
+        resultadoSegundo = Promise.allSettled([segunda]);
+        const pid = await limitarEsperaInicial(Promise.race([observadoPronto, segunda.then(() => { throw new Error('Operação encerrou cedo.'); })]));
+        await esperarBloqueioReal(pid, pidEscritor);
+      } finally { liberar(); }
+      const [a] = await limitarEsperaInicial(resultadoPrimeiro);
+      const [b] = await limitarEsperaInicial(resultadoSegundo!);
+      if (primeiro === 'ausencia') {
+        expect(a.status).toBe('rejected');
+        if (a.status !== 'rejected') throw new Error('Ausência com pendência deveria falhar.');
+        expect(a.reason).toMatchObject({ status: 409 }); expect(b.status).toBe('fulfilled');
+      } else { expect(a.status).toBe('fulfilled'); expect(b.status).toBe('fulfilled'); }
+      expect((await cliente!.query('select confirmacao,revisao from restricoes_pacientes where id=$1', [caso.restricaoId])).rows)
+        .toEqual([{ confirmacao: 'rejeitada', revisao: 2 }]);
+      expect((await cliente!.query('select situacao,revisao from avaliacoes_restricoes_pacientes where id=$1', [caso.avaliacaoId])).rows)
+        .toEqual([{ situacao: primeiro === 'ausencia' ? 'nao_informado' : 'sem_restricoes_confirmadas', revisao: primeiro === 'ausencia' ? 1 : 2 }]);
+    }
+    await provarCorridaAusenciaRejeicao('ausencia');
+    await provarCorridaAusenciaRejeicao('rejeicao');
+    const pacienteAusenciaRecon = randomUUID();
+    await cliente.query('insert into pacientes(id,tenant_id,profissional_responsavel_id,nome_criptografado) values ($1,$2,$3,$4)',
+      [pacienteAusenciaRecon, tenantP2, dados.profissionalId, Buffer.from('paciente-sintetico')]);
+    const avaliacaoAusenciaRecon = await cliente.query<{ id: string }>(`insert into avaliacoes_restricoes_pacientes
+      (tenant_id,paciente_id,situacao,confirmado_por_usuario_id,confirmado_em,vence_em)
+      values ($1,$2,'sem_restricoes_confirmadas',$3,now(),now() + interval '10 days') returning id`,
+      [tenantP2, pacienteAusenciaRecon, dados.usuarioId]);
+    const idAvaliacaoAusenciaRecon = avaliacaoAusenciaRecon.rows[0].id;
+    await cliente.query(`insert into avaliacoes_restricoes_revisoes
+      (tenant_id,paciente_id,avaliacao_id,numero,situacao,autor_usuario_id,vence_em)
+      select tenant_id,paciente_id,id,1,situacao,$2,vence_em from avaliacoes_restricoes_pacientes where id=$1`,
+      [idAvaliacaoAusenciaRecon, dados.usuarioId]);
+    const estadoAusenciaAntes = await cliente.query('select situacao,revisao,confirmado_por_usuario_id,confirmado_em,vence_em from avaliacoes_restricoes_pacientes where id=$1', [idAvaliacaoAusenciaRecon]);
+    const pedidoAusenciaRecon = { avaliacaoId: idAvaliacaoAusenciaRecon, revisaoAvaliacao: 1, chaveIdempotencia: randomUUID(), meio: 'teleconsulta', atestacao: true };
+    const reconfirmarComFalha = new ServicoReconfirmacaoRestricao(executorFalho as ExecutorTenant, crypto, concessoes);
+    await expect(reconfirmarComFalha.registrarAlteracaoInformada(usuario, pacienteAusenciaRecon, pedidoAusenciaRecon))
+      .rejects.toMatchObject({ status: 500, message: 'Operação indisponível.' });
+    expect(auditoriasObservadas).toBe(2);
+    expect((await cliente.query('select situacao,revisao,confirmado_por_usuario_id,confirmado_em,vence_em from avaliacoes_restricoes_pacientes where id=$1', [idAvaliacaoAusenciaRecon])).rows).toEqual(estadoAusenciaAntes.rows);
+    expect((await cliente.query('select numero from avaliacoes_restricoes_revisoes where avaliacao_id=$1 order by numero', [idAvaliacaoAusenciaRecon])).rows).toEqual([{ numero: 1 }]);
+    expect((await cliente.query('select id from reconfirmacoes_restricoes where tenant_id=$1 and chave_idempotencia=$2', [tenantP2, pedidoAusenciaRecon.chaveIdempotencia])).rows).toEqual([]);
+    expect((await cliente.query('select id from user_action_logs where recurso_id=$1', [idAvaliacaoAusenciaRecon])).rows).toEqual([]);
+    const alteracaoAusencia = await reconfirmar.registrarAlteracaoInformada(usuario, pacienteAusenciaRecon, pedidoAusenciaRecon) as { id: string; resultado: string };
+    expect(alteracaoAusencia.resultado).toBe('alteracao_informada');
+    expect((await cliente.query('select situacao,revisao,confirmado_por_usuario_id,confirmado_em,vence_em from avaliacoes_restricoes_pacientes where id=$1', [idAvaliacaoAusenciaRecon])).rows)
+      .toEqual([{ situacao: 'nao_informado', revisao: 2, confirmado_por_usuario_id: null, confirmado_em: null, vence_em: null }]);
+    expect((await cliente.query('select numero,situacao from avaliacoes_restricoes_revisoes where avaliacao_id=$1 order by numero', [idAvaliacaoAusenciaRecon])).rows)
+      .toEqual([{ numero: 1, situacao: 'sem_restricoes_confirmadas' }, { numero: 2, situacao: 'nao_informado' }]);
+    expect((await cliente.query('select revisao_avaliacao from reconfirmacoes_restricoes where id=$1', [alteracaoAusencia.id])).rows).toEqual([{ revisao_avaliacao: 1 }]);
+    expect((await cliente.query('select acao from user_action_logs where recurso_id=any($1::uuid[]) order by acao', [[idAvaliacaoAusenciaRecon, alteracaoAusencia.id]])).rows)
+      .toEqual([{ acao: 'restricoes.avaliacao_invalidada' }, { acao: 'restricoes.reconfirmacao_alteracao' }]);
+    const pacienteRenovacao = randomUUID();
+    await cliente.query('insert into pacientes(id,tenant_id,profissional_responsavel_id,nome_criptografado) values ($1,$2,$3,$4)',
+      [pacienteRenovacao, tenantP2, dados.profissionalId, Buffer.from('paciente-sintetico')]);
+    const avaliacaoRenovacao = await cliente.query<{ id: string }>(`insert into avaliacoes_restricoes_pacientes
+      (tenant_id,paciente_id,situacao,confirmado_por_usuario_id,confirmado_em,vence_em)
+      values ($1,$2,'sem_restricoes_confirmadas',$3,now(),now() + interval '10 days') returning id`,
+      [tenantP2, pacienteRenovacao, dados.usuarioId]);
+    const idAvaliacaoRenovacao = avaliacaoRenovacao.rows[0].id;
+    await cliente.query(`insert into avaliacoes_restricoes_revisoes
+      (tenant_id,paciente_id,avaliacao_id,numero,situacao,autor_usuario_id,vence_em)
+      select tenant_id,paciente_id,id,1,situacao,$2,vence_em from avaliacoes_restricoes_pacientes where id=$1`,
+      [idAvaliacaoRenovacao, dados.usuarioId]);
+    const pedidoRenovacao = { avaliacaoId: idAvaliacaoRenovacao, revisaoAvaliacao: 1, chaveIdempotencia: randomUUID(), meio: 'teleconsulta', atestacao: true };
+    await expect(reconfirmar.registrarSemAlteracao(usuario, outro.pacienteId, pedidoRenovacao)).rejects.toMatchObject({ status: 403 });
+    await expect(reconfirmar.registrarSemAlteracao(usuario, pacienteIdTenantB, pedidoRenovacao)).rejects.toMatchObject({ status: 403 });
+    for (const isolamento of ['REPEATABLE READ', 'SERIALIZABLE'] as const) {
+      if (!fonteDadosRuntime) throw new Error('DataSource runtime não inicializado.');
+      const executorIsolado = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) =>
+        fonteDadosRuntime!.transaction(isolamento, async g => {
+          await g.query("select set_config('app.tenant_id', $1, true)", [t]);
+          return fn(g);
+        }) };
+      const servicoIsolado = new ServicoReconfirmacaoRestricao(executorIsolado as ExecutorTenant, crypto, concessoes);
+      await expect(servicoIsolado.registrarSemAlteracao(usuario, pacienteRenovacao, { ...pedidoRenovacao, chaveIdempotencia: randomUUID() }))
+        .rejects.toMatchObject({ status: 409 });
+      await expect(servicoIsolado.garantirAvaliacaoInicial(usuario, pacienteRenovacao)).rejects.toMatchObject({ status: 409 });
+      expect((await cliente.query('select revisao from avaliacoes_restricoes_pacientes where id=$1', [idAvaliacaoRenovacao])).rows).toEqual([{ revisao: 1 }]);
+    }
+    const falhaRenovacao = new ServicoReconfirmacaoRestricao(executorFalho as ExecutorTenant, crypto, concessoes);
+    const pedidoAusenciaFalha = { ...pedidoRenovacao, chaveIdempotencia: randomUUID(), confirmacaoExplicitaAusencia: true };
+    const estadoAntesAusenciaFalha = await cliente.query('select situacao,revisao,confirmado_por_usuario_id,confirmado_em,vence_em from avaliacoes_restricoes_pacientes where id=$1', [idAvaliacaoRenovacao]);
+    await expect(falhaRenovacao.registrarAusenciaDeclarada(usuario, pacienteRenovacao, pedidoAusenciaFalha))
+      .rejects.toMatchObject({ status: 500, message: 'Operação indisponível.' });
+    expect(auditoriasObservadas).toBe(2);
+    expect((await cliente.query('select situacao,revisao,confirmado_por_usuario_id,confirmado_em,vence_em from avaliacoes_restricoes_pacientes where id=$1', [idAvaliacaoRenovacao])).rows)
+      .toEqual(estadoAntesAusenciaFalha.rows);
+    expect((await cliente.query('select id from reconfirmacoes_restricoes where tenant_id=$1 and chave_idempotencia=$2', [tenantP2, pedidoAusenciaFalha.chaveIdempotencia])).rows).toEqual([]);
+    expect((await cliente.query('select numero from avaliacoes_restricoes_revisoes where avaliacao_id=$1 order by numero', [idAvaliacaoRenovacao])).rows).toEqual([{ numero: 1 }]);
+    expect((await cliente.query('select id from user_action_logs where recurso_id=$1', [idAvaliacaoRenovacao])).rows).toEqual([]);
+    await expect(falhaRenovacao.registrarSemAlteracao(usuario, pacienteRenovacao, pedidoRenovacao))
+      .rejects.toMatchObject({ status: 500, message: 'Operação indisponível.' });
+    expect(auditoriasObservadas).toBe(2);
+    expect((await cliente.query('select situacao,revisao from avaliacoes_restricoes_pacientes where id=$1', [idAvaliacaoRenovacao])).rows)
+      .toEqual([{ situacao: 'sem_restricoes_confirmadas', revisao: 1 }]);
+    expect((await cliente.query('select numero from avaliacoes_restricoes_revisoes where avaliacao_id=$1 order by numero', [idAvaliacaoRenovacao])).rows).toEqual([{ numero: 1 }]);
+    expect((await cliente.query('select id from reconfirmacoes_restricoes where tenant_id=$1 and chave_idempotencia=$2', [tenantP2, pedidoRenovacao.chaveIdempotencia])).rows).toEqual([]);
+    expect((await cliente.query('select id from user_action_logs where recurso_id=$1', [idAvaliacaoRenovacao])).rows).toEqual([]);
+    const renovada = await reconfirmar.registrarSemAlteracao(usuario, pacienteRenovacao, pedidoRenovacao) as { id: string; resultado: string };
+    expect(renovada.resultado).toBe('sem_alteracao');
+    expect((await cliente.query(`select situacao,revisao,extract(epoch from (vence_em-confirmado_em))::int prazo
+      from avaliacoes_restricoes_pacientes where id=$1`, [idAvaliacaoRenovacao])).rows)
+      .toEqual([{ situacao: 'sem_restricoes_confirmadas', revisao: 2, prazo: 180 * 86_400 }]);
+    expect((await cliente.query('select numero,situacao from avaliacoes_restricoes_revisoes where avaliacao_id=$1 order by numero', [idAvaliacaoRenovacao])).rows)
+      .toEqual([{ numero: 1, situacao: 'sem_restricoes_confirmadas' }, { numero: 2, situacao: 'sem_restricoes_confirmadas' }]);
+    const linhaRenovacao = await cliente.query('select revisao_avaliacao,resultado_criptografado,vence_em from reconfirmacoes_restricoes where id=$1', [renovada.id]);
+    expect(linhaRenovacao.rows[0]).toMatchObject({ revisao_avaliacao: 1, vence_em: expect.any(Date) });
+    expect(decifrarCampo(crypto, 'reconfirmacoes_restricoes.resultado_criptografado', linhaRenovacao.rows[0].resultado_criptografado,
+      { tenantId: tenantP2, pacienteId: pacienteRenovacao, registroId: renovada.id, revisao: 1 })).toEqual({ resultado: 'sem_alteracao' });
+    expect((await cliente.query('select acao from user_action_logs where recurso_id=any($1::uuid[]) order by acao', [[idAvaliacaoRenovacao, renovada.id]])).rows)
+      .toEqual([{ acao: 'restricoes.avaliacao_reconfirmada' }, { acao: 'restricoes.reconfirmacao_sem_alteracao' }]);
+    await expect(reconfirmar.registrarSemAlteracao(usuario, pacienteRenovacao, pedidoRenovacao)).resolves.toEqual(renovada);
+    expect((await cliente.query('select revisao from avaliacoes_restricoes_pacientes where id=$1', [idAvaliacaoRenovacao])).rows).toEqual([{ revisao: 2 }]);
+    const idEmReavaliacao = randomUUID();
+    const cifraEmReavaliacao = cifrarConteudoRestricao(crypto, conteudo,
+      { tenantId: tenantP2, pacienteId: pacienteRenovacao, restricaoId: idEmReavaliacao, revisao: 1, finalidade: 'restricao' });
+    await cliente.query(`insert into restricoes_pacientes
+      (id,tenant_id,paciente_id,autor_usuario_id,chave_criacao,origem,estado,confirmacao,confirmado_por_usuario_id,confirmado_em,conteudo_criptografado)
+      values ($1,$2,$3,$4,$5,'profissional','em_reavaliacao','confirmada',$4,now(),$6)`,
+      [idEmReavaliacao, tenantP2, pacienteRenovacao, dados.usuarioId, randomUUID(), cifraEmReavaliacao]);
+    await expect(reconfirmar.registrarSemAlteracao(usuario, pacienteRenovacao, { ...pedidoRenovacao, revisaoAvaliacao: 2, chaveIdempotencia: randomUUID() }))
+      .rejects.toMatchObject({ status: 409 });
+    await expect(reconfirmar.registrarAusenciaDeclarada(usuario, pacienteRenovacao,
+      { ...pedidoRenovacao, revisaoAvaliacao: 2, chaveIdempotencia: randomUUID(), confirmacaoExplicitaAusencia: true })).rejects.toMatchObject({ status: 409 });
+    expect((await cliente.query('select revisao from avaliacoes_restricoes_pacientes where id=$1', [idAvaliacaoRenovacao])).rows).toEqual([{ revisao: 2 }]);
+    const pacientePreferencia = randomUUID();
+    await cliente.query('insert into pacientes(id,tenant_id,profissional_responsavel_id,nome_criptografado) values ($1,$2,$3,$4)',
+      [pacientePreferencia, tenantP2, dados.profissionalId, Buffer.from('paciente-sintetico')]);
+    const avaliacaoPreferencia = await cliente.query<{ id: string }>(`insert into avaliacoes_restricoes_pacientes
+      (tenant_id,paciente_id,situacao,confirmado_por_usuario_id,confirmado_em,vence_em)
+      values ($1,$2,'sem_restricoes_confirmadas',$3,now(),now() + interval '10 days') returning id`,
+      [tenantP2, pacientePreferencia, dados.usuarioId]);
+    const idAvaliacaoPreferencia = avaliacaoPreferencia.rows[0].id;
+    await cliente.query(`insert into avaliacoes_restricoes_revisoes
+      (tenant_id,paciente_id,avaliacao_id,numero,situacao,autor_usuario_id,vence_em)
+      select tenant_id,paciente_id,id,1,situacao,$2,vence_em from avaliacoes_restricoes_pacientes where id=$1`, [idAvaliacaoPreferencia, dados.usuarioId]);
+    const idPreferencia = randomUUID();
+    const cifraPreferencia = cifrarConteudoRestricao(crypto, { schemaVersao: 1, natureza: 'preferencia', alvo: { tipo: 'alimento', id: 'alvo-sintetico' } },
+      { tenantId: tenantP2, pacienteId: pacientePreferencia, restricaoId: idPreferencia, revisao: 1, finalidade: 'restricao' });
+    await cliente.query(`insert into restricoes_pacientes
+      (id,tenant_id,paciente_id,autor_usuario_id,chave_criacao,origem,estado,confirmacao,confirmado_por_usuario_id,confirmado_em,conteudo_criptografado)
+      values ($1,$2,$3,$4,$5,'profissional','em_reavaliacao','confirmada',$4,now(),$6)`,
+      [idPreferencia, tenantP2, pacientePreferencia, dados.usuarioId, randomUUID(), cifraPreferencia]);
+    const pedidoPreferencia = { avaliacaoId: idAvaliacaoPreferencia, revisaoAvaliacao: 1, chaveIdempotencia: randomUUID(), meio: 'teleconsulta', atestacao: true };
+    await expect(reconfirmar.registrarSemAlteracao(usuario, pacientePreferencia, pedidoPreferencia)).resolves.toMatchObject({ resultado: 'sem_alteracao' });
+    await expect(reconfirmar.registrarAusenciaDeclarada(usuario, pacientePreferencia,
+      { ...pedidoPreferencia, revisaoAvaliacao: 2, chaveIdempotencia: randomUUID(), confirmacaoExplicitaAusencia: true })).resolves.toMatchObject({ resultado: 'sem_restricoes_declaradas' });
+    await cliente.query(`insert into restricoes_pacientes
+      (id,tenant_id,paciente_id,autor_usuario_id,chave_criacao,origem,estado,confirmacao,conteudo_criptografado)
+      values ($1,$2,$3,$4,$5,'profissional','em_reavaliacao','pendente',$6)`,
+      [randomUUID(), tenantP2, pacientePreferencia, dados.usuarioId, randomUUID(), Buffer.alloc(64)]);
+    await expect(reconfirmar.registrarAusenciaDeclarada(usuario, pacientePreferencia, { ...pedidoPreferencia, revisaoAvaliacao: 3, chaveIdempotencia: randomUUID(), confirmacaoExplicitaAusencia: true }))
+      .rejects.toMatchObject({ status: 500, message: 'Operação indisponível.' });
+    expect((await cliente.query('select revisao from avaliacoes_restricoes_pacientes where id=$1', [idAvaliacaoPreferencia])).rows).toEqual([{ revisao: 3 }]);
+    async function prepararCorridaAvaliacao() {
+      const paciente = randomUUID();
+      await cliente!.query('insert into pacientes(id,tenant_id,profissional_responsavel_id,nome_criptografado) values ($1,$2,$3,$4)',
+        [paciente, tenantP2, dados.profissionalId, Buffer.from('paciente-sintetico')]);
+      const criada = await cliente!.query<{ id: string }>(`insert into avaliacoes_restricoes_pacientes
+        (tenant_id,paciente_id,situacao,confirmado_por_usuario_id,confirmado_em,vence_em)
+        values ($1,$2,'sem_restricoes_confirmadas',$3,now(),now() + interval '10 days') returning id`, [tenantP2, paciente, dados.usuarioId]);
+      const id = criada.rows[0].id;
+      await cliente!.query(`insert into avaliacoes_restricoes_revisoes (tenant_id,paciente_id,avaliacao_id,numero,situacao,autor_usuario_id,vence_em)
+        select tenant_id,paciente_id,id,1,situacao,$2,vence_em from avaliacoes_restricoes_pacientes where id=$1`, [id, dados.usuarioId]);
+      return { paciente, id };
+    }
+    async function provarCorridaAusencia(primeiro: 'pendencia' | 'ausencia') {
+      const paciente = randomUUID();
+      await cliente!.query('insert into pacientes(id,tenant_id,profissional_responsavel_id,nome_criptografado) values ($1,$2,$3,$4)',
+        [paciente, tenantP2, dados.profissionalId, Buffer.from('paciente-sintetico')]);
+      const avaliacaoInicial = await reconfirmar.garantirAvaliacaoInicial(usuario, paciente) as { id: string };
+      const chaveAusencia = randomUUID(), chavePendencia = randomUUID();
+      const pedidoAusencia = { avaliacaoId: avaliacaoInicial.id, revisaoAvaliacao: 1, chaveIdempotencia: chaveAusencia,
+        meio: 'teleconsulta', atestacao: true, confirmacaoExplicitaAusencia: true };
+      let liberar!: () => void;
+      let avisarEscritor!: (pid: number) => void;
+      let avisarObservado!: (pid: number) => void;
+      const espera = new Promise<void>(resolve => { liberar = resolve; });
+      const escritorPronto = new Promise<number>(resolve => { avisarEscritor = resolve; });
+      const observadoPronto = new Promise<number>(resolve => { avisarObservado = resolve; });
+      const segurado = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) => executorTenant!.executar(t, async g => {
+        await g.query("set local statement_timeout = '12s'");
+        const pid = await g.query('select pg_backend_pid()::int as pid');
+        const resposta = await fn(g); avisarEscritor(pid[0].pid as number); await espera; return resposta;
+      }) };
+      const observador = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) => executorTenant!.executar(t, async g => {
+        await g.query("set local statement_timeout = '12s'"); await g.query("set local lock_timeout = '10s'");
+        const pid = await g.query('select pg_backend_pid()::int as pid'); avisarObservado(pid[0].pid as number); return fn(g);
+      }) };
+      const escreverPendencia = (executor: ExecutorTenant) => new ServicoRegistroPendenciaRestricao(executor, crypto)
+        .registrar(usuario, paciente, { chaveCriacao: chavePendencia, conteudo });
+      const escreverAusencia = (executor: ExecutorTenant) => new ServicoReconfirmacaoRestricao(executor, crypto, concessoes)
+        .registrarAusenciaDeclarada(usuario, paciente, pedidoAusencia);
+      const primeira = primeiro === 'pendencia' ? escreverPendencia(segurado as ExecutorTenant) : escreverAusencia(segurado as ExecutorTenant);
+      let segundaResultado: Promise<PromiseSettledResult<unknown>[]> | undefined;
+      try {
+        const pidEscritor = await limitarEsperaInicial(Promise.race([escritorPronto, primeira.then(() => { throw new Error('Escritor encerrou cedo.'); })]));
+        const segunda = primeiro === 'pendencia' ? escreverAusencia(observador as ExecutorTenant) : escreverPendencia(observador as ExecutorTenant);
+        segundaResultado = Promise.allSettled([segunda]);
+        const pid = await limitarEsperaInicial(Promise.race([observadoPronto, segunda.then(() => { throw new Error('Operação encerrou cedo.'); })]));
+        await esperarBloqueioReal(pid, pidEscritor);
+      } finally {
+        liberar();
+        const encerradas = await Promise.allSettled([limitarEsperaInicial(primeira), ...(segundaResultado ? [limitarEsperaInicial(segundaResultado)] : [])]);
+        for (const encerrada of encerradas) if (encerrada.status === 'rejected') throw encerrada.reason;
+      }
+      const segunda = (await segundaResultado!)[0];
+      if (primeiro === 'pendencia') {
+        expect(segunda.status).toBe('rejected');
+        if (segunda.status !== 'rejected') throw new Error('Declaração deveria falhar.');
+        expect(segunda.reason).toMatchObject({ status: 409, message: 'Operação indisponível ou concorrente.' });
+        expect((await cliente!.query('select id from reconfirmacoes_restricoes where tenant_id=$1 and chave_idempotencia=$2', [tenantP2, chaveAusencia])).rows).toEqual([]);
+      } else {
+        expect(segunda.status).toBe('fulfilled');
+        expect((await cliente!.query('select id from reconfirmacoes_restricoes where tenant_id=$1 and chave_idempotencia=$2', [tenantP2, chaveAusencia])).rows).toHaveLength(1);
+      }
+      expect((await cliente!.query('select situacao,revisao from avaliacoes_restricoes_pacientes where id=$1', [avaliacaoInicial.id])).rows)
+        .toEqual([{ situacao: 'nao_informado', revisao: primeiro === 'pendencia' ? 1 : 3 }]);
+      expect((await cliente!.query('select id from restricoes_pacientes where tenant_id=$1 and autor_usuario_id=$2 and chave_criacao=$3',
+        [tenantP2, dados.usuarioId, chavePendencia])).rows).toHaveLength(1);
+    }
+    await provarCorridaAusencia('pendencia');
+    await provarCorridaAusencia('ausencia');
+    for (const natureza of ['clinica', 'escolha'] as const) {
+      for (const estado of ['ativa', 'em_reavaliacao'] as const) {
+        for (const confirmacao of ['pendente', 'confirmada'] as const) {
+          const caso = await prepararCorridaAvaliacao();
+          await expect(reconfirmar.registrarAusenciaDeclarada(usuario, caso.paciente,
+            { avaliacaoId: caso.id, revisaoAvaliacao: 1, chaveIdempotencia: randomUUID(), meio: 'teleconsulta', atestacao: true, confirmacaoExplicitaAusencia: true }))
+            .resolves.toMatchObject({ resultado: 'sem_restricoes_declaradas' });
+          const id = randomUUID();
+          const conteudoCaso = natureza === 'clinica' ? conteudo : { schemaVersao: 1, natureza: 'escolha', alvo: { tipo: 'categoria_escolha', id: 'sem_carne' } };
+          const cifraCaso = cifrarConteudoRestricao(crypto, conteudoCaso,
+            { tenantId: tenantP2, pacienteId: caso.paciente, restricaoId: id, revisao: 1, finalidade: 'restricao' });
+          const snapshotCaso = cifrarConteudoRestricao(crypto, conteudoCaso,
+            { tenantId: tenantP2, pacienteId: caso.paciente, restricaoId: id, revisao: 1, finalidade: 'revisao_restricao' });
+          await cliente.query(`insert into restricoes_pacientes
+            (id,tenant_id,paciente_id,autor_usuario_id,chave_criacao,origem,estado,confirmacao,confirmado_por_usuario_id,confirmado_em,conteudo_criptografado)
+            values ($1,$2,$3,$4,$5,'profissional',$6,$7,$8,$9,$10)`,
+            [id, tenantP2, caso.paciente, dados.usuarioId, randomUUID(), estado, confirmacao,
+              confirmacao === 'confirmada' ? dados.usuarioId : null, confirmacao === 'confirmada' ? new Date() : null, cifraCaso]);
+          await cliente.query(`insert into restricoes_pacientes_revisoes
+            (tenant_id,paciente_id,restricao_id,numero,evento,autor_usuario_id,conteudo_criptografado)
+            values ($1,$2,$3,1,'criacao',$4,$5)`, [tenantP2, caso.paciente, id, dados.usuarioId, snapshotCaso]);
+          const chave = randomUUID();
+          await expect(reconfirmar.registrarAusenciaDeclarada(usuario, caso.paciente,
+            { avaliacaoId: caso.id, revisaoAvaliacao: 2, chaveIdempotencia: chave, meio: 'teleconsulta', atestacao: true, confirmacaoExplicitaAusencia: true }))
+            .rejects.toMatchObject({ status: 409 });
+          expect((await cliente.query('select revisao from avaliacoes_restricoes_pacientes where id=$1', [caso.id])).rows).toEqual([{ revisao: 2 }]);
+          expect((await cliente.query('select id from reconfirmacoes_restricoes where tenant_id=$1 and chave_idempotencia=$2', [tenantP2, chave])).rows).toEqual([]);
+          const primeiroResultado = (natureza === 'clinica') === (estado === 'ativa') ? 'pendencia_mantida' : 'alteracao_informada';
+          const segundoResultado = primeiroResultado === 'pendencia_mantida' ? 'alteracao_informada' : 'pendencia_mantida';
+          const pedidoPrimeiro = { avaliacaoId: caso.id, revisaoAvaliacao: 2, restricaoId: id, revisaoRestricao: 1,
+            chaveIdempotencia: randomUUID(), meio: 'teleconsulta', atestacao: true };
+          const registrarIndividual = (resultado: string, pedido: typeof pedidoPrimeiro) => resultado === 'pendencia_mantida'
+            ? reconfirmar.registrarPendenciaIndividual(usuario, caso.paciente, pedido)
+            : reconfirmar.registrarAlteracaoInformadaIndividual(usuario, caso.paciente, pedido);
+          if (natureza === 'clinica' && estado === 'ativa' && confirmacao === 'pendente') {
+            const antes = await cliente.query('select situacao,revisao,confirmado_por_usuario_id,confirmado_em,vence_em from avaliacoes_restricoes_pacientes where id=$1', [caso.id]);
+            const auditoriaAntes = await cliente.query('select acao from user_action_logs where recurso_id=$1 order by acao', [caso.id]);
+            await expect(reconfirmarComFalha.registrarPendenciaIndividual(usuario, caso.paciente, pedidoPrimeiro))
+              .rejects.toMatchObject({ status: 500, message: 'Operação indisponível.' });
+            expect(auditoriasObservadas).toBe(2);
+            expect((await cliente.query('select situacao,revisao,confirmado_por_usuario_id,confirmado_em,vence_em from avaliacoes_restricoes_pacientes where id=$1', [caso.id])).rows).toEqual(antes.rows);
+            expect((await cliente.query('select acao from user_action_logs where recurso_id=$1 order by acao', [caso.id])).rows).toEqual(auditoriaAntes.rows);
+            expect((await cliente.query('select numero from avaliacoes_restricoes_revisoes where avaliacao_id=$1 order by numero', [caso.id])).rows).toEqual([{ numero: 1 }, { numero: 2 }]);
+            expect((await cliente.query('select id from reconfirmacoes_restricoes where tenant_id=$1 and chave_idempotencia=$2', [tenantP2, pedidoPrimeiro.chaveIdempotencia])).rows).toEqual([]);
+          }
+          const primeiro = await registrarIndividual(primeiroResultado, pedidoPrimeiro) as { id: string; resultado: string; escopo: string; revisaoAvaliacao: number; revisaoRestricao: number };
+          expect(primeiro).toEqual({ id: expect.any(String), resultado: primeiroResultado, escopo: 'restricao_individual', revisaoAvaliacao: 2, revisaoRestricao: 1 });
+          expect((await cliente.query('select situacao,revisao from avaliacoes_restricoes_pacientes where id=$1', [caso.id])).rows)
+            .toEqual([{ situacao: 'nao_informado', revisao: 3 }]);
+          expect((await cliente.query('select numero,situacao from avaliacoes_restricoes_revisoes where avaliacao_id=$1 and numero=3', [caso.id])).rows)
+            .toEqual([{ numero: 3, situacao: 'nao_informado' }]);
+          await expect(registrarIndividual(segundoResultado, pedidoPrimeiro)).rejects.toMatchObject({ status: 409 });
+          const segundo = await registrarIndividual(segundoResultado, { ...pedidoPrimeiro, revisaoAvaliacao: 3, chaveIdempotencia: randomUUID() }) as { id: string; resultado: string };
+          expect(segundo.resultado).toBe(segundoResultado);
+          for (const atestacao of [primeiro, segundo]) {
+            const linha = await cliente.query('select resultado_criptografado from reconfirmacoes_restricoes where id=$1', [atestacao.id]);
+            expect(decifrarCampo(crypto, 'reconfirmacoes_restricoes.resultado_criptografado', linha.rows[0].resultado_criptografado,
+              { tenantId: tenantP2, pacienteId: caso.paciente, registroId: atestacao.id, revisao: 1 })).toEqual({ resultado: atestacao.resultado });
+          }
+          await expect(registrarIndividual(primeiroResultado, pedidoPrimeiro)).resolves.toEqual(primeiro);
+          expect((await cliente.query('select situacao,revisao from avaliacoes_restricoes_pacientes where id=$1', [caso.id])).rows)
+            .toEqual([{ situacao: 'nao_informado', revisao: 3 }]);
+          expect((await cliente.query('select estado,confirmacao,revisao,conteudo_criptografado from restricoes_pacientes where id=$1', [id])).rows)
+            .toEqual([{ estado, confirmacao, revisao: 1, conteudo_criptografado: cifraCaso }]);
+          expect((await cliente.query("select id from user_action_logs where recurso_id=any($1::uuid[]) and acao='restricoes.reconfirmacao_individual'", [[primeiro.id, segundo.id]])).rows).toHaveLength(2);
+        }
+      }
+    }
+    const casoPaginacao = await prepararCorridaAvaliacao();
+    const prefixoPaginacao = randomUUID().slice(0, 24);
+    for (let i = 0; i < 100; i++) {
+      const id = `${prefixoPaginacao}${i.toString(16).padStart(12, '0')}`;
+      const cifra = cifrarConteudoRestricao(crypto, { schemaVersao: 1, natureza: 'preferencia', alvo: { tipo: 'alimento', id: 'alvo-sintetico' } },
+        { tenantId: tenantP2, pacienteId: casoPaginacao.paciente, restricaoId: id, revisao: 1, finalidade: 'restricao' });
+      await cliente.query(`insert into restricoes_pacientes
+        (id,tenant_id,paciente_id,autor_usuario_id,chave_criacao,origem,estado,confirmacao,conteudo_criptografado)
+        values ($1,$2,$3,$4,$5,'profissional','ativa','pendente',$6)`,
+        [id, tenantP2, casoPaginacao.paciente, dados.usuarioId, randomUUID(), cifra]);
+    }
+    await expect(reconfirmar.registrarAusenciaDeclarada(usuario, casoPaginacao.paciente,
+      { avaliacaoId: casoPaginacao.id, revisaoAvaliacao: 1, chaveIdempotencia: randomUUID(), meio: 'teleconsulta', atestacao: true, confirmacaoExplicitaAusencia: true }))
+      .resolves.toMatchObject({ resultado: 'sem_restricoes_declaradas' });
+    const idUltimaPagina = `${prefixoPaginacao}ffffffffffff`;
+    const cifraUltimaPagina = cifrarConteudoRestricao(crypto, conteudo,
+      { tenantId: tenantP2, pacienteId: casoPaginacao.paciente, restricaoId: idUltimaPagina, revisao: 1, finalidade: 'restricao' });
+    await cliente.query(`insert into restricoes_pacientes
+      (id,tenant_id,paciente_id,autor_usuario_id,chave_criacao,origem,estado,confirmacao,conteudo_criptografado)
+      values ($1,$2,$3,$4,$5,'profissional','em_reavaliacao','pendente',$6)`,
+      [idUltimaPagina, tenantP2, casoPaginacao.paciente, dados.usuarioId, randomUUID(), cifraUltimaPagina]);
+    const chavePaginacao = randomUUID();
+    await expect(reconfirmar.registrarAusenciaDeclarada(usuario, casoPaginacao.paciente,
+      { avaliacaoId: casoPaginacao.id, revisaoAvaliacao: 2, chaveIdempotencia: chavePaginacao, meio: 'teleconsulta', atestacao: true, confirmacaoExplicitaAusencia: true }))
+      .rejects.toMatchObject({ status: 409 });
+    expect((await cliente.query('select id from reconfirmacoes_restricoes where tenant_id=$1 and chave_idempotencia=$2', [tenantP2, chavePaginacao])).rows).toEqual([]);
+    expect((await cliente.query('select revisao from avaliacoes_restricoes_pacientes where id=$1', [casoPaginacao.id])).rows).toEqual([{ revisao: 2 }]);
+    for (const divergencia of ['situacao', 'validade'] as const) {
+      const caso = await prepararCorridaAvaliacao();
+      await cliente.query(`update avaliacoes_restricoes_pacientes set situacao='nao_informado', revisao=2,
+        confirmado_por_usuario_id=null, confirmado_em=null, vence_em=null where id=$1`, [caso.id]);
+      await cliente.query(`insert into avaliacoes_restricoes_revisoes
+        (tenant_id,paciente_id,avaliacao_id,numero,situacao,autor_usuario_id,vence_em)
+        values ($1,$2,$3,2,$4,$5,case when $6::text='situacao' then null else now() + interval '10 days' end)`,
+        [tenantP2, caso.paciente, caso.id, divergencia === 'situacao' ? 'sem_restricoes_confirmadas' : 'nao_informado', dados.usuarioId, divergencia]);
+      const chaveDivergente = randomUUID();
+      await expect(reconfirmar.registrarPendencia(usuario, caso.paciente,
+        { avaliacaoId: caso.id, revisaoAvaliacao: 2, chaveIdempotencia: chaveDivergente, meio: 'teleconsulta', atestacao: true }))
+        .rejects.toMatchObject({ status: 409 });
+      await expect(reconfirmar.garantirAvaliacaoInicial(usuario, caso.paciente)).rejects.toMatchObject({ status: 409 });
+      expect((await cliente.query('select id from reconfirmacoes_restricoes where tenant_id=$1 and chave_idempotencia=$2', [tenantP2, chaveDivergente])).rows).toEqual([]);
+      expect((await cliente.query('select situacao,revisao from avaliacoes_restricoes_pacientes where id=$1', [caso.id])).rows)
+        .toEqual([{ situacao: 'nao_informado', revisao: 2 }]);
+    }
+    const casoPrecisao = await prepararCorridaAvaliacao();
+    await cliente.query(`update avaliacoes_restricoes_pacientes set revisao=2,
+      vence_em=date_trunc('milliseconds', vence_em) + interval '1 microsecond' where id=$1`, [casoPrecisao.id]);
+    await cliente.query(`insert into avaliacoes_restricoes_revisoes
+      (tenant_id,paciente_id,avaliacao_id,numero,situacao,autor_usuario_id,vence_em)
+      select tenant_id,paciente_id,id,2,situacao,$2,vence_em + interval '1 microsecond' from avaliacoes_restricoes_pacientes where id=$1`,
+      [casoPrecisao.id, dados.usuarioId]);
+    const diferencaMicros = await cliente.query(`select extract(epoch from (r.vence_em-a.vence_em))*1000000 diferenca
+      from avaliacoes_restricoes_pacientes a join avaliacoes_restricoes_revisoes r on r.avaliacao_id=a.id and r.numero=2 where a.id=$1`, [casoPrecisao.id]);
+    expect(Number(diferencaMicros.rows[0].diferenca)).toBe(1);
+    const chavePrecisao = randomUUID();
+    await expect(reconfirmar.registrarPendencia(usuario, casoPrecisao.paciente,
+      { avaliacaoId: casoPrecisao.id, revisaoAvaliacao: 2, chaveIdempotencia: chavePrecisao, meio: 'teleconsulta', atestacao: true }))
+      .rejects.toMatchObject({ status: 409 });
+    await expect(reconfirmar.garantirAvaliacaoInicial(usuario, casoPrecisao.paciente)).rejects.toMatchObject({ status: 409 });
+    expect((await cliente.query('select id from reconfirmacoes_restricoes where tenant_id=$1 and chave_idempotencia=$2', [tenantP2, chavePrecisao])).rows).toEqual([]);
+    const casoPendenteReavaliacao = await prepararCorridaAvaliacao();
+    const idPendenteReavaliacao = randomUUID();
+    const cifraPendenteReavaliacao = cifrarConteudoRestricao(crypto, conteudo,
+      { tenantId: tenantP2, pacienteId: casoPendenteReavaliacao.paciente, restricaoId: idPendenteReavaliacao, revisao: 1, finalidade: 'restricao' });
+    await cliente.query(`insert into restricoes_pacientes
+      (id,tenant_id,paciente_id,autor_usuario_id,chave_criacao,origem,estado,confirmacao,conteudo_criptografado)
+      values ($1,$2,$3,$4,$5,'profissional','em_reavaliacao','pendente',$6)`,
+      [idPendenteReavaliacao, tenantP2, casoPendenteReavaliacao.paciente, dados.usuarioId, randomUUID(), cifraPendenteReavaliacao]);
+    await expect(reconfirmar.registrarSemAlteracao(usuario, casoPendenteReavaliacao.paciente,
+      { avaliacaoId: casoPendenteReavaliacao.id, revisaoAvaliacao: 1, chaveIdempotencia: randomUUID(), meio: 'teleconsulta', atestacao: true }))
+      .rejects.toMatchObject({ status: 409 });
+    expect((await cliente.query('select revisao from avaliacoes_restricoes_pacientes where id=$1', [casoPendenteReavaliacao.id])).rows).toEqual([{ revisao: 1 }]);
+    const primeiroRace = await prepararCorridaAvaliacao();
+    let liberarEscrita!: () => void;
+    let avisarEscrita!: () => void;
+    const esperaEscrita = new Promise<void>(resolve => { liberarEscrita = resolve; });
+    const escritaPronta = new Promise<void>(resolve => { avisarEscrita = resolve; });
+    const executorSeguraEscrita = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) =>
+      executorTenant!.executar(t, async g => { const r = await fn(g); avisarEscrita(); await esperaEscrita; return r; }) };
+    const pendenciaSegura = new ServicoRegistroPendenciaRestricao(executorSeguraEscrita as ExecutorTenant, crypto);
+    const escritaPendente = pendenciaSegura.registrar(usuario, primeiroRace.paciente, { chaveCriacao: randomUUID(), conteudo });
+    try {
+      await Promise.race([escritaPronta, escritaPendente.then(() => { throw new Error('Transação encerrou cedo.'); })]);
+      const executorPrazo = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) =>
+        executorTenant!.executar(t, async g => { await g.query("set local lock_timeout = '200ms'"); return fn(g); }) };
+      const renovacaoPrazo = new ServicoReconfirmacaoRestricao(executorPrazo as ExecutorTenant, crypto, concessoes);
+      await expect(renovacaoPrazo.registrarSemAlteracao(usuario, primeiroRace.paciente,
+        { avaliacaoId: primeiroRace.id, revisaoAvaliacao: 1, chaveIdempotencia: randomUUID(), meio: 'teleconsulta', atestacao: true }))
+        .rejects.toMatchObject({ status: 409, message: 'Operação concorrente. Tente novamente.' });
+    } finally { liberarEscrita(); await escritaPendente; }
+    expect((await cliente.query('select situacao,revisao from avaliacoes_restricoes_pacientes where id=$1', [primeiroRace.id])).rows)
+      .toEqual([{ situacao: 'nao_informado', revisao: 2 }]);
+    await expect(reconfirmar.registrarSemAlteracao(usuario, primeiroRace.paciente,
+      { avaliacaoId: primeiroRace.id, revisaoAvaliacao: 1, chaveIdempotencia: randomUUID(), meio: 'teleconsulta', atestacao: true })).rejects.toMatchObject({ status: 409 });
+    const segundoRace = await prepararCorridaAvaliacao();
+    let liberarRenovacao!: () => void;
+    let avisarRenovacao!: () => void;
+    const esperaRenovacao = new Promise<void>(resolve => { liberarRenovacao = resolve; });
+    const renovacaoPronta = new Promise<void>(resolve => { avisarRenovacao = resolve; });
+    const executorSeguraRenovacao = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) =>
+      executorTenant!.executar(t, async g => { const r = await fn(g); avisarRenovacao(); await esperaRenovacao; return r; }) };
+    const renovacaoSegura = new ServicoReconfirmacaoRestricao(executorSeguraRenovacao as ExecutorTenant, crypto, concessoes);
+    const renovacaoPendente = renovacaoSegura.registrarSemAlteracao(usuario, segundoRace.paciente,
+      { avaliacaoId: segundoRace.id, revisaoAvaliacao: 1, chaveIdempotencia: randomUUID(), meio: 'teleconsulta', atestacao: true });
+    try {
+      await Promise.race([renovacaoPronta, renovacaoPendente.then(() => { throw new Error('Transação encerrou cedo.'); })]);
+      const executorPrazo = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) =>
+        executorTenant!.executar(t, async g => { await g.query("set local lock_timeout = '200ms'"); return fn(g); }) };
+      const pendenciaPrazo = new ServicoRegistroPendenciaRestricao(executorPrazo as ExecutorTenant, crypto);
+      await expect(pendenciaPrazo.registrar(usuario, segundoRace.paciente, { chaveCriacao: randomUUID(), conteudo }))
+        .rejects.toMatchObject({ status: 409, message: 'Operação concorrente. Tente novamente.' });
+    } finally { liberarRenovacao(); await renovacaoPendente; }
+    await registro.registrar(usuario, segundoRace.paciente, { chaveCriacao: randomUUID(), conteudo });
+    expect((await cliente.query('select situacao,revisao from avaliacoes_restricoes_pacientes where id=$1', [segundoRace.id])).rows)
+      .toEqual([{ situacao: 'nao_informado', revisao: 3 }]);
+    async function esperarBloqueioReal(pid: number, pidEscritor: number) {
+      for (let tentativa = 0; tentativa < 200; tentativa++) {
+        const consulta = await cliente!.query<{ bloqueado: boolean }>('select $2::int = any(pg_blocking_pids($1)) as bloqueado', [pid, pidEscritor]);
+        if (consulta.rows[0].bloqueado) return;
+        await new Promise(resolve => setTimeout(resolve, 25));
+      }
+      throw new Error('A transação não chegou ao bloqueio esperado.');
+    }
+    const terceiroRace = await prepararCorridaAvaliacao();
+    let liberarTerceiro!: () => void;
+    let avisarTerceiro!: (pid: number) => void;
+    let avisarPidTerceiro!: (pid: number) => void;
+    const esperaTerceiro = new Promise<void>(resolve => { liberarTerceiro = resolve; });
+    const prontoTerceiro = new Promise<number>(resolve => { avisarTerceiro = resolve; });
+    const pidTerceiro = new Promise<number>(resolve => { avisarPidTerceiro = resolve; });
+    const executorTerceiro = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) =>
+      executorTenant!.executar(t, async g => { const pid = await g.query('select pg_backend_pid()::int as pid'); const r = await fn(g); avisarTerceiro(pid[0].pid as number); await esperaTerceiro; return r; }) };
+    const pendenciaTerceiro = new ServicoRegistroPendenciaRestricao(executorTerceiro as ExecutorTenant, crypto)
+      .registrar(usuario, terceiroRace.paciente, { chaveCriacao: randomUUID(), conteudo });
+    let renovacaoMesmaTransacao: Promise<PromiseSettledResult<unknown>[]> | undefined;
+    const chaveTerceiro = randomUUID();
+    try {
+      const pidEscritor = await Promise.race([prontoTerceiro, pendenciaTerceiro.then(() => { throw new Error('Transação encerrou cedo.'); })]);
+      const executorObservado = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) =>
+        executorTenant!.executar(t, async g => {
+          await g.query("set local lock_timeout = '15s'");
+          const pid = await g.query('select pg_backend_pid()::int as pid'); avisarPidTerceiro(pid[0].pid as number);
+          return fn(g);
+        }) };
+      const renovacaoObservada = new ServicoReconfirmacaoRestricao(executorObservado as ExecutorTenant, crypto, concessoes)
+        .registrarSemAlteracao(usuario, terceiroRace.paciente,
+          { avaliacaoId: terceiroRace.id, revisaoAvaliacao: 1, chaveIdempotencia: chaveTerceiro, meio: 'teleconsulta', atestacao: true });
+      renovacaoMesmaTransacao = Promise.allSettled([renovacaoObservada]);
+      const pid = await Promise.race([pidTerceiro, renovacaoObservada.then(() => { throw new Error('Renovação encerrou cedo.'); })]);
+      await esperarBloqueioReal(pid, pidEscritor);
+    } finally { liberarTerceiro(); await pendenciaTerceiro; if (renovacaoMesmaTransacao) await renovacaoMesmaTransacao; }
+    const resultadoTerceiro = (await renovacaoMesmaTransacao!)[0];
+    expect(resultadoTerceiro.status).toBe('rejected');
+    if (resultadoTerceiro.status !== 'rejected') throw new Error('Renovação deveria falhar.');
+    expect(resultadoTerceiro.reason).toMatchObject({ status: 409, message: 'Operação indisponível ou concorrente.' });
+    expect((await cliente.query('select id from reconfirmacoes_restricoes where tenant_id=$1 and chave_idempotencia=$2', [tenantP2, chaveTerceiro])).rows).toEqual([]);
+    expect((await cliente.query('select situacao,revisao from avaliacoes_restricoes_pacientes where id=$1', [terceiroRace.id])).rows)
+      .toEqual([{ situacao: 'nao_informado', revisao: 2 }]);
+    const quartoRace = await prepararCorridaAvaliacao();
+    let liberarQuarto!: () => void;
+    let avisarQuarto!: (pid: number) => void;
+    let avisarPidQuarto!: (pid: number) => void;
+    const esperaQuarto = new Promise<void>(resolve => { liberarQuarto = resolve; });
+    const prontoQuarto = new Promise<number>(resolve => { avisarQuarto = resolve; });
+    const pidQuarto = new Promise<number>(resolve => { avisarPidQuarto = resolve; });
+    const executorQuarto = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) =>
+      executorTenant!.executar(t, async g => { const pid = await g.query('select pg_backend_pid()::int as pid'); const r = await fn(g); avisarQuarto(pid[0].pid as number); await esperaQuarto; return r; }) };
+    const renovacaoQuarto = new ServicoReconfirmacaoRestricao(executorQuarto as ExecutorTenant, crypto, concessoes)
+      .registrarSemAlteracao(usuario, quartoRace.paciente,
+        { avaliacaoId: quartoRace.id, revisaoAvaliacao: 1, chaveIdempotencia: randomUUID(), meio: 'teleconsulta', atestacao: true });
+    let pendenciaMesmaTransacao: Promise<PromiseSettledResult<unknown>[]> | undefined;
+    try {
+      const pidEscritor = await Promise.race([prontoQuarto, renovacaoQuarto.then(() => { throw new Error('Transação encerrou cedo.'); })]);
+      const executorObservado = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) =>
+        executorTenant!.executar(t, async g => {
+          await g.query("set local lock_timeout = '15s'");
+          const pid = await g.query('select pg_backend_pid()::int as pid'); avisarPidQuarto(pid[0].pid as number);
+          return fn(g);
+        }) };
+      const pendenciaObservada = new ServicoRegistroPendenciaRestricao(executorObservado as ExecutorTenant, crypto)
+        .registrar(usuario, quartoRace.paciente, { chaveCriacao: randomUUID(), conteudo });
+      pendenciaMesmaTransacao = Promise.allSettled([pendenciaObservada]);
+      const pid = await Promise.race([pidQuarto, pendenciaObservada.then(() => { throw new Error('Pendência encerrou cedo.'); })]);
+      await esperarBloqueioReal(pid, pidEscritor);
+    } finally { liberarQuarto(); await renovacaoQuarto; if (pendenciaMesmaTransacao) await pendenciaMesmaTransacao; }
+    const resultadoQuarto = (await pendenciaMesmaTransacao!)[0];
+    expect(resultadoQuarto.status).toBe('fulfilled');
+    expect((await cliente.query('select situacao,revisao from avaliacoes_restricoes_pacientes where id=$1', [quartoRace.id])).rows)
+      .toEqual([{ situacao: 'nao_informado', revisao: 3 }]);
+    await expect(reconfirmar.registrarAlteracaoInformada(usuario, pacienteAusenciaRecon, pedidoAusenciaRecon)).resolves.toEqual(alteracaoAusencia);
+    expect((await cliente.query('select numero from avaliacoes_restricoes_revisoes where avaliacao_id=$1 order by numero', [idAvaliacaoAusenciaRecon])).rows)
+      .toEqual([{ numero: 1 }, { numero: 2 }]);
+    expect((await cliente.query('select id from reconfirmacoes_restricoes where tenant_id=$1 and chave_idempotencia=$2', [tenantP2, pedidoAusenciaRecon.chaveIdempotencia])).rows)
+      .toEqual([{ id: alteracaoAusencia.id }]);
+    expect((await cliente.query('select acao from user_action_logs where recurso_id=any($1::uuid[]) order by acao', [[idAvaliacaoAusenciaRecon, alteracaoAusencia.id]])).rows)
+      .toEqual([{ acao: 'restricoes.avaliacao_invalidada' }, { acao: 'restricoes.reconfirmacao_alteracao' }]);
+    const confirmarComFalha = new ServicoConfirmacaoRestricao(executorFalho as ExecutorTenant, crypto, concessoes);
+    await expect(confirmarComFalha.confirmar(usuario, pacienteRollback, idRollback, 1)).rejects.toMatchObject({ status: 500, message: 'Operação indisponível.' });
+    const rollback = await cliente.query('select confirmacao,revisao,conteudo_criptografado from restricoes_pacientes where id=$1', [idRollback]);
+    expect(rollback.rows).toEqual([{ confirmacao: 'pendente', revisao: 1, conteudo_criptografado: cifraRollback }]);
+    expect((await cliente.query('select numero from restricoes_pacientes_revisoes where restricao_id=$1', [idRollback])).rows).toEqual([{ numero: 1 }]);
+    expect((await cliente.query('select situacao,revisao,confirmado_por_usuario_id,confirmado_em,vence_em from avaliacoes_restricoes_pacientes where id=$1', [avaliacaoRollback.rows[0].id])).rows).toEqual(antesRollback.rows);
+    expect((await cliente.query('select numero from avaliacoes_restricoes_revisoes where avaliacao_id=$1', [avaliacaoRollback.rows[0].id])).rows).toEqual([{ numero: 1 }]);
+    expect((await cliente.query('select id from user_action_logs where recurso_id = any($1::uuid[])', [[avaliacaoRollback.rows[0].id, idRollback]])).rows).toEqual([]);
+    const chaveRegistroRollback = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+    const registroComFalha = new ServicoRegistroPendenciaRestricao(executorFalho as ExecutorTenant, crypto);
+    const auditoriasAntesRegistro = await cliente.query<{ n: number }>(
+      'select count(*)::int n from user_action_logs where tenant_id=$1 and usuario_id=$2', [tenantP2, dados.usuarioId]);
+    await expect(registroComFalha.registrar(usuario, pacienteRollback, { chaveCriacao: chaveRegistroRollback, conteudo }))
+      .rejects.toMatchObject({ status: 500, message: 'Operação indisponível.' });
+    expect((await cliente.query('select id from restricoes_pacientes where tenant_id=$1 and autor_usuario_id=$2 and chave_criacao=$3',
+      [tenantP2, dados.usuarioId, chaveRegistroRollback])).rows).toEqual([]);
+    expect((await cliente.query('select situacao,revisao,confirmado_por_usuario_id,confirmado_em,vence_em from avaliacoes_restricoes_pacientes where id=$1', [avaliacaoRollback.rows[0].id])).rows).toEqual(antesRollback.rows);
+    expect((await cliente.query('select numero from avaliacoes_restricoes_revisoes where avaliacao_id=$1', [avaliacaoRollback.rows[0].id])).rows).toEqual([{ numero: 1 }]);
+    expect((await cliente.query('select count(*)::int n from user_action_logs where tenant_id=$1 and usuario_id=$2', [tenantP2, dados.usuarioId])).rows).toEqual(auditoriasAntesRegistro.rows);
+    await cliente.query(`update avaliacoes_restricoes_pacientes set situacao='restricoes_registradas',
+      confirmado_por_usuario_id=$1, confirmado_em=now(), vence_em=now() + interval '10 days', revisao=3 where id=$2`,
+      [dados.usuarioId, avaliacao.rows[0].id]);
+    await cliente.query(`insert into avaliacoes_restricoes_revisoes
+      (tenant_id,paciente_id,avaliacao_id,numero,situacao,autor_usuario_id,vence_em)
+      select tenant_id,paciente_id,id,3,'restricoes_registradas',$2,vence_em from avaliacoes_restricoes_pacientes where id=$1`,
+      [avaliacao.rows[0].id, dados.usuarioId]);
+    await expect(confirmar.inativar(usuario, outro.pacienteId, restricaoId, 2,
+      { motivo: 'outro', justificativa: 'Sintético', confirmacaoEmDoisPassos: true })).rejects.toMatchObject({ status: 403 });
+    await expect(confirmar.inativar(usuario, pacienteIdTenantB, restricaoId, 2,
+      { motivo: 'outro', justificativa: 'Sintético', confirmacaoEmDoisPassos: true })).rejects.toMatchObject({ status: 403 });
+    await expect(confirmar.inativar(usuario, dados.pacienteId, restricaoId, 2,
+      { motivo: 'outro', justificativa: 'Sintético', confirmacaoEmDoisPassos: false })).rejects.toMatchObject({ status: 400 });
+    await expect(confirmar.inativar(usuario, dados.pacienteId, restricaoId, 2,
+      { motivo: 'informacao_clinica_revisada', justificativa: 'Justificativa sintética', confirmacaoEmDoisPassos: true }))
+      .resolves.toEqual({ id: restricaoId, revisao: 3, estado: 'inativa' });
+    const inativada = await cliente.query('select estado,revisao from restricoes_pacientes where id=$1', [restricaoId]);
+    expect(inativada.rows).toEqual([{ estado: 'inativa', revisao: 3 }]);
+    await expect(reconfirmar.registrarSemAlteracaoIndividual(usuario, dados.pacienteId, pedidoIndividual)).resolves.toEqual(individual);
+    await expect(reconfirmar.registrarSemAlteracaoIndividual(usuario, dados.pacienteId,
+      { ...pedidoIndividual, chaveIdempotencia: randomUUID() })).rejects.toMatchObject({ status: 409 });
+    expect((await cliente.query("select id from user_action_logs where recurso_id=$1 and acao='restricoes.reconfirmacao_individual'", [individual.id])).rows).toHaveLength(1);
+    expect((await cliente.query('select atualizado_em > criado_em as atualizada from restricoes_pacientes where id=$1', [restricaoId])).rows)
+      .toEqual([{ atualizada: true }]);
+    const registroInativacao = await cliente.query<{ justificativa_criptografada: Buffer; autor_usuario_id: string; motivo_inativacao: string; confirmacao_dois_passos: boolean }>(
+      "select justificativa_criptografada,autor_usuario_id,motivo_inativacao,confirmacao_dois_passos from restricoes_pacientes_revisoes where restricao_id=$1 and evento='inativacao'", [restricaoId]);
+    expect(registroInativacao.rows[0]).toMatchObject({ autor_usuario_id: dados.usuarioId, motivo_inativacao: 'informacao_clinica_revisada', confirmacao_dois_passos: true });
+    expect(decifrarCampo(crypto, 'restricoes_pacientes_revisoes.justificativa_criptografada', registroInativacao.rows[0].justificativa_criptografada,
+      { tenantId: tenantP2, pacienteId: dados.pacienteId, registroId: restricaoId, revisao: 3 })).toBe('Justificativa sintética');
+    expect((await cliente.query('select situacao,revisao from avaliacoes_restricoes_pacientes where id=$1', [avaliacao.rows[0].id])).rows)
+      .toEqual([{ situacao: 'nao_informado', revisao: 4 }]);
+    expect((await cliente.query('select numero,situacao from avaliacoes_restricoes_revisoes where avaliacao_id=$1 and numero=4', [avaliacao.rows[0].id])).rows)
+      .toEqual([{ numero: 4, situacao: 'nao_informado' }]);
+    expect((await cliente.query("select acao,usuario_id,tenant_id,metadados from user_action_logs where recurso_id=$1 and acao='restricoes.inativar'", [restricaoId])).rows)
+      .toEqual([{ acao: 'restricoes.inativar', usuario_id: dados.usuarioId, tenant_id: tenantP2, metadados: {} }]);
+    const concorrenteId = randomUUID();
+    const cifraConcorrente = cifrarConteudoRestricao(crypto, conteudo,
+      { ...vinculo, restricaoId: concorrenteId, finalidade: 'restricao' });
+    await cliente.query(`insert into restricoes_pacientes
+      (id,tenant_id,paciente_id,autor_usuario_id,chave_criacao,origem,confirmacao,confirmado_por_usuario_id,confirmado_em,conteudo_criptografado)
+      values ($1,$2,$3,$4,$5,'profissional','confirmada',$4,now(),$6)`,
+      [concorrenteId, tenantP2, dados.pacienteId, dados.usuarioId, randomUUID(), cifraConcorrente]);
+    await cliente.query(`insert into restricoes_pacientes_revisoes
+      (tenant_id,paciente_id,restricao_id,numero,evento,autor_usuario_id,conteudo_criptografado)
+      values ($1,$2,$3,1,'confirmacao',$4,$5)`, [tenantP2, dados.pacienteId, concorrenteId, dados.usuarioId,
+      cifrarConteudoRestricao(crypto, conteudo, { ...vinculo, restricaoId: concorrenteId, finalidade: 'revisao_restricao' })]);
+    const pedido = { motivo: 'outro', justificativa: 'Justificativa sintética', confirmacaoEmDoisPassos: true };
+    async function provarCorridaIndividual(primeiro: 'inativacao' | 'reconfirmacao', resultado: 'sem_alteracao' | 'pendencia_mantida' | 'alteracao_informada') {
+      const paciente = randomUUID(), id = randomUUID();
+      await cliente!.query('insert into pacientes(id,tenant_id,profissional_responsavel_id,nome_criptografado) values ($1,$2,$3,$4)',
+        [paciente, tenantP2, dados.profissionalId, Buffer.from('paciente-sintetico')]);
+      const avaliacaoCaso = await reconfirmar.garantirAvaliacaoInicial(usuario, paciente) as { id: string };
+      const base = { tenantId: tenantP2, pacienteId: paciente, restricaoId: id, revisao: 1 };
+      const atual = cifrarConteudoRestricao(crypto, conteudo, { ...base, finalidade: 'restricao' });
+      const snapshot = cifrarConteudoRestricao(crypto, conteudo, { ...base, finalidade: 'revisao_restricao' });
+      await cliente!.query(`insert into restricoes_pacientes
+        (id,tenant_id,paciente_id,autor_usuario_id,chave_criacao,origem,confirmacao,confirmado_por_usuario_id,confirmado_em,conteudo_criptografado)
+        values ($1,$2,$3,$4,$5,'profissional','confirmada',$4,now(),$6)`, [id, tenantP2, paciente, dados.usuarioId, randomUUID(), atual]);
+      await cliente!.query(`insert into restricoes_pacientes_revisoes
+        (tenant_id,paciente_id,restricao_id,numero,evento,autor_usuario_id,conteudo_criptografado)
+        values ($1,$2,$3,1,'confirmacao',$4,$5)`, [tenantP2, paciente, id, dados.usuarioId, snapshot]);
+      await cliente!.query(`update avaliacoes_restricoes_pacientes set situacao='restricoes_registradas', revisao=2,
+        confirmado_por_usuario_id=$2, confirmado_em=now(), vence_em=now() + interval '10 days' where id=$1`, [avaliacaoCaso.id, dados.usuarioId]);
+      await cliente!.query(`insert into avaliacoes_restricoes_revisoes
+        (tenant_id,paciente_id,avaliacao_id,numero,situacao,autor_usuario_id,vence_em)
+        select tenant_id,paciente_id,id,2,situacao,$2,vence_em from avaliacoes_restricoes_pacientes where id=$1`, [avaliacaoCaso.id, dados.usuarioId]);
+      const chave = randomUUID();
+      const requisicao = { avaliacaoId: avaliacaoCaso.id, revisaoAvaliacao: 2, restricaoId: id, revisaoRestricao: 1,
+        chaveIdempotencia: chave, meio: 'teleconsulta', atestacao: true };
+      let liberar!: () => void;
+      let avisarEscritor!: (pid: number) => void;
+      let avisarObservado!: (pid: number) => void;
+      const espera = new Promise<void>(resolve => { liberar = resolve; });
+      const escritorPronto = new Promise<number>(resolve => { avisarEscritor = resolve; });
+      const observadoPronto = new Promise<number>(resolve => { avisarObservado = resolve; });
+      const segurado = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) => executorTenant!.executar(t, async g => {
+        await g.query("set local statement_timeout = '12s'");
+        const pid = await g.query('select pg_backend_pid()::int as pid');
+        const resposta = await fn(g); avisarEscritor(pid[0].pid as number); await espera; return resposta;
+      }) };
+      const observador = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) => executorTenant!.executar(t, async g => {
+        await g.query("set local statement_timeout = '12s'"); await g.query("set local lock_timeout = '10s'");
+        const pid = await g.query('select pg_backend_pid()::int as pid'); avisarObservado(pid[0].pid as number); return fn(g);
+      }) };
+      const inativar = (executor: ExecutorTenant) => new ServicoConfirmacaoRestricao(executor, crypto, concessoes).inativar(usuario, paciente, id, 1, pedido);
+      const atestar = (executor: ExecutorTenant) => {
+        const servico = new ServicoReconfirmacaoRestricao(executor, crypto, concessoes);
+        return resultado === 'sem_alteracao' ? servico.registrarSemAlteracaoIndividual(usuario, paciente, requisicao)
+          : resultado === 'pendencia_mantida' ? servico.registrarPendenciaIndividual(usuario, paciente, requisicao)
+            : servico.registrarAlteracaoInformadaIndividual(usuario, paciente, requisicao);
+      };
+      const primeira = primeiro === 'inativacao' ? inativar(segurado as ExecutorTenant) : atestar(segurado as ExecutorTenant);
+      let resultadoPrimeiro: unknown;
+      let segundaResultado: Promise<PromiseSettledResult<unknown>[]> | undefined;
+      try {
+        const pidEscritor = await limitarEsperaInicial(Promise.race([escritorPronto, primeira.then(() => { throw new Error('Escritor encerrou cedo.'); })]));
+        const segunda = primeiro === 'inativacao' ? atestar(observador as ExecutorTenant) : inativar(observador as ExecutorTenant);
+        segundaResultado = Promise.allSettled([segunda]);
+        const pid = await limitarEsperaInicial(Promise.race([observadoPronto, segunda.then(() => { throw new Error('Operação encerrou cedo.'); })]));
+        await esperarBloqueioReal(pid, pidEscritor);
+      } finally {
+        liberar();
+        const encerradas = await Promise.allSettled([limitarEsperaInicial(primeira), ...(segundaResultado ? [limitarEsperaInicial(segundaResultado)] : [])]);
+        for (const encerrada of encerradas) if (encerrada.status === 'rejected') throw encerrada.reason;
+        if (encerradas[0].status === 'fulfilled') resultadoPrimeiro = encerradas[0].value;
+      }
+      const segunda = (await segundaResultado!)[0];
+      if (primeiro === 'inativacao') {
+        expect(segunda.status).toBe('rejected');
+        if (segunda.status !== 'rejected') throw new Error('Atestação deveria falhar.');
+        expect(segunda.reason).toMatchObject({ status: 409, message: 'Operação indisponível ou concorrente.' });
+        expect((await cliente!.query('select id from reconfirmacoes_restricoes where tenant_id=$1 and chave_idempotencia=$2', [tenantP2, chave])).rows).toEqual([]);
+      } else {
+        expect(segunda.status).toBe('fulfilled');
+        const historicoAtestado = resultadoPrimeiro as { id: string; resultado: string; escopo: string; revisaoAvaliacao: number; revisaoRestricao: number };
+        expect(historicoAtestado).toEqual({ id: expect.any(String), resultado, escopo: 'restricao_individual', revisaoAvaliacao: 2, revisaoRestricao: 1 });
+        await expect(atestar(executorTenant!)).resolves.toEqual(historicoAtestado);
+        expect((await cliente!.query("select id from user_action_logs where recurso_id=$1 and acao='restricoes.reconfirmacao_individual'", [historicoAtestado.id])).rows).toHaveLength(1);
+      }
+      expect((await cliente!.query('select estado,revisao from restricoes_pacientes where id=$1', [id])).rows).toEqual([{ estado: 'inativa', revisao: 2 }]);
+      expect((await cliente!.query('select situacao,revisao from avaliacoes_restricoes_pacientes where id=$1', [avaliacaoCaso.id])).rows).toEqual([{ situacao: 'nao_informado', revisao: 3 }]);
+      expect((await cliente!.query('select numero,situacao from avaliacoes_restricoes_revisoes where avaliacao_id=$1 and numero=3', [avaliacaoCaso.id])).rows)
+        .toEqual([{ numero: 3, situacao: 'nao_informado' }]);
+      expect((await cliente!.query("select id from user_action_logs where recurso_id=$1 and acao='restricoes.avaliacao_invalidada'", [avaliacaoCaso.id])).rows).toHaveLength(1);
+    }
+    for (const resultado of ['sem_alteracao', 'pendencia_mantida', 'alteracao_informada'] as const) {
+      await provarCorridaIndividual('inativacao', resultado);
+      await provarCorridaIndividual('reconfirmacao', resultado);
+    }
+    let liberarPaciente!: () => void;
+    let avisarPaciente!: () => void;
+    const aguardandoPaciente = new Promise<void>(resolve => { liberarPaciente = resolve; });
+    const pacienteBloqueado = new Promise<void>(resolve => { avisarPaciente = resolve; });
+    const detentor = executorTenant.executar(tenantP2, async g => {
+      await autorizarRestricaoClinica(g, concessoes, usuario, dados.pacienteId);
+      avisarPaciente();
+      await aguardandoPaciente;
+    });
+    try {
+      await Promise.race([pacienteBloqueado, detentor.then(() => { throw new Error('Transação encerrou cedo.'); })]);
+      const executorComPrazo = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) =>
+        executorTenant!.executar(t, async g => { await g.query("set local lock_timeout = '200ms'"); return fn(g); }) };
+      const comPrazo = new ServicoConfirmacaoRestricao(executorComPrazo as ExecutorTenant, crypto, concessoes);
+      await expect(comPrazo.inativar(usuario, dados.pacienteId, concorrenteId, 1, pedido)).rejects.toMatchObject({ status: 409, message: 'Operação concorrente. Tente novamente.' });
+    } finally {
+      liberarPaciente();
+      await detentor;
+    }
+    const simultaneas = await Promise.allSettled([
+      confirmar.inativar(usuario, dados.pacienteId, concorrenteId, 1, pedido),
+      confirmar.inativar(usuario, dados.pacienteId, concorrenteId, 1, pedido)
+    ]);
+    expect(simultaneas.filter(r => r.status === 'fulfilled')).toHaveLength(1);
+    const falhaConcorrente = simultaneas.find(r => r.status === 'rejected');
+    expect(falhaConcorrente).toMatchObject({ status: 'rejected', reason: { status: 409 } });
+    expect((await cliente.query("select numero from restricoes_pacientes_revisoes where restricao_id=$1 and evento='inativacao'", [concorrenteId])).rows)
+      .toEqual([{ numero: 2 }]);
+    expect((await cliente.query('select estado,revisao from restricoes_pacientes where id=$1', [concorrenteId])).rows)
+      .toEqual([{ estado: 'inativa', revisao: 2 }]);
+    expect((await cliente.query("select id from user_action_logs where recurso_id=$1 and acao='restricoes.inativar'", [concorrenteId])).rows).toHaveLength(1);
+    await cliente.query("update avaliacoes_restricoes_pacientes set situacao='restricoes_registradas', revisao=revisao+1 where id=$1", [avaliacaoRollback.rows[0].id]);
+    await cliente.query(`insert into avaliacoes_restricoes_revisoes
+      (tenant_id,paciente_id,avaliacao_id,numero,situacao,autor_usuario_id,vence_em)
+      select tenant_id,paciente_id,id,revisao,situacao,$2,vence_em from avaliacoes_restricoes_pacientes where id=$1`,
+      [avaliacaoRollback.rows[0].id, dados.usuarioId]);
+    const avaliacaoAntesInativacao = await cliente.query('select situacao,revisao,confirmado_por_usuario_id,confirmado_em,vence_em from avaliacoes_restricoes_pacientes where id=$1', [avaliacaoRollback.rows[0].id]);
+    const idInativacaoRollback = randomUUID();
+    const cifraInativacaoRollback = cifrarConteudoRestricao(crypto, conteudo,
+      { ...vinculo, pacienteId: pacienteRollback, restricaoId: idInativacaoRollback, finalidade: 'restricao' });
+    await cliente.query(`insert into restricoes_pacientes
+      (id,tenant_id,paciente_id,autor_usuario_id,chave_criacao,origem,confirmacao,confirmado_por_usuario_id,confirmado_em,conteudo_criptografado)
+      values ($1,$2,$3,$4,$5,'profissional','confirmada',$4,now(),$6)`,
+      [idInativacaoRollback, tenantP2, pacienteRollback, dados.usuarioId, randomUUID(), cifraInativacaoRollback]);
+    await cliente.query(`insert into restricoes_pacientes_revisoes
+      (tenant_id,paciente_id,restricao_id,numero,evento,autor_usuario_id,conteudo_criptografado)
+      values ($1,$2,$3,1,'confirmacao',$4,$5)`, [tenantP2, pacienteRollback, idInativacaoRollback, dados.usuarioId,
+      cifrarConteudoRestricao(crypto, conteudo, { ...vinculo, pacienteId: pacienteRollback, restricaoId: idInativacaoRollback, finalidade: 'revisao_restricao' })]);
+    await expect(confirmarComFalha.inativar(usuario, pacienteRollback, idInativacaoRollback, 1, pedido))
+      .rejects.toMatchObject({ status: 500, message: 'Operação indisponível.' });
+    expect((await cliente.query('select estado,revisao,conteudo_criptografado from restricoes_pacientes where id=$1', [idInativacaoRollback])).rows)
+      .toEqual([{ estado: 'ativa', revisao: 1, conteudo_criptografado: cifraInativacaoRollback }]);
+    expect((await cliente.query('select situacao,revisao,confirmado_por_usuario_id,confirmado_em,vence_em from avaliacoes_restricoes_pacientes where id=$1', [avaliacaoRollback.rows[0].id])).rows)
+      .toEqual(avaliacaoAntesInativacao.rows);
+    expect((await cliente.query('select numero from restricoes_pacientes_revisoes where restricao_id=$1', [idInativacaoRollback])).rows).toEqual([{ numero: 1 }]);
+    expect((await cliente.query('select numero from avaliacoes_restricoes_revisoes where avaliacao_id=$1 order by numero', [avaliacaoRollback.rows[0].id])).rows).toEqual([{ numero: 1 }, { numero: 2 }]);
+    expect((await cliente.query('select id from user_action_logs where recurso_id=any($1::uuid[])', [[idInativacaoRollback, avaliacaoRollback.rows[0].id]])).rows).toEqual([]);
+    let liberarTransferencia!: () => void, avisarLeitura!: () => void;
+    const aguardandoTransferencia = new Promise<void>(resolve => { liberarTransferencia = resolve; });
+    const leituraPronta = new Promise<void>(resolve => { avisarLeitura = resolve; });
+    const executorLeituraTransferencia = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) => executorTenant!.executar(t, async g => {
+      const resposta = await fn(g); avisarLeitura(); await aguardandoTransferencia; return resposta;
+    }) };
+    const leituraAntesTransferencia = new ServicoLeituraRestricao(executorLeituraTransferencia as ExecutorTenant, crypto, concessoes)
+      .consultar(usuario, casoLeitura.paciente, casoLeitura.restricaoId);
+    try {
+      await Promise.race([leituraPronta, leituraAntesTransferencia.then(() => { throw new Error('Leitura encerrou cedo.'); })]);
+      await cliente.query("set lock_timeout = '200ms'");
+      await expect(cliente.query('update pacientes set profissional_responsavel_id=$1 where id=$2', [outro.profissionalId, casoLeitura.paciente]))
+        .rejects.toMatchObject({ code: '55P03' });
+    } finally {
+      liberarTransferencia(); await leituraAntesTransferencia; await cliente.query('reset lock_timeout');
+    }
+    let liberarMudanca!: () => void, avisarMudanca!: (pid: number) => void, avisarLeituraMudanca!: (pid: number) => void;
+    const esperaMudanca = new Promise<void>(resolve => { liberarMudanca = resolve; });
+    const mudancaPronta = new Promise<number>(resolve => { avisarMudanca = resolve; });
+    const leituraMudancaPronta = new Promise<number>(resolve => { avisarLeituraMudanca = resolve; });
+    const mudanca = executorTenant.executar(tenantP2, async g => {
+      await g.query("set local statement_timeout = '12s'"); const pid = await g.query('select pg_backend_pid()::int as pid');
+      await g.query('update pacientes set profissional_responsavel_id=$1 where id=$2', [outro.profissionalId, casoLeitura.paciente]);
+      avisarMudanca(pid[0].pid as number); await esperaMudanca;
+    });
+    const executorLeituraMudanca = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) => executorTenant!.executar(t, async g => {
+      await g.query("set local statement_timeout = '12s'"); await g.query("set local lock_timeout = '10s'");
+      const pid = await g.query('select pg_backend_pid()::int as pid'); avisarLeituraMudanca(pid[0].pid as number); return fn(g);
+    }) };
+    let leituraAguardandoMudanca: Promise<PromiseSettledResult<unknown>[]> | undefined;
+    try {
+      const pidEscritor = await limitarEsperaInicial(Promise.race([mudancaPronta, mudanca.then(() => { throw new Error('Transferência encerrou cedo.'); })]));
+      const chamada = new ServicoLeituraRestricao(executorLeituraMudanca as ExecutorTenant, crypto, concessoes).consultar(usuario, casoLeitura.paciente, casoLeitura.restricaoId);
+      leituraAguardandoMudanca = Promise.allSettled([chamada]);
+      const pid = await limitarEsperaInicial(Promise.race([leituraMudancaPronta, chamada.then(() => { throw new Error('Leitura encerrou cedo.'); })]));
+      await esperarBloqueioReal(pid, pidEscritor);
+    } finally {
+      liberarMudanca();
+      const encerradas = await Promise.allSettled([limitarEsperaInicial(mudanca), ...(leituraAguardandoMudanca ? [limitarEsperaInicial(leituraAguardandoMudanca)] : [])]);
+      for (const encerrada of encerradas) if (encerrada.status === 'rejected') throw encerrada.reason;
+    }
+    const [resultadoLeituraTransferida] = await leituraAguardandoMudanca!;
+    expect(resultadoLeituraTransferida.status).toBe('rejected');
+    if (resultadoLeituraTransferida.status !== 'rejected') throw new Error('Leitura após transferência deveria falhar.');
+    expect(resultadoLeituraTransferida.reason).toMatchObject({ status: 403 });
+    await cliente.query('update pacientes set profissional_responsavel_id=$1 where id=$2', [dados.profissionalId, casoLeitura.paciente]);
+    await expect(leitura.consultar(usuario, casoLeitura.paciente, casoLeitura.restricaoId)).resolves.toMatchObject({ id: casoLeitura.restricaoId, revisao: 1 });
+    let liberar!: () => void;
+    let avisar!: () => void;
+    const aguardando = new Promise<void>(resolve => { liberar = resolve; });
+    const autorizado = new Promise<void>(resolve => { avisar = resolve; });
+    const executorLeituraPausada = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) => executorTenant!.executar(t, async g => {
+      const resposta = await fn(g); avisar(); await aguardando; return resposta;
+    }) };
+    const transacao = new ServicoLeituraRestricao(executorLeituraPausada as ExecutorTenant, crypto, concessoes)
+      .consultar(usuario, casoLeitura.paciente, casoLeitura.restricaoId);
+    try {
+      await Promise.race([autorizado, transacao.then(() => { throw new Error('Transação encerrou cedo.'); })]);
+      await cliente.query("set lock_timeout = '200ms'");
+      await expect(cliente.query(`update concessoes_permissao_usuario set revogada_por=$1, revogada_em=clock_timestamp()
+        where id=$2`, [dados.usuarioId, linha.rows[0].id])).rejects.toMatchObject({ code: '55P03' });
+    } finally {
+      liberar();
+      await transacao;
+      await cliente.query('reset lock_timeout');
+    }
+    let liberarRevogacao!: () => void, avisarRevogacao!: (pid: number) => void, avisarLeituraRevogada!: (pid: number) => void;
+    const esperaRevogacao = new Promise<void>(resolve => { liberarRevogacao = resolve; });
+    const revogacaoPronta = new Promise<number>(resolve => { avisarRevogacao = resolve; });
+    const leituraRevogadaPronta = new Promise<number>(resolve => { avisarLeituraRevogada = resolve; });
+    const revogacao = executorTenant.executar(tenantP2, async g => {
+      await g.query("set local statement_timeout = '12s'");
+      const pid = await g.query('select pg_backend_pid()::int as pid');
+      await g.query('update concessoes_permissao_usuario set revogada_por=$1, revogada_em=clock_timestamp() where id=$2', [dados.usuarioId, linha.rows[0].id]);
+      avisarRevogacao(pid[0].pid as number); await esperaRevogacao;
+    });
+    const executorLeituraRevogada = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) => executorTenant!.executar(t, async g => {
+      await g.query("set local statement_timeout = '12s'"); await g.query("set local lock_timeout = '10s'");
+      const pid = await g.query('select pg_backend_pid()::int as pid'); avisarLeituraRevogada(pid[0].pid as number); return fn(g);
+    }) };
+    let leituraAguardandoRevogacao: Promise<PromiseSettledResult<unknown>[]> | undefined;
+    try {
+      const pidEscritor = await limitarEsperaInicial(Promise.race([revogacaoPronta, revogacao.then(() => { throw new Error('Revogação encerrou cedo.'); })]));
+      const chamada = new ServicoLeituraRestricao(executorLeituraRevogada as ExecutorTenant, crypto, concessoes).consultar(usuario, casoLeitura.paciente, casoLeitura.restricaoId);
+      leituraAguardandoRevogacao = Promise.allSettled([chamada]);
+      const pid = await limitarEsperaInicial(Promise.race([leituraRevogadaPronta, chamada.then(() => { throw new Error('Leitura encerrou cedo.'); })]));
+      await esperarBloqueioReal(pid, pidEscritor);
+    } finally {
+      liberarRevogacao();
+      const encerradas = await Promise.allSettled([limitarEsperaInicial(revogacao), ...(leituraAguardandoRevogacao ? [limitarEsperaInicial(leituraAguardandoRevogacao)] : [])]);
+      for (const encerrada of encerradas) if (encerrada.status === 'rejected') throw encerrada.reason;
+    }
+    const [resultadoLeituraRevogada] = await leituraAguardandoRevogacao!;
+    expect(resultadoLeituraRevogada.status).toBe('rejected');
+    if (resultadoLeituraRevogada.status !== 'rejected') throw new Error('Leitura após revogação deveria falhar.');
+    expect(resultadoLeituraRevogada.reason).toMatchObject({ status: 403 });
+    await expect(conferir(dados.pacienteId)).rejects.toMatchObject({ status: 403 });
+    await expect(reconfirmar.registrarSemAlteracaoIndividual(usuario, dados.pacienteId, pedidoIndividual)).rejects.toMatchObject({ status: 403 });
+    await expect(leitura.consultar(usuario, casoLeitura.paciente, casoLeitura.restricaoId)).rejects.toMatchObject({ status: 403, message: 'Operação não autorizada.' });
+  }, 120_000);
 
   it('FOOD03 protege favoritos com FORCE RLS e oculta registros ao trocar tenant', async () => {
     if (!cliente) throw new Error('Cliente da prova RLS nao foi inicializado.');

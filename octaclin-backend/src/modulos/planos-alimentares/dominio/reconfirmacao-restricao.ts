@@ -34,9 +34,14 @@ const CHAVES = ['agora', 'pacienteId', 'avaliacaoId', 'revisaoAvaliacao', 'restr
 
 function invalida(): never { throw new ReconfirmacaoInvalidaError(); }
 function simples(v: unknown, permitidas: readonly string[]): Record<string, unknown> {
-  if (!v || typeof v !== 'object' || Array.isArray(v) || ![Object.prototype, null].includes(Object.getPrototypeOf(v)) ||
-    Reflect.ownKeys(v).some(k => typeof k !== 'string' || !permitidas.includes(k))) return invalida();
-  return v as Record<string, unknown>;
+  if (!v || typeof v !== 'object' || Array.isArray(v) || ![Object.prototype, null].includes(Object.getPrototypeOf(v))) return invalida();
+  const descritores = Object.getOwnPropertyDescriptors(v);
+  if (Reflect.ownKeys(descritores).some(k => typeof k !== 'string' || !permitidas.includes(k)) ||
+    Object.values(descritores).some(d => !d.enumerable || !Object.hasOwn(d, 'value'))) return invalida();
+  // O snapshot sem protótipo não lê propriedades herdadas ao validar opcionais.
+  const copia: Record<string, unknown> = Object.create(null);
+  for (const [chave, descritor] of Object.entries(descritores)) copia[chave] = descritor.value;
+  return copia;
 }
 const id = (v: unknown): string => (typeof v === 'string' && ID.test(v) ? v : invalida());
 const revisao = (v: unknown): number => (typeof v === 'number' && Number.isSafeInteger(v) && v >= 1 ? v : invalida());
