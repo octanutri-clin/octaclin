@@ -165,7 +165,7 @@ export class ControladorProfissionais {
     @Req() requisicao: Request,
     @Param('id', ParseUUIDPipe) id: string
   ) {
-    await this.servicoProfissionais.arquivar(usuario.tenantId, id);
+    await this.servicoProfissionais.arquivar(usuario.tenantId, id, usuario.usuarioId);
     await this.servicoAuditoria.registrar({
       tenantId: usuario.tenantId,
       usuarioId: usuario.usuarioId,
