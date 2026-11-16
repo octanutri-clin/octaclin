@@ -1,6 +1,6 @@
 import { ArgumentsHost, Body, Catch, Controller, ExceptionFilter, Header, HttpCode, HttpException, InternalServerErrorException,
   Param, ParseUUIDPipe, Post, UseFilters, UseGuards } from '@nestjs/common';
-import { Allow, Equals, IsBoolean, IsDefined, IsIn, IsInt, IsOptional, IsString, IsUUID, Max, MaxLength, Min, MinLength, isUUID } from 'class-validator';
+import { Allow, ArrayMaxSize, Equals, IsArray, IsBoolean, IsDefined, IsIn, IsInt, IsOptional, IsString, IsUUID, Max, MaxLength, Min, MinLength, isUUID } from 'class-validator';
 import type { Response } from 'express';
 import { Papeis, Permissoes, UsuarioAtual } from '../../auth/apresentacao/decorators';
 import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
@@ -13,6 +13,7 @@ import { ServicoLeituraRestricao } from '../aplicacao/servico-leitura-restricao'
 import { ServicoConfirmacaoRestricao } from '../aplicacao/servico-confirmacao-restricao';
 import { ServicoRegistroPendenciaRestricao } from '../aplicacao/servico-registro-pendencia-restricao';
 import { ServicoReconfirmacaoRestricao } from '../aplicacao/servico-reconfirmacao-restricao';
+import { ServicoSolicitacoesRestricao } from '../aplicacao/servico-solicitacoes-restricao';
 
 class ConsultarRestricaoDto {
   @IsUUID() restricaoId: string;
@@ -44,6 +45,25 @@ class ReconfirmarRestricaoDto {
   @IsOptional() @IsUUID() restricaoId?: string;
   @IsOptional() @IsInt() @Min(1) @Max(2147483646) revisaoRestricao?: number;
   @IsOptional() @IsBoolean() @Equals(true) confirmacaoExplicitaAusencia?: boolean;
+}
+
+class DecidirSolicitacaoDto extends RevisaoRestricaoDto {
+  @IsIn(['atendida', 'parcial', 'recusada']) estadoFinal: string;
+  @IsString() @MinLength(1) @MaxLength(4000) explicacaoPaciente: string;
+  @IsOptional() @IsString() @MinLength(1) @MaxLength(4000) justificativaInterna?: string;
+  // Estrutura dos itens validada no domínio (`validarDesfechoSolicitacao`), com entrada fechada.
+  @IsArray() @ArrayMaxSize(200) @Allow() alterados: unknown[];
+  @IsArray() @ArrayMaxSize(200) @Allow() inalterados: unknown[];
+}
+
+const CAMPOS_SOLICITACAO_PROFISSIONAL = ['id', 'tipo', 'estado', 'revisao', 'restricaoId', 'criadoEm', 'pedido', 'decididoEm',
+  'explicacaoPaciente', 'justificativaInterna', 'desfecho'] as const;
+/** Allowlist da lista para o profissional: só os campos acima, e só se o serviço devolveu um item bem formado. */
+function projetarSolicitacaoProfissional(valor: unknown): Record<string, unknown> {
+  if (!valor || typeof valor !== 'object' || Array.isArray(valor)) throw new InternalServerErrorException('Operação indisponível.');
+  const r = valor as Record<string, unknown>;
+  if (typeof r.id !== 'string' || !isUUID(r.id) || !Number.isSafeInteger(r.revisao)) throw new InternalServerErrorException('Operação indisponível.');
+  return Object.fromEntries(CAMPOS_SOLICITACAO_PROFISSIONAL.filter(k => r[k] !== undefined).map(k => [k, r[k]]));
 }
 
 function projetarAcao(valor: unknown, id: string, revisao: number, campo: 'estado' | 'confirmacao', esperado: string): Record<string, unknown> {
@@ -79,7 +99,34 @@ class FiltroRestricoesClinicas implements ExceptionFilter {
 @UseFilters(FiltroRestricoesClinicas)
 export class ControladorRestricoesClinicas {
   constructor(private readonly leitura: ServicoLeituraRestricao, private readonly decisao: ServicoConfirmacaoRestricao,
-    private readonly registro: ServicoRegistroPendenciaRestricao, private readonly reconfirmacao: ServicoReconfirmacaoRestricao) {}
+    private readonly registro: ServicoRegistroPendenciaRestricao, private readonly reconfirmacao: ServicoReconfirmacaoRestricao,
+    private readonly solicitacoes: ServicoSolicitacoesRestricao) {}
+
+  @Post('solicitacoes/listar') @HttpCode(200) @Permissoes('pacientes.ler') @Header('Cache-Control', 'private, no-store')
+  async listarSolicitacoes(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('pacienteId', ParseUUIDPipe) pacienteId: string,
+    @Body() dados: unknown): Promise<unknown> {
+    if (!dados || typeof dados !== 'object' || Array.isArray(dados) || Reflect.ownKeys(dados).length !== 0) throw new HttpException('Solicitação inválida.', 400);
+    const lista = await this.solicitacoes.listar(usuario, pacienteId);
+    if (!Array.isArray(lista)) throw new InternalServerErrorException('Operação indisponível.');
+    return { itens: lista.map(projetarSolicitacaoProfissional) };
+  }
+
+  @Post('solicitacoes/:solicitacaoId/iniciar-analise') @HttpCode(200) @Permissoes('pacientes.ler', 'pacientes.gerenciar') @Header('Cache-Control', 'private, no-store')
+  async iniciarAnaliseSolicitacao(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('pacienteId', ParseUUIDPipe) pacienteId: string,
+    @Param('solicitacaoId', ParseUUIDPipe) solicitacaoId: string, @Body() dados: RevisaoRestricaoDto): Promise<unknown> {
+    const valor = await this.solicitacoes.iniciarAnalise(usuario, pacienteId, solicitacaoId, dados.revisao);
+    return projetarAcao(valor, solicitacaoId, dados.revisao, 'estado', 'em_analise');
+  }
+
+  @Post('solicitacoes/:solicitacaoId/decidir') @HttpCode(200) @Permissoes('pacientes.ler', 'pacientes.gerenciar') @Header('Cache-Control', 'private, no-store')
+  async decidirSolicitacao(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('pacienteId', ParseUUIDPipe) pacienteId: string,
+    @Param('solicitacaoId', ParseUUIDPipe) solicitacaoId: string, @Body() dados: DecidirSolicitacaoDto): Promise<unknown> {
+    const valor = await this.solicitacoes.decidir(usuario, pacienteId, solicitacaoId, dados.revisao, {
+      estadoFinal: dados.estadoFinal, explicacaoPaciente: dados.explicacaoPaciente,
+      ...(dados.justificativaInterna !== undefined ? { justificativaInterna: dados.justificativaInterna } : {}),
+      alterados: dados.alterados, inalterados: dados.inalterados });
+    return projetarAcao(valor, solicitacaoId, dados.revisao, 'estado', dados.estadoFinal);
+  }
 
   @Post('avaliacao/inicial') @HttpCode(200) @Permissoes('pacientes.ler', 'pacientes.gerenciar') @Header('Cache-Control', 'private, no-store')
   async avaliacaoInicial(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('pacienteId', ParseUUIDPipe) pacienteId: string,

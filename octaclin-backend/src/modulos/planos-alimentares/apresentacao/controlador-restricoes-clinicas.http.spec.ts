@@ -12,6 +12,7 @@ import { ServicoLeituraRestricao } from '../aplicacao/servico-leitura-restricao'
 import { ServicoConfirmacaoRestricao } from '../aplicacao/servico-confirmacao-restricao';
 import { ServicoRegistroPendenciaRestricao } from '../aplicacao/servico-registro-pendencia-restricao';
 import { ServicoReconfirmacaoRestricao } from '../aplicacao/servico-reconfirmacao-restricao';
+import { ServicoSolicitacoesRestricao } from '../aplicacao/servico-solicitacoes-restricao';
 import { ServicoFeatureFlags } from '../../../infraestrutura/feature-flags/servico-feature-flags';
 import { ControladorRestricoesClinicas } from './controlador-restricoes-clinicas';
 
@@ -33,6 +34,11 @@ const registrarPendenciaGlobal = resultadoGlobal('pendencia_mantida'), registrar
 const registrarSemAlteracao = resultadoGlobal('sem_alteracao'), registrarAusenciaDeclarada = resultadoGlobal('sem_restricoes_declaradas');
 const registrarPendenciaIndividual = resultadoIndividual('pendencia_mantida'), registrarAlteracaoIndividual = resultadoIndividual('alteracao_informada');
 const registrarSemAlteracaoIndividual = resultadoIndividual('sem_alteracao');
+const SOLICITACAO = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+const listarSolicitacoes = jest.fn(async (): Promise<unknown> => [{ id: SOLICITACAO, tipo: 'correcao', estado: 'criada', revisao: 1,
+  criadoEm: '2026-11-10T10:00:00.000Z', pedido: { itens: [{ item: 'i1', texto: 'Texto sintético' }] }, autorUsuarioId: 'CANARIO_AUTOR' }]);
+const iniciarAnalise = jest.fn(async (): Promise<unknown> => ({ id: SOLICITACAO, revisao: 2, estado: 'em_analise', privado: 'CANARIO_INTERNO' }));
+const decidir = jest.fn(async (): Promise<unknown> => ({ id: SOLICITACAO, revisao: 3, estado: 'recusada', privado: 'CANARIO_INTERNO' }));
 
 let flagLigada = true;
 const flags = { habilitada: jest.fn(async (_tenant: string, chave: string) => chave === 'restricoes.clinicas' && flagLigada) };
@@ -52,7 +58,8 @@ describe('contrato HTTP clínico isolado de restrições', () => {
         registrarAlteracaoInformada: registrarAlteracaoGlobal, registrarSemAlteracao, registrarAusenciaDeclarada,
         registrarPendenciaIndividual, registrarAlteracaoInformadaIndividual: registrarAlteracaoIndividual, registrarSemAlteracaoIndividual } },
       { provide: ServicoAuditoria, useValue: { registrar: async () => undefined } },
-      { provide: ServicoFeatureFlags, useValue: flags }
+      { provide: ServicoFeatureFlags, useValue: flags },
+      { provide: ServicoSolicitacoesRestricao, useValue: { listar: listarSolicitacoes, iniciarAnalise, decidir } }
     ] }).overrideGuard(GuardaJwt).useValue({ canActivate(c: ExecutionContext) {
       const r = c.switchToHttp().getRequest(); if (!r.headers['x-papel-sintetico']) throw new UnauthorizedException();
       r.usuarioAutenticado = { tenantId: tenant, usuarioId: usuario, papel: r.headers['x-papel-sintetico'],
@@ -111,6 +118,49 @@ describe('contrato HTTP clínico isolado de restrições', () => {
         for (const f of [consultar, registrar, confirmar, registrarPendenciaGlobal]) expect(f).not.toHaveBeenCalled();
       } finally { flagLigada = true; }
     });
+  describe('solicitações do paciente (P2c, lado do profissional)', () => {
+    const post = (rota: string, body: unknown, headers: Record<string, string> = {}) => fetch(`${url}/pacientes/${paciente}/restricoes/solicitacoes/${rota}`, {
+      method: 'POST', headers: { 'content-type': 'application/json', 'x-papel-sintetico': 'Professional', ...headers }, body: JSON.stringify(body) });
+    beforeEach(() => { listarSolicitacoes.mockClear(); iniciarAnalise.mockClear(); decidir.mockClear(); });
+    it('lista com allowlist e sem cache; campo fora da lista não passa', async () => {
+      const resposta = await post('listar', {});
+      expect(resposta.status).toBe(200); expect(resposta.headers.get('cache-control')).toBe('private, no-store');
+      const corpo = await resposta.json();
+      expect(corpo).toEqual({ itens: [{ id: SOLICITACAO, tipo: 'correcao', estado: 'criada', revisao: 1, criadoEm: '2026-11-10T10:00:00.000Z',
+        pedido: { itens: [{ item: 'i1', texto: 'Texto sintético' }] } }] });
+      expect(listarSolicitacoes).toHaveBeenCalledWith(expect.objectContaining({ tenantId: tenant, usuarioId: usuario }), paciente);
+    });
+    it('listar recusa corpo com campos e só exige leitura', async () => {
+      expect((await post('listar', { pacienteId: 'outro' })).status).toBe(400);
+      expect((await post('listar', {}, { 'x-somente-leitura': '1' })).status).toBe(200);
+    });
+    it('inicia análise e decide devolvendo só id, revisão e estado', async () => {
+      const r1 = await post(`${SOLICITACAO}/iniciar-analise`, { revisao: 1 });
+      expect(r1.status).toBe(200); expect(await r1.json()).toEqual({ id: SOLICITACAO, revisao: 2, estado: 'em_analise' });
+      const corpo = { revisao: 2, estadoFinal: 'recusada', explicacaoPaciente: 'Mantido após conferência.', alterados: [], inalterados: ['i1'] };
+      const r2 = await post(`${SOLICITACAO}/decidir`, corpo);
+      expect(r2.status).toBe(200); expect(await r2.json()).toEqual({ id: SOLICITACAO, revisao: 3, estado: 'recusada' });
+      expect(decidir).toHaveBeenCalledWith(expect.objectContaining({ tenantId: tenant }), paciente, SOLICITACAO, 2,
+        { estadoFinal: 'recusada', explicacaoPaciente: 'Mantido após conferência.', alterados: [], inalterados: ['i1'] });
+    });
+    it.each([
+      ['estado final inválido', { revisao: 2, estadoFinal: 'cancelada_pelo_paciente', explicacaoPaciente: 'x', alterados: [], inalterados: ['i1'] }],
+      ['sem explicação ao paciente', { revisao: 2, estadoFinal: 'recusada', alterados: [], inalterados: ['i1'] }],
+      ['campo extra', { revisao: 2, estadoFinal: 'recusada', explicacaoPaciente: 'x', alterados: [], inalterados: ['i1'], autorUsuarioId: 'x' }]
+    ])('decidir com %s responde 400 sem chamar o serviço', async (_caso, corpo) => {
+      expect((await post(`${SOLICITACAO}/decidir`, corpo)).status).toBe(400); expect(decidir).not.toHaveBeenCalled();
+    });
+    it('iniciar análise e decidir exigem permissão de gestão', async () => {
+      expect((await post(`${SOLICITACAO}/iniciar-analise`, { revisao: 1 }, { 'x-somente-leitura': '1' })).status).toBe(403);
+      expect((await post(`${SOLICITACAO}/decidir`, { revisao: 2, estadoFinal: 'recusada', explicacaoPaciente: 'x', alterados: [], inalterados: ['i1'] },
+        { 'x-somente-leitura': '1' })).status).toBe(403);
+      expect(iniciarAnalise).not.toHaveBeenCalled(); expect(decidir).not.toHaveBeenCalled();
+    });
+    it('Patient e Collaborator não chegam ao serviço', async () => {
+      for (const papel of ['Patient', 'Collaborator']) expect((await post('listar', {}, { 'x-papel-sintetico': papel })).status).toBe(403);
+      expect(listarSolicitacoes).not.toHaveBeenCalled();
+    });
+  });
   it('nega profissional sem permissão genérica antes do serviço', async () => {
     const resposta = await fetch(`${url}/pacientes/${paciente}/restricoes/consultar`, { method: 'POST',
       headers: { 'content-type': 'application/json', 'x-papel-sintetico': 'Professional', 'x-sem-permissao': '1' }, body: JSON.stringify({ restricaoId: restricao }) });
