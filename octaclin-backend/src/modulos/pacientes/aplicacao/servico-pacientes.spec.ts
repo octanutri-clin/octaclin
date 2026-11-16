@@ -1,4 +1,5 @@
 import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import * as vinculosRepresentacao from './servico-vinculos-representacao';
 import { QueryFailedError } from 'typeorm';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
@@ -33,7 +34,7 @@ import { LIMITE_LINHAS_EXPORTACAO, ServicoPacientes } from './servico-pacientes'
 function criarGerenciadorFake(repositorio: Record<string, unknown>) {
   if ('paciente' in repositorio || 'profissional' in repositorio) {
     return {
-      query: jest.fn(async () => []),
+      query: jest.fn(async (sql: string) => (/^\s*update\s/i.test(String(sql)) ? [[], 0] : [])),
       getRepository: jest.fn((entidade: unknown) => {
         if (entidade === WebhookAssinaturaOrm) return { find: jest.fn(async () => []) };
         if (entidade === PerfilCadastroPacienteOrm) return { findOne: jest.fn(async () => null) };
@@ -46,7 +47,7 @@ function criarGerenciadorFake(repositorio: Record<string, unknown>) {
   }
 
   return {
-    query: jest.fn(async () => []),
+    query: jest.fn(async (sql: string) => (/^\s*update\s/i.test(String(sql)) ? [[], 0] : [])),
     getRepository: jest.fn((entidade: unknown) => {
       if (entidade === WebhookAssinaturaOrm) return { find: jest.fn(async () => []) };
       if (entidade === PerfilCadastroPacienteOrm) return { findOne: jest.fn(async () => null) };
@@ -861,9 +862,13 @@ describe('ServicoPacientes', () => {
         limitesPermitidos as never
       );
 
+      const cascata = jest.spyOn(vinculosRepresentacao, 'revogarVinculosDoPaciente');
       await servico.arquivar('tenant-1', 'paciente-1', usuarioColaborador);
 
       expect(repositorio.update).toHaveBeenCalledWith(expect.any(Object), { arquivadoEm: expect.any(Date) });
+      // FOOD06 P2d-3a: arquivar encerra as representações; restaurar não as revive.
+      expect(cascata).toHaveBeenCalledWith(expect.anything(), 'tenant-1', 'paciente-1', usuarioColaborador.usuarioId, 'arquivamento');
+      cascata.mockRestore();
     });
 
     it('restaura paciente arquivado somente se houver vaga no plano', async () => {
@@ -1179,7 +1184,7 @@ describe('ServicoPacientes', () => {
         executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
           operacao({
             getRepository: jest.fn((entidade) => repositorios.get(entidade)),
-            query: jest.fn(async () => [])
+            query: jest.fn(async (sql: string) => (/^\s*update\s/i.test(String(sql)) ? [[], 0] : []))
           })
         )
       } as never,
@@ -1282,7 +1287,7 @@ describe('ServicoPacientes', () => {
         executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
           operacao({
             getRepository: jest.fn((entidade) => repositorios.get(entidade)),
-            query: jest.fn(async () => [])
+            query: jest.fn(async (sql: string) => (/^\s*update\s/i.test(String(sql)) ? [[], 0] : []))
           })
         )
       } as never,
@@ -1777,7 +1782,7 @@ describe('ServicoPacientes', () => {
         executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
           operacao({
             getRepository: jest.fn((entidade) => repositorios.get(entidade)),
-            query: jest.fn(async () => [])
+            query: jest.fn(async (sql: string) => (/^\s*update\s/i.test(String(sql)) ? [[], 0] : []))
           })
         )
       } as never,
@@ -1866,7 +1871,7 @@ describe('ServicoPacientes', () => {
         executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
           operacao({
             getRepository: jest.fn((entidade) => repositorios.get(entidade)),
-            query: jest.fn(async () => [])
+            query: jest.fn(async (sql: string) => (/^\s*update\s/i.test(String(sql)) ? [[], 0] : []))
           })
         )
       } as never,
@@ -2040,7 +2045,7 @@ describe('ServicoPacientes', () => {
         executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
           operacao({
             getRepository: jest.fn((entidade) => repositorios.get(entidade)),
-            query: jest.fn(async () => [])
+            query: jest.fn(async (sql: string) => (/^\s*update\s/i.test(String(sql)) ? [[], 0] : []))
           })
         )
       } as never,
@@ -2098,7 +2103,7 @@ describe('ServicoPacientes', () => {
         executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
           operacao({
             getRepository: jest.fn((entidade) => repositorios.get(entidade)),
-            query: jest.fn(async () => [])
+            query: jest.fn(async (sql: string) => (/^\s*update\s/i.test(String(sql)) ? [[], 0] : []))
           })
         )
       } as never,
@@ -2152,7 +2157,7 @@ describe('ServicoPacientes', () => {
         executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
           operacao({
             getRepository: jest.fn((entidade) => repositorios.get(entidade)),
-            query: jest.fn(async () => [])
+            query: jest.fn(async (sql: string) => (/^\s*update\s/i.test(String(sql)) ? [[], 0] : []))
           })
         )
       } as never,
@@ -3611,7 +3616,8 @@ describe('ServicoPacientes - LGPD retencao e eliminacao', () => {
     const repositorioUsuario = { update: jest.fn(async () => undefined) };
     const repositorioRefreshToken = { update: jest.fn(async () => undefined) };
     const repositorioSessao = { update: jest.fn(async () => undefined) };
-    const query = jest.fn(async (sql: string) => sql.includes('as ultimo') ? [{ ultimo: opcoes.ultimoRegistroClinico ?? 'epoch' }] : []);
+    const query = jest.fn(async (sql: string) => sql.includes('as ultimo') ? [{ ultimo: opcoes.ultimoRegistroClinico ?? 'epoch' }]
+      : /^\s*update\s/i.test(sql) ? [[], 0] : []);
 
     const gerenciador = {
       query,
@@ -3679,6 +3685,7 @@ describe('ServicoPacientes - LGPD retencao e eliminacao', () => {
       }
     });
 
+    const cascataEliminacao = jest.spyOn(vinculosRepresentacao, 'revogarVinculosDoPaciente');
     const resultado = await servico.solicitarEliminacaoDadosLgpd('tenant-1', 'paciente-1', usuarioColaborador);
 
     expect(resultado.status).toBe('DELETED');
@@ -3686,6 +3693,9 @@ describe('ServicoPacientes - LGPD retencao e eliminacao', () => {
       'delete from conversas_portal_paciente where tenant_id = $1 and paciente_id = $2',
       ['tenant-1', 'paciente-1']
     );
+    // FOOD06 P2d-3a: a eliminação revoga as representações no portal.
+    expect(cascataEliminacao).toHaveBeenCalledWith(expect.anything(), 'tenant-1', 'paciente-1', usuarioColaborador.usuarioId, 'eliminacao');
+    cascataEliminacao.mockRestore();
     expect(resultado.deletedAt).toBeInstanceOf(Date);
     const salvo = await repositorioPaciente.save.mock.results[0].value;
     expect(salvo.statusCicloVida).toBe('DELETED');
@@ -3744,12 +3754,21 @@ describe('ServicoPacientes - LGPD retencao e eliminacao', () => {
         paciente: { id: 'paciente-1', tenantId: 'tenant-1', usuarioId: 'usuario-paciente-1' }
       });
 
+    const cascata = jest.spyOn(vinculosRepresentacao, 'revogarVinculosPorAlteracaoAcesso');
+    const cascataRepresentados = jest.spyOn(vinculosRepresentacao, 'revogarVinculosDoPaciente');
     await servico.desativarContaAcesso('tenant-1', 'paciente-1', usuarioColaborador);
 
     expect(repositorioUsuario.update).toHaveBeenCalledWith(
       { id: 'usuario-paciente-1', tenantId: 'tenant-1' },
       { ativo: false }
     );
+    // FOOD06 P2d-3a: a conta desativada perde as representações de outros pacientes.
+    expect(cascata).toHaveBeenCalledWith(expect.anything(), 'tenant-1', 'usuario-paciente-1', usuarioColaborador.usuarioId);
+    expect(repositorioUsuario.update.mock.invocationCallOrder[0]).toBeLessThan(cascata.mock.invocationCallOrder[0]);
+    cascata.mockRestore();
+    // Decisão do proprietário: desativar a conta do paciente também derruba quem o representa.
+    expect(cascataRepresentados).toHaveBeenCalledWith(expect.anything(), 'tenant-1', 'paciente-1', usuarioColaborador.usuarioId, 'desativacao_conta');
+    cascataRepresentados.mockRestore();
     expect(repositorioRefreshToken.update).toHaveBeenCalledWith(
       { tenantId: 'tenant-1', usuarioId: 'usuario-paciente-1' },
       expect.objectContaining({ revogadoEm: expect.any(Date) })

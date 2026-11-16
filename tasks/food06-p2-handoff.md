@@ -56,7 +56,35 @@ função pura (`dominio/projecao-portal-solicitacao.ts`). **Criar e cancelar pel
      invariante "cai se desativado" depende de todo escritor de `usuarios.ativo`/`role` chamar a cascata (hoje todos
      chamam); pendência do colaborador invalida avaliação `sem_restricoes_confirmadas` como a do profissional
      (conservador; **aceito pelo proprietário em 2026-11-16**); sem limite de taxa por colaborador.
-   - **P2d-3 (a seguir):** vínculo de representação e portal do paciente (criar/cancelar/listar pedidos e resumo Q11).
+   - **P2d-2 (#551, mergeada).**
+   - **P2d-3a (branch `claude/food06-p2d3a-vinculos-paciente`):** `ServicoVinculosRepresentacao` (listar/registrar/revogar pela
+     equipe do paciente: Professional responsável ou Collaborator delegado, provado por `autorizarPendenciaRestricao`);
+     representante é conta `Patient` ativa do tenant, diferente de quem verifica e da conta do próprio paciente; idempotente;
+     cascata ao desativar a conta do paciente (`servico-pacientes.desativarContaAcesso`), na alteração de acesso
+     (`servico-usuarios-cliente`) e ao arquivar o paciente (restaurar não revive). `autorizarPacientePortal` prova, sob lock
+     (usuário → paciente → vínculo), que a conta `Patient` é a do próprio paciente ou tem vínculo vigente; o `pacienteId` é só
+     seletor. Seletor `POST portal/restricoes/pacientes/listar` e rotas `pacientes/:id/representantes/*`, atrás da flag.
+     Decisões do proprietário: duas PRs na P2d-3; declaração nova do paciente = pendência direta (`declaracao_paciente`);
+     resumo Q11 sem observação. A regra de menores/representantes legais (ATV-6) continua de produto e privacidade.
+     Revisão R4 (subagente de tenant, mesmo modelo): 1 bloqueante corrigido (paciente eliminado por LGPD ficava acessível:
+     agora negado no portal, fora do seletor e com vínculos revogados na eliminação); travas explícitas no registro; repetição
+     com outro tipo de verificação = 409. Limites: `pacientes.usuario_id` sem unique (seletor falha fechado com dois "próprios";
+     unique fica para migration própria, R4, fora de banda; o portal também falha fechado com conta "própria" de mais de uma
+     ficha); a cascata em `servico-usuarios-cliente` não alcança contas Patient (o escritor real é `desativarContaAcesso`);
+     encerramento de tenant não revoga vínculos (o portal relê `ativo`).
+     **Decisões do proprietário (2026-11-16, depois da revisão):** desativar a conta do paciente também derruba quem o
+     representa (`revogarVinculosDoPaciente(..., 'desativacao_conta')`); limites de 100 vigentes já na P2d-3a: delegações por
+     titular, representantes por paciente e representações por conta (409 acima; travas consultivas por titular e por
+     representante), então nenhuma lista corta sem aviso. Guarda textual `usuarios/infraestrutura/guarda-escritores-acesso.spec.ts`
+     exige que todo escritor de `usuarios.ativo`/`role` chame a cascata (exceção nominal: encerramento de tenant).
+   - **Correção pelo CI da #552:** `UPDATE ... RETURNING` via `query()` devolve `[linhas, contagem]`; as cascatas de vínculos e
+     de delegações (P2d-2, já na `main`) gravavam uma auditoria extra com `recurso_id` nulo por revogação. Helper
+     `linhasDeUpdateReturning` falha fechado; provas contam a auditoria por linha (ver `docs/agents/LESSONS_LEARNED.md`).
+   - **P2d-3b (a seguir):** declaração, pedidos (criar, cancelar pelo autor, listar) e resumo Q11 no portal; encerra a P2.
+   - **Backlog para a P3:** se a tela mostrar o histórico de delegações ou de vínculos (revogados), consulta paginada própria.
+     (O limite de 100 vigentes foi antecipado para a P2d-3a.)
+   - **PR própria a seguir:** unique parcial em `pacientes (tenant_id, usuario_id) where usuario_id is not null` (migration R4,
+     fora de banda, com checagem de duplicatas antes; ensaio só em PostgreSQL descartável).
 4. Depois: P3 (telas, UX B/C) e P4 (M04/M12, apply com impressão e invalidação de prévias).
 
 

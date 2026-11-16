@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, ForbiddenException, HttpExcepti
 import { isUUID } from 'class-validator';
 import { IsNull, type EntityManager } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
+import { linhasDeUpdateReturning } from '../../../infraestrutura/banco-dados/linhas-update-returning';
 import { registrarAuditoriaNaTransacao } from '../../../infraestrutura/auditoria/servico-auditoria';
 import type { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
@@ -12,6 +13,8 @@ import { DelegacaoCarteiraProfissionalOrm } from '../infraestrutura/delegacao-ca
 export interface DelegacaoCarteiraResposta { id: string; colaboradorUsuarioId: string; concedidaEm: Date }
 
 const negar = () => new ForbiddenException('Operação não autorizada.');
+/** Máximo de delegações vigentes por titular; `listar` devolve todas. */
+export const LIMITE_DELEGACOES_VIGENTES = 100;
 
 /** Ordem global de locks: usuários (por id) → delegação → profissional → paciente. */
 async function exigirReadCommitted(g: EntityManager): Promise<void> {
@@ -52,11 +55,11 @@ function falharDelegacao(erro: unknown): never {
  */
 export async function revogarDelegacoesPorAlteracaoAcesso(g: EntityManager, tenantId: string, usuarioId: string,
   revogadorUsuarioId: string): Promise<void> {
-  const revogadas: Array<{ id: string }> = await g.query(`update delegacoes_carteira_profissional d
+  const revogadas = linhasDeUpdateReturning(await g.query(`update delegacoes_carteira_profissional d
       set revogada_por = $3, revogada_em = clock_timestamp()
     where d.tenant_id = $1 and d.revogada_em is null and (d.colaborador_usuario_id = $2 or d.profissional_id in
       (select p.id from profissionais p where p.tenant_id = $1 and p.usuario_id = $2))
-    returning d.id`, [tenantId, usuarioId, revogadorUsuarioId]);
+    returning d.id`, [tenantId, usuarioId, revogadorUsuarioId]));
   for (const linha of revogadas) {
     await registrarAuditoriaNaTransacao(g, { tenantId, usuarioId: revogadorUsuarioId, acao: 'carteira.delegacao.revogar_por_alteracao_acesso',
       recursoTipo: 'delegacao_carteira_profissional', recursoId: linha.id, metadados: {} });
@@ -95,7 +98,7 @@ export class ServicoDelegacoesCarteira {
         const { profissional } = await this.titular(g, u);
         const linhas = await g.getRepository(DelegacaoCarteiraProfissionalOrm).find({
           where: { tenantId: u.tenantId, profissionalId: profissional.id, revogadaEm: IsNull() },
-          select: { id: true, colaboradorUsuarioId: true, concedidaEm: true }, order: { concedidaEm: 'DESC' }, take: 100 });
+          select: { id: true, colaboradorUsuarioId: true, concedidaEm: true }, order: { concedidaEm: 'DESC' }, take: LIMITE_DELEGACOES_VIGENTES });
         return linhas.map(l => ({ id: l.id, colaboradorUsuarioId: l.colaboradorUsuarioId, concedidaEm: l.concedidaEm }));
       });
     } catch (erro) { return falharDelegacao(erro); }
@@ -115,6 +118,11 @@ export class ServicoDelegacoesCarteira {
         const existente = await repo.findOne({ where: { tenantId: u.tenantId, profissionalId: profissional.id, colaboradorUsuarioId: colaborador, revogadaEm: IsNull() },
           select: { id: true, colaboradorUsuarioId: true, concedidaEm: true }, lock: { mode: 'pessimistic_read' } });
         if (existente) return { id: existente.id, colaboradorUsuarioId: existente.colaboradorUsuarioId, concedidaEm: existente.concedidaEm };
+        // Limite de vigentes por titular (a lista devolve até 100 e nunca corta sem aviso). Serializa por titular.
+        await g.query('select pg_advisory_xact_lock(hashtextextended($1, 0))', [`delegacoes:${u.tenantId}:${profissional.id}`]);
+        const vigentes: Array<{ total: number }> = await g.query(`select count(*)::int as total from delegacoes_carteira_profissional
+          where tenant_id = $1 and profissional_id = $2 and revogada_em is null`, [u.tenantId, profissional.id]);
+        if ((vigentes[0]?.total ?? LIMITE_DELEGACOES_VIGENTES) >= LIMITE_DELEGACOES_VIGENTES) throw new ConflictException('Operação indisponível ou concorrente.');
         const linhas: Array<{ id: string; concedida_em: Date }> = await g.query(`insert into delegacoes_carteira_profissional
           (tenant_id, profissional_id, colaborador_usuario_id, concedida_por) values ($1, $2, $3, $4) returning id, concedida_em`,
           [u.tenantId, profissional.id, colaborador, u.usuarioId]);

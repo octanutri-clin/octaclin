@@ -81,7 +81,8 @@ function criarServico(
     find: jest.fn(async () => [] as Array<{ id: string }>),
     update: jest.fn(async () => ({ affected: 1 }))
   };
-  const consultas = jest.fn(async (_sql: string, _params?: unknown[]) => [] as unknown[]);
+  // UPDATE ... RETURNING via query() devolve [linhas, contagem] no driver real.
+  const consultas = jest.fn(async (sql: string, _params?: unknown[]) => (/^\s*update\s/i.test(String(sql)) ? [[], 0] : []) as unknown[]);
   const executorTenant = {
     executar: jest.fn((_tenantId: string, callback: any) =>
       callback({
@@ -241,7 +242,7 @@ describe('ServicoUsuariosCliente', () => {
     const executorTenant = {
       executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
         operacao({
-          query: jest.fn(async()=>[]),
+          query: jest.fn(async (sql: string) => (/^\s*update\s/i.test(String(sql)) ? [[], 0] : [])),
           getRepository: jest.fn((entidade: unknown) => {
             if (entidade === UsuarioOrm) return repositorioUsuarios;
             if (entidade === ProfissionalOrm) return repositorioProfissionais;

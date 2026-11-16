@@ -11,12 +11,18 @@ import { ControladorRestricoesClinicas } from './apresentacao/controlador-restri
 import { ControladorRestricoesColaborador } from './apresentacao/controlador-restricoes-colaborador';
 import { ServicoDelegacoesCarteira } from '../profissionais/aplicacao/servico-delegacoes-carteira';
 import { ControladorDelegacoesCarteira } from '../profissionais/apresentacao/controlador-delegacoes-carteira';
+import { ServicoPortalRestricoes } from './aplicacao/servico-portal-restricoes';
+import { ControladorPortalRestricoes } from './apresentacao/controlador-portal-restricoes';
+import { ServicoVinculosRepresentacao } from '../pacientes/aplicacao/servico-vinculos-representacao';
+import { ControladorRepresentantesPaciente } from '../pacientes/apresentacao/controlador-representantes-paciente';
 
-/** Rotas clínicas, do colaborador delegado e da delegação de carteira (P2d-2) só respondem com a flag `restricoes.clinicas` ligada (padrão desligada); sem exports. */
+/** Rotas clínicas, do colaborador delegado, da delegação de carteira (P2d-2), dos representantes e do portal (P2d-3a) só respondem com a flag `restricoes.clinicas` ligada (padrão desligada); sem exports. */
 @Module({
   imports: [ModuloTenancy, ModuloAuth],
-  controllers: [ControladorRestricoesClinicas, ControladorRestricoesColaborador, ControladorDelegacoesCarteira],
+  controllers: [ControladorRestricoesClinicas, ControladorRestricoesColaborador, ControladorDelegacoesCarteira,
+    ControladorRepresentantesPaciente, ControladorPortalRestricoes],
   providers: [CriptografiaDadosSensiveis, ServicoRegistroPendenciaRestricao, ServicoConfirmacaoRestricao,
-    ServicoReconfirmacaoRestricao, ServicoLeituraRestricao, ServicoSolicitacoesRestricao, ServicoDelegacoesCarteira]
+    ServicoReconfirmacaoRestricao, ServicoLeituraRestricao, ServicoSolicitacoesRestricao, ServicoDelegacoesCarteira,
+    ServicoVinculosRepresentacao, ServicoPortalRestricoes]
 })
 export class ModuloRestricoes {}

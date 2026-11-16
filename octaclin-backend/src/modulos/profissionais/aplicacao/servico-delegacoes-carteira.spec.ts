@@ -27,7 +27,9 @@ function preparar() {
     if (sql === 'show transaction_isolation') return [{ transaction_isolation: 'read committed' }];
     if (sql.includes('insert into delegacoes_carteira_profissional')) return [{ id: delegacaoId, concedida_em: new Date(0) }];
     if (sql.includes('from pacientes pa join profissionais')) return [{ profissional_id: profissionalId, usuario_id: titular }];
-    if (sql.includes('update delegacoes_carteira_profissional')) return [{ id: delegacaoId }];
+    // Formato REAL do TypeORM/pg para UPDATE ... RETURNING via query(): [linhas, contagem].
+    if (sql.includes('update delegacoes_carteira_profissional')) return [[{ id: delegacaoId }], 1];
+    if (sql.includes('count(*)::int as total from delegacoes_carteira_profissional')) return [{ total: 0 }];
     return [];
   });
   const g = { query, queryRunner: { isTransactionActive: true }, getRepository: jest.fn((e: unknown) => {
@@ -46,6 +48,13 @@ describe('ServicoDelegacoesCarteira (P2d-2)', () => {
     expect(c.usuario.findOne).toHaveBeenCalledWith(expect.objectContaining({ lock: { mode: 'pessimistic_read' } }));
     const insercao = c.query.mock.calls.find(([sql]) => String(sql).includes('insert into delegacoes'));
     expect(insercao?.[1]).toEqual([tenant, profissionalId, colaborador, titular]);
+  });
+  it('limite de 100 delegações vigentes por titular responde 409 sem gravar, sob trava consultiva do titular', async () => {
+    const c = preparar(); const base = c.query.getMockImplementation()!;
+    c.query.mockImplementation(async (sql: string, p?: unknown[]) => sql.includes('as total from delegacoes') ? [{ total: 100 }] : base(sql, p));
+    await expect(c.s.conceder(ator, colaborador)).rejects.toMatchObject({ status: 409 });
+    expect(c.query.mock.calls.some(([sql]) => String(sql).includes('insert into delegacoes'))).toBe(false);
+    expect(c.query.mock.calls.find(([sql]) => String(sql).includes('pg_advisory_xact_lock'))?.[1]).toEqual([`delegacoes:${tenant}:${profissionalId}`]);
   });
   it('concessão repetida devolve a vigente sem nova linha', async () => {
     const c = preparar(); c.delegacao.findOne.mockResolvedValueOnce({ id: delegacaoId, colaboradorUsuarioId: colaborador, concedidaEm: new Date(1) });
@@ -96,6 +105,14 @@ describe('ServicoDelegacoesCarteira (P2d-2)', () => {
     c.delegacao.findOne.mockResolvedValueOnce({ id: delegacaoId, revogadaEm: new Date() }); c.delegacao.update.mockClear();
     await expect(c.s.revogar(ator, delegacaoId)).resolves.toEqual({ id: delegacaoId, revogada: true });
     expect(c.delegacao.update).not.toHaveBeenCalled();
+  });
+  it('cascata grava exatamente uma auditoria por delegação revogada, com o id certo, e falha fechado com formato inesperado', async () => {
+    const c = preparar();
+    await revogarDelegacoesPorAlteracaoAcesso(c.g as never, tenant, colaborador, titular);
+    const auditorias = (c.g.getRepository('auditoria' as never) as unknown as { create: jest.Mock }).create.mock.calls.map(([x]) => x);
+    expect(auditorias).toEqual([expect.objectContaining({ recursoId: delegacaoId, acao: 'carteira.delegacao.revogar_por_alteracao_acesso', metadados: {} })]);
+    const d = preparar(); d.query.mockImplementation(async (sql: string) => sql.includes('update delegacoes') ? [{ id: delegacaoId }] : []);
+    await expect(revogarDelegacoesPorAlteracaoAcesso(d.g as never, tenant, colaborador, titular)).rejects.toThrow();
   });
   it('cascata revoga como colaborador e como titular, em uma instrução', async () => {
     const c = preparar();
