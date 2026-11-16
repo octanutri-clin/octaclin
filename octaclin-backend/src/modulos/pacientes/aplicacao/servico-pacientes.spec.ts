@@ -3684,6 +3684,7 @@ describe('ServicoPacientes - LGPD retencao e eliminacao', () => {
       }
     });
 
+    const cascataEliminacao = jest.spyOn(vinculosRepresentacao, 'revogarVinculosDoPaciente');
     const resultado = await servico.solicitarEliminacaoDadosLgpd('tenant-1', 'paciente-1', usuarioColaborador);
 
     expect(resultado.status).toBe('DELETED');
@@ -3691,6 +3692,9 @@ describe('ServicoPacientes - LGPD retencao e eliminacao', () => {
       'delete from conversas_portal_paciente where tenant_id = $1 and paciente_id = $2',
       ['tenant-1', 'paciente-1']
     );
+    // FOOD06 P2d-3a: a eliminação revoga as representações no portal.
+    expect(cascataEliminacao).toHaveBeenCalledWith(expect.anything(), 'tenant-1', 'paciente-1', usuarioColaborador.usuarioId);
+    cascataEliminacao.mockRestore();
     expect(resultado.deletedAt).toBeInstanceOf(Date);
     const salvo = await repositorioPaciente.save.mock.results[0].value;
     expect(salvo.statusCicloVida).toBe('DELETED');

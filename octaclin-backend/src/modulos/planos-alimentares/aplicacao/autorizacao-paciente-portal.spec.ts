@@ -39,7 +39,8 @@ describe('autorização do portal do paciente (P2d-3a)', () => {
     ['sem vínculo vigente', (c: ReturnType<typeof preparar>) => { c.vinculo.findOne.mockResolvedValueOnce(null); }],
     ['conta inativa', (c: ReturnType<typeof preparar>) => { c.usuario.findOne.mockResolvedValueOnce({ id: conta, role: 'Patient', ativo: false }); }],
     ['papel trocado no banco', (c: ReturnType<typeof preparar>) => { c.usuario.findOne.mockResolvedValueOnce({ id: conta, role: 'Collaborator', ativo: true }); }],
-    ['paciente arquivado, inexistente ou de outro tenant', (c: ReturnType<typeof preparar>) => { c.paciente.findOne.mockResolvedValueOnce(null); }]
+    ['paciente arquivado, inexistente ou de outro tenant', (c: ReturnType<typeof preparar>) => { c.paciente.findOne.mockResolvedValueOnce(null); }],
+    ['paciente eliminado por LGPD, mesmo pela própria conta', (c: ReturnType<typeof preparar>) => { c.paciente.findOne.mockResolvedValueOnce({ id: pacienteId, usuarioId: conta, statusCicloVida: 'DELETED' }); }]
   ])('%s: nega', async (_caso, ajustar) => {
     const c = preparar(); ajustar(c);
     await expect(c.chamar()).rejects.toBeInstanceOf(ForbiddenException);

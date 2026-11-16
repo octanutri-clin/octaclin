@@ -66,6 +66,12 @@ função pura (`dominio/projecao-portal-solicitacao.ts`). **Criar e cancelar pel
      seletor. Seletor `POST portal/restricoes/pacientes/listar` e rotas `pacientes/:id/representantes/*`, atrás da flag.
      Decisões do proprietário: duas PRs na P2d-3; declaração nova do paciente = pendência direta (`declaracao_paciente`);
      resumo Q11 sem observação. A regra de menores/representantes legais (ATV-6) continua de produto e privacidade.
+     Revisão R4 (subagente de tenant, mesmo modelo): 1 bloqueante corrigido (paciente eliminado por LGPD ficava acessível:
+     agora negado no portal, fora do seletor e com vínculos revogados na eliminação); travas explícitas no registro; repetição
+     com outro tipo de verificação = 409. Limites: `pacientes.usuario_id` sem unique (seletor falha fechado com dois "próprios";
+     unique fica para migration própria, R4, fora de banda); desativar a conta do próprio paciente não revoga quem o representa
+     (confirmar com o proprietário); a cascata em `servico-usuarios-cliente` não alcança contas Patient (o escritor real é
+     `desativarContaAcesso`); encerramento de tenant não revoga vínculos (o portal relê `ativo`); listas cortam em 100.
    - **P2d-3b (a seguir):** declaração, pedidos (criar, cancelar pelo autor, listar) e resumo Q11 no portal; encerra a P2.
    - **Backlog para a P3 (decisão do proprietário, 2026-11-16):** limitar a concessão a 100 delegações vigentes por titular
      (409 acima disso), para a lista nunca cortar sem aviso; se a tela mostrar o histórico de delegações, consulta paginada própria.

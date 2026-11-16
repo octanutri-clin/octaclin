@@ -94,12 +94,17 @@ export class ServicoVinculosRepresentacao {
         // Usuários primeiro (ordem global). Só travas compartilhadas; a conta do ator é relida pela autorização.
         const usuarios = await travarUsuariosAtivos(g, u.tenantId, [representante]);
         if (usuarios.get(representante)?.role !== 'Patient') throw negar();
-        await autorizarPendenciaRestricao(g, u, paciente);
-        const linhaPaciente = await g.getRepository(PacienteOrm).findOne({ where: { id: paciente, tenantId: u.tenantId }, select: { id: true, usuarioId: true } });
+        const equipe = await autorizarPendenciaRestricao(g, u, paciente);
+        if (equipe !== 'profissional' && equipe !== 'colaborador') throw negar();
+        // Trava explícita (a autorização já trava a mesma linha; não depender disso em silêncio).
+        const linhaPaciente = await g.getRepository(PacienteOrm).findOne({ where: { id: paciente, tenantId: u.tenantId }, select: { id: true, usuarioId: true },
+          lock: { mode: 'pessimistic_write' } });
         if (!linhaPaciente || linhaPaciente.usuarioId === representante) throw negar();
         const repo = g.getRepository(VinculoRepresentacaoPacienteOrm);
         const existente = await repo.findOne({ where: { tenantId: u.tenantId, pacienteId: paciente, representanteUsuarioId: representante, revogadoEm: IsNull() },
           select: { id: true, representanteUsuarioId: true, tipoVerificacao: true, verificadoEm: true }, lock: { mode: 'pessimistic_read' } });
+        // Repetição com outro tipo de verificação não reescreve o registro: conflito explícito.
+        if (existente && existente.tipoVerificacao !== tipoVerificacao) throw new ConflictException('Operação indisponível ou concorrente.');
         if (existente) return { id: existente.id, representanteUsuarioId: existente.representanteUsuarioId,
           tipoVerificacao: existente.tipoVerificacao as TipoVerificacaoRepresentacao, verificadoEm: existente.verificadoEm };
         const linhas: Array<{ id: string; verificado_em: Date }> = await g.query(`insert into vinculos_representacao_paciente

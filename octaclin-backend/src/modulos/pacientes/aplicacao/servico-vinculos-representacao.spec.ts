@@ -53,9 +53,22 @@ describe('ServicoVinculosRepresentacao (P2d-3a)', () => {
     await expect(c.s.registrar({ ...profissional, papel: 'Collaborator' }, pacienteId, representante, 'procuracao')).resolves.toMatchObject({ id: vinculoId });
   });
   it('vínculo vigente repetido devolve o mesmo sem nova linha', async () => {
-    const c = preparar(); c.vinculo.findOne.mockResolvedValueOnce({ id: vinculoId, representanteUsuarioId: representante, tipoVerificacao: 'outro', verificadoEm: new Date(1) });
-    await expect(c.s.registrar(profissional, pacienteId, representante, 'presencial')).resolves.toMatchObject({ id: vinculoId, tipoVerificacao: 'outro' });
+    const c = preparar(); c.vinculo.findOne.mockResolvedValueOnce({ id: vinculoId, representanteUsuarioId: representante, tipoVerificacao: 'presencial', verificadoEm: new Date(1) });
+    await expect(c.s.registrar(profissional, pacienteId, representante, 'presencial')).resolves.toMatchObject({ id: vinculoId, tipoVerificacao: 'presencial' });
     expect(inseriu(c)).toBe(false);
+  });
+  it('repetição com outro tipo de verificação é conflito explícito, sem reescrever', async () => {
+    const c = preparar(); c.vinculo.findOne.mockResolvedValueOnce({ id: vinculoId, representanteUsuarioId: representante, tipoVerificacao: 'outro', verificadoEm: new Date(1) });
+    await expect(c.s.registrar(profissional, pacienteId, representante, 'presencial')).rejects.toMatchObject({ status: 409 });
+    expect(inseriu(c)).toBe(false);
+  });
+  it('a linha do paciente é relida com trava explícita e a autorização precisa ser da equipe', async () => {
+    const c = preparar();
+    await c.s.registrar(profissional, pacienteId, representante, 'presencial');
+    expect(c.paciente.findOne).toHaveBeenCalledWith(expect.objectContaining({ lock: { mode: 'pessimistic_write' } }));
+    const d = preparar(); d.autorizar.mockResolvedValue('declaracao_paciente' as never);
+    await expect(d.s.registrar(profissional, pacienteId, representante, 'presencial')).rejects.toMatchObject({ status: 403 });
+    expect(inseriu(d)).toBe(false);
   });
   it.each([
     ['ator é o próprio representante', (c: ReturnType<typeof preparar>) => c.s.registrar(profissional, pacienteId, ator, 'presencial')],

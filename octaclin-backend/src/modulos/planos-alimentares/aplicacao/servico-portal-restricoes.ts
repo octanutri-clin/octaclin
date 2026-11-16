@@ -31,18 +31,19 @@ export class ServicoPortalRestricoes {
           lock: { mode: 'pessimistic_read' } });
         if (!conta?.ativo || conta.role !== 'Patient') throw new ForbiddenException('Operação não autorizada.');
         const linhas: Array<{ id: string; via: AcessoPortalPaciente; nome: Buffer }> = await g.query(`select p.id, 'propria' as via, p.nome_criptografado as nome
-            from pacientes p where p.tenant_id = $1 and p.usuario_id = $2 and p.arquivado_em is null
+            from pacientes p where p.tenant_id = $1 and p.usuario_id = $2 and p.arquivado_em is null and p.status_ciclo_vida <> 'DELETED'
           union
           select p.id, 'representante' as via, p.nome_criptografado as nome
             from vinculos_representacao_paciente v join pacientes p on p.tenant_id = v.tenant_id and p.id = v.paciente_id
-           where v.tenant_id = $1 and v.representante_usuario_id = $2 and v.revogado_em is null and p.arquivado_em is null
+           where v.tenant_id = $1 and v.representante_usuario_id = $2 and v.revogado_em is null and p.arquivado_em is null and p.status_ciclo_vida <> 'DELETED'
              and p.usuario_id is distinct from $2
           order by via, id limit 100`, [tenantId, usuarioId]);
         const itens = linhas.map(l => {
           if (!isUUID(l.id) || (l.via !== 'propria' && l.via !== 'representante') || !Buffer.isBuffer(l.nome)) throw new InternalServerErrorException('Operação indisponível.');
           return { pacienteId: l.id, via: l.via, nome: this.cripto.descriptografar(l.nome) };
         });
-        if (new Set(itens.map(i => i.pacienteId)).size !== itens.length) throw new ConflictException('Operação indisponível.');
+        // `pacientes.usuario_id` não tem unique no banco: mais de um paciente "próprio" falha fechado em vez de listar.
+        if (new Set(itens.map(i => i.pacienteId)).size !== itens.length || itens.filter(i => i.via === 'propria').length > 1) throw new ConflictException('Operação indisponível.');
         await registrarAuditoriaNaTransacao(g, { tenantId, usuarioId, acao: 'portal.restricoes.pacientes_listar', recursoTipo: 'usuario',
           recursoId: usuarioId, metadados: {} });
         return itens;

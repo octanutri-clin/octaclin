@@ -22,8 +22,9 @@ export async function autorizarPacientePortal(g: EntityManager, u: UsuarioAutent
     lock: { mode: 'pessimistic_read' } });
   if (!conta?.ativo || conta.role !== 'Patient') throw negar();
   const linha = await g.getRepository(PacienteOrm).findOne({ where: { id: paciente, tenantId, arquivadoEm: IsNull() },
-    select: { id: true, usuarioId: true }, lock: { mode: 'pessimistic_write' } });
-  if (!linha) throw negar();
+    select: { id: true, usuarioId: true, statusCicloVida: true }, lock: { mode: 'pessimistic_write' } });
+  // Paciente eliminado por LGPD nunca é acessível pelo portal (mesma regra do portal legado).
+  if (!linha || linha.statusCicloVida === 'DELETED') throw negar();
   if (linha.usuarioId === usuarioId) return 'propria';
   const vinculo = await g.getRepository(VinculoRepresentacaoPacienteOrm).findOne({ where: { tenantId, pacienteId: paciente,
     representanteUsuarioId: usuarioId, revogadoEm: IsNull() }, select: { id: true }, lock: { mode: 'pessimistic_read' } });

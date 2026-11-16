@@ -28,6 +28,7 @@ describe('seletor de pacientes do portal (P2d-3a)', () => {
       { pacienteId: p1, via: 'propria', nome: 'Nome sintético 1' }, { pacienteId: p2, via: 'representante', nome: 'Nome sintético 2' }]);
     const [sql, params] = c.query.mock.calls.find(([s]) => s.includes('from pacientes'))!;
     expect(sql).toMatch(/v\.revogado_em is null/); expect(sql).toMatch(/p\.arquivado_em is null/); expect(sql).toMatch(/limit 100/);
+    expect(sql.match(/p\.status_ciclo_vida <> 'DELETED'/g)).toHaveLength(2);
     expect(params).toEqual([tenant, conta]);
     expect(c.usuario.findOne).toHaveBeenCalledWith(expect.objectContaining({ lock: { mode: 'pessimistic_read' } }));
     expect(registrarAuditoriaNaTransacao).toHaveBeenCalledWith(c.g, expect.objectContaining({ acao: 'portal.restricoes.pacientes_listar', metadados: {} }));
@@ -50,5 +51,9 @@ describe('seletor de pacientes do portal (P2d-3a)', () => {
     const d = preparar(); d.query.mockImplementation(async (sql: string) => sql === 'show transaction_isolation'
       ? [{ transaction_isolation: 'read committed' }] : [{ id: 'CANARIO', via: 'propria', nome: Buffer.from('x') }]);
     await expect(d.s.listarPacientes(ator as never)).rejects.toMatchObject({ status: 500 });
+    // `pacientes.usuario_id` sem unique: dois pacientes "próprios" falham fechado.
+    const e = preparar(); e.query.mockImplementation(async (sql: string) => sql === 'show transaction_isolation'
+      ? [{ transaction_isolation: 'read committed' }] : [{ id: p1, via: 'propria', nome: Buffer.from('x') }, { id: p2, via: 'propria', nome: Buffer.from('y') }]);
+    await expect(e.s.listarPacientes(ator as never)).rejects.toMatchObject({ status: 409 });
   });
 });

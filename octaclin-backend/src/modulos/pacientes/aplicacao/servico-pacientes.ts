@@ -528,6 +528,8 @@ export class ServicoPacientes {
 
       paciente.statusCicloVida = 'DELETED';
       paciente.deletedAt = agora;
+      // FOOD06 P2d-3a: eliminação encerra as representações no portal.
+      await revogarVinculosDoPaciente(gerenciador, tenantId, pacienteId, usuario.usuarioId);
       paciente.retentionReason = undefined;
       paciente.retentionUntil = undefined;
       paciente.legalBasis = 'lgpd_art_18_v_eliminacao';

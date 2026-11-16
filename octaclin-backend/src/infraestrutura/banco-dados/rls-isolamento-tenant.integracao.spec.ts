@@ -3025,6 +3025,10 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     await comoTenant(tenant); await cliente.query('update pacientes set arquivado_em=null where id=$1', [dados.pacienteId]);
     await expect(acessar(comoUsuario(segundoRep, 'Patient'), dados.pacienteId)).rejects.toMatchObject({ status: 403 });
     await expect(acessar(contaPaciente, dados.pacienteId)).resolves.toBe('propria');
+    // Paciente eliminado por LGPD: nem a própria conta acessa, e some do seletor.
+    await comoTenant(tenant); await cliente.query("update pacientes set status_ciclo_vida='DELETED', deleted_at=now() where id=$1", [dados.pacienteId]);
+    await expect(acessar(contaPaciente, dados.pacienteId)).rejects.toMatchObject({ status: 403 });
+    expect(await portal.listarPacientes(contaPaciente)).toEqual([]);
     // Outro tenant não enxerga os vínculos nem por SQL direto (RLS).
     await comoTenant(tenantB);
     expect((await cliente.query('select id from vinculos_representacao_paciente where representante_usuario_id=$1', [representanteId])).rows).toEqual([]);
