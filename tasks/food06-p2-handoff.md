@@ -20,8 +20,14 @@ vazamento entre tenants demonstrado. Achados corrigidos nesta PR com TDD (RED �
 **Provas:** suíte PostgreSQL/RLS (`pnpm test:rls:testcontainers`) passou **localmente** no container do Claude Code,
 com Docker, antes e depois das correções (ver PR). Isso não substitui o CI do HEAD final.
 
+**P2b entregue em PR própria (branch `claude/food06-p2b-exposicao-fechada`, empilhada sobre a #536):** flag
+`restricoes.clinicas` (padrão desligada; o endpoint de operações não a liga), controlador registrado em `ModuloRestricoes`
+atrás de `GuardaFeatureFlag`, middlewares no `main.ts` (antes e depois do parser), prova com a guarda JWT real
+(`controlador-restricoes-clinicas.jwt.http.spec.ts`) e prova PostgreSQL com a flag lida de `tenant_configuracoes`.
+**Ligar a flag em qualquer ambiente continua proibido** até ATV-1..9 e autorização do proprietário.
+
 **Próximas PRs da P2 (cada uma R4, o proprietário mergeia):**
-1. **P2b — exposição fechada:** flag nova em `FEATURE_FLAGS_CONHECIDAS` (desligada por padrão); middlewares
+1. ~~**P2b — exposição fechada:**~~ (feita; ver acima) flag nova em `FEATURE_FLAGS_CONHECIDAS` (desligada por padrão); middlewares
    no bootstrap (cabeçalhos antes do parser e erro depois dele); registrar o controlador só com a flag;
    prova com a guarda JWT real e o bootstrap real (o spec JWT local do Codex não foi publicado e será recriado);
    canário de log. Antes de expor, decidir permissão de escrita definitiva (R4-P2a-02 é defesa em profundidade).

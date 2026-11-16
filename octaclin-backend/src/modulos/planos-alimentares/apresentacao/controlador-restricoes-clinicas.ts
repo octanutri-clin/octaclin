@@ -6,6 +6,7 @@ import { Papeis, Permissoes, UsuarioAtual } from '../../auth/apresentacao/decora
 import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
 import { GuardaPermissoes } from '../../auth/apresentacao/guarda-permissoes';
+import { FeatureFlag, GuardaFeatureFlag } from '../../../infraestrutura/feature-flags/guarda-feature-flag';
 import type { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { validarConteudoRestricao } from '../dominio/conteudo-restricao';
 import { ServicoLeituraRestricao } from '../aplicacao/servico-leitura-restricao';
@@ -67,12 +68,13 @@ class FiltroRestricoesClinicas implements ExceptionFilter {
 }
 
 /**
- * Contrato isolado para testes; não registrado no módulo enquanto P2 estiver incompleta.
+ * Registrado em `ModuloRestricoes` atrás da flag `restricoes.clinicas` (padrão desligada; P2b).
  * Escritas exigem `pacientes.gerenciar` na guarda (defesa em profundidade); a autorização clínica real
  * (concessão `restricoes.confirmar` e carteira) continua no serviço, na mesma transação.
  */
 @Controller('pacientes/:pacienteId/restricoes')
-@UseGuards(GuardaJwt, GuardaPapeis, GuardaPermissoes)
+@UseGuards(GuardaJwt, GuardaPapeis, GuardaPermissoes, GuardaFeatureFlag)
+@FeatureFlag('restricoes.clinicas')
 @Papeis('Professional')
 @UseFilters(FiltroRestricoesClinicas)
 export class ControladorRestricoesClinicas {

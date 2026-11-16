@@ -12,6 +12,7 @@ import { ServicoLeituraRestricao } from '../aplicacao/servico-leitura-restricao'
 import { ServicoConfirmacaoRestricao } from '../aplicacao/servico-confirmacao-restricao';
 import { ServicoRegistroPendenciaRestricao } from '../aplicacao/servico-registro-pendencia-restricao';
 import { ServicoReconfirmacaoRestricao } from '../aplicacao/servico-reconfirmacao-restricao';
+import { ServicoFeatureFlags } from '../../../infraestrutura/feature-flags/servico-feature-flags';
 import { ControladorRestricoesClinicas } from './controlador-restricoes-clinicas';
 
 const tenant = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', usuario = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
@@ -33,6 +34,9 @@ const registrarSemAlteracao = resultadoGlobal('sem_alteracao'), registrarAusenci
 const registrarPendenciaIndividual = resultadoIndividual('pendencia_mantida'), registrarAlteracaoIndividual = resultadoIndividual('alteracao_informada');
 const registrarSemAlteracaoIndividual = resultadoIndividual('sem_alteracao');
 
+let flagLigada = true;
+const flags = { habilitada: jest.fn(async (_tenant: string, chave: string) => chave === 'restricoes.clinicas' && flagLigada) };
+
 describe('contrato HTTP clínico isolado de restrições', () => {
   let app: NestExpressApplication, url: string;
   const logs: unknown[][] = [];
@@ -47,7 +51,8 @@ describe('contrato HTTP clínico isolado de restrições', () => {
       { provide: ServicoReconfirmacaoRestricao, useValue: { garantirAvaliacaoInicial, registrarPendencia: registrarPendenciaGlobal,
         registrarAlteracaoInformada: registrarAlteracaoGlobal, registrarSemAlteracao, registrarAusenciaDeclarada,
         registrarPendenciaIndividual, registrarAlteracaoInformadaIndividual: registrarAlteracaoIndividual, registrarSemAlteracaoIndividual } },
-      { provide: ServicoAuditoria, useValue: { registrar: async () => undefined } }
+      { provide: ServicoAuditoria, useValue: { registrar: async () => undefined } },
+      { provide: ServicoFeatureFlags, useValue: flags }
     ] }).overrideGuard(GuardaJwt).useValue({ canActivate(c: ExecutionContext) {
       const r = c.switchToHttp().getRequest(); if (!r.headers['x-papel-sintetico']) throw new UnauthorizedException();
       r.usuarioAutenticado = { tenantId: tenant, usuarioId: usuario, papel: r.headers['x-papel-sintetico'],
@@ -93,6 +98,19 @@ describe('contrato HTTP clínico isolado de restrições', () => {
       headers: { 'content-type': 'application/json', 'x-papel-sintetico': 'Professional', 'x-somente-leitura': '1' }, body: JSON.stringify({ restricaoId: restricao }) });
     expect(resposta.status).toBe(200);
   });
+  it.each([['consultar', { restricaoId: restricao }], ['registrar', {}], [`${restricao}/confirmar`, { revisao: 1 }], ['reconfirmar', {}]])(
+    'com a flag restricoes.clinicas desligada nega %s com 403 genérico antes do serviço (P2b)', async (rota, body) => {
+      flagLigada = false;
+      try {
+        const resposta = await fetch(`${url}/pacientes/${paciente}/restricoes/${rota}`, { method: 'POST',
+          headers: { 'content-type': 'application/json', 'x-papel-sintetico': 'Professional' }, body: JSON.stringify(body) });
+        expect(resposta.status).toBe(403);
+        expect(await resposta.json()).toEqual({ statusCode: 403, message: 'Operação não autorizada.' });
+        expect(resposta.headers.get('cache-control')).toBe('private, no-store');
+        expect(flags.habilitada).toHaveBeenCalledWith(tenant, 'restricoes.clinicas');
+        for (const f of [consultar, registrar, confirmar, registrarPendenciaGlobal]) expect(f).not.toHaveBeenCalled();
+      } finally { flagLigada = true; }
+    });
   it('nega profissional sem permissão genérica antes do serviço', async () => {
     const resposta = await fetch(`${url}/pacientes/${paciente}/restricoes/consultar`, { method: 'POST',
       headers: { 'content-type': 'application/json', 'x-papel-sintetico': 'Professional', 'x-sem-permissao': '1' }, body: JSON.stringify({ restricaoId: restricao }) });

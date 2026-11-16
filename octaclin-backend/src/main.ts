@@ -1,4 +1,5 @@
 import { middlewareAnalisesFactuais,middlewareLimiteAnalisesFactuais,middlewareErroAnalisesFactuais } from './infraestrutura/http/middleware-analises-factuais';
+import { middlewareRestricoesClinicas, middlewareErroRestricoesClinicas } from './infraestrutura/http/middleware-restricoes-clinicas';
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
@@ -127,9 +128,9 @@ async function iniciarAplicacao() {
   }
   const aplicacao = await NestFactory.create<NestExpressApplication>(ModuloAplicacao, { rawBody: true });
   aplicacao.enableShutdownHooks();
-  aplicacao.use(middlewareAnalisesFactuais);
+  aplicacao.use(middlewareAnalisesFactuais, middlewareRestricoesClinicas);
   aplicacao.useBodyParser('json', { limit: '100kb' });
-  aplicacao.use(middlewareErroAnalisesFactuais,middlewareLimiteAnalisesFactuais);
+  aplicacao.use(middlewareErroAnalisesFactuais, middlewareLimiteAnalisesFactuais, middlewareErroRestricoesClinicas);
   const servidorHttp = aplicacao.getHttpAdapter().getInstance();
   servidorHttp.set('trust proxy', 1);
   aplicacao.use(middlewareCorrelacao);

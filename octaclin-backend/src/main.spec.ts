@@ -243,8 +243,9 @@ describe('inicializacao da aplicacao', () => {
 
     expect(mockCriarAplicacao).toHaveBeenCalledWith(expect.any(Function), { rawBody: true });
     expect(mockAplicacao.useBodyParser).toHaveBeenCalledWith('json', { limit: '100kb' });
-    expect(mockAplicacao.use.mock.calls[0][0].name).toBe('middlewareAnalisesFactuais');
-    expect(mockAplicacao.use.mock.calls[1].map((fn:Function)=>fn.name)).toEqual(['middlewareErroAnalisesFactuais','middlewareLimiteAnalisesFactuais']);
+    // FOOD06 P2b: restrições clínicas recebem cabeçalhos antes do parser e erro sanitizado depois dele.
+    expect(mockAplicacao.use.mock.calls[0].map((fn:Function)=>fn.name)).toEqual(['middlewareAnalisesFactuais','middlewareRestricoesClinicas']);
+    expect(mockAplicacao.use.mock.calls[1].map((fn:Function)=>fn.name)).toEqual(['middlewareErroAnalisesFactuais','middlewareLimiteAnalisesFactuais','middlewareErroRestricoesClinicas']);
     expect(mockAplicacao.use.mock.invocationCallOrder[0]).toBeLessThan(mockAplicacao.useBodyParser.mock.invocationCallOrder[0]);
     expect(mockAplicacao.useBodyParser.mock.invocationCallOrder[0]).toBeLessThan(mockAplicacao.use.mock.invocationCallOrder[1]);
     expect(mockServidorHttp.set).toHaveBeenCalledWith('trust proxy', 1);

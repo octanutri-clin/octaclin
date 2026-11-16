@@ -3,7 +3,11 @@ import { ExecutorTenant } from '../banco-dados/executor-tenant';
 import { TenantConfiguracaoOrm } from '../../modulos/tenancy/infraestrutura/tenant-configuracao.orm';
 
 const CHAVE_CONFIGURACAO = 'feature_flags';
-export const FEATURE_FLAGS_CONHECIDAS = ['ia.clinica', 'mobile.sync'] as const;
+/**
+ * `restricoes.clinicas` (FOOD06 P2b) expõe as rotas clínicas de restrições alimentares. Padrão desligado.
+ * Ligar exige as condições de ativação ATV-1..9 do contrato v3 e autorização do proprietário por ambiente.
+ */
+export const FEATURE_FLAGS_CONHECIDAS = ['ia.clinica', 'mobile.sync', 'restricoes.clinicas'] as const;
 export type FeatureFlagConhecida = (typeof FEATURE_FLAGS_CONHECIDAS)[number];
 export type ValoresFeatureFlags = Partial<Record<FeatureFlagConhecida, boolean>>;
 export type OrigemFeatureFlag = 'padrao' | 'ambiente' | 'tenant';

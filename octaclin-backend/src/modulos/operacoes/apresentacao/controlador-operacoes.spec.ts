@@ -1,3 +1,5 @@
+import { BadRequestException } from '@nestjs/common';
+import { criarPipeValidacaoHttp } from '../../../infraestrutura/http/pipe-validacao-http';
 import { ControladorOperacoes } from './controlador-operacoes';
 import { CHAVE_PERMISSOES } from '../../auth/apresentacao/decorators';
 import { ServicoAuditoria } from '../../../infraestrutura/auditoria/servico-auditoria';
@@ -72,6 +74,15 @@ describe('ControladorOperacoes', () => {
         acao: 'operacoes.feature_flags.atualizar'
       })
     );
+  });
+
+  it('não permite ligar restricoes.clinicas pelo endpoint de operações (FOOD06 P2b: ativação exige ATV e decisão do proprietário)', async () => {
+    const tipos = Reflect.getMetadata('design:paramtypes', ControladorOperacoes.prototype, 'atualizarFeatureFlags') as Array<new () => unknown>;
+    const pipe = criarPipeValidacaoHttp();
+    for (const corpo of [{ restricoesClinicas: true }, { 'restricoes.clinicas': true }]) {
+      await expect(pipe.transform({ tenantId: '00000000-0000-4000-8000-000000000002', ...corpo }, { type: 'body', metatype: tipos[2] }))
+        .rejects.toBeInstanceOf(BadRequestException);
+    }
   });
 
   it('deve reavaliar o menor privilegio dos providers a cada chamada, e nao devolver cache do boot', async () => {
