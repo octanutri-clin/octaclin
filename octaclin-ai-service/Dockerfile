@@ -16,7 +16,7 @@
 # 1:1.3.dfsg+really1.3.1-1+deb13u1 (trixie-security). Atualiza so o zlib1g e reprova o build
 # se a versao final ficar abaixo da corrigida. Sem pin exato: quando a base ja trouxer a
 # correcao (ou uma posterior) o passo vira no-op em vez de quebrar.
-FROM python:3.15.2-slim@sha256:65a65fc7b30b06cb6df4930fd4650697cb23f4c2698ab81fc87e4b031bc36928 AS base
+FROM python:3.16.0a1-slim@sha256:df293ba3b89f458e1aad6051b62ff1c4fad7b3b52b8147ae9cc4b667f9cf2741 AS base
 RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends --only-upgrade zlib1g \
     && dpkg --compare-versions "$(dpkg-query -W -f='${Version}' zlib1g)" ge '1:1.3.dfsg+really1.3.1-1+deb13u1' \
