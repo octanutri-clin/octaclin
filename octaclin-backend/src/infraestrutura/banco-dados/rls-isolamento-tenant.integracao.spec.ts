@@ -91,6 +91,8 @@ import { ServicoAuditoria } from '../auditoria/servico-auditoria';
 import { criarPipeValidacaoHttp } from '../http/pipe-validacao-http';
 import { middlewareErroRestricoesClinicas, middlewareRestricoesClinicas } from '../http/middleware-restricoes-clinicas';
 import { ControladorRestricoesClinicas } from '../../modulos/planos-alimentares/apresentacao/controlador-restricoes-clinicas';
+import { ServicoFeatureFlags } from '../feature-flags/servico-feature-flags';
+import { GuardaFeatureFlag } from '../feature-flags/guarda-feature-flag';
 
 /**
  * Prova integral de isolamento por tenant em Postgres real (PR 43).
@@ -1409,7 +1411,9 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     const moduloHttp = await Test.createTestingModule({ controllers: [ControladorRestricoesClinicas], providers: [
       { provide: ServicoLeituraRestricao, useValue: new ServicoLeituraRestricao(executorTenant, crypto, concessoes) },
       { provide: ServicoConfirmacaoRestricao, useValue: confirmar }, { provide: ServicoRegistroPendenciaRestricao, useValue: registro },
-      { provide: ServicoReconfirmacaoRestricao, useValue: reconfirmar }, { provide: ServicoAuditoria, useValue: { registrar: async () => undefined } }
+      { provide: ServicoReconfirmacaoRestricao, useValue: reconfirmar }, { provide: ServicoAuditoria, useValue: { registrar: async () => undefined } },
+      // P2b: flag real lida de tenant_configuracoes sob RLS.
+      { provide: ServicoFeatureFlags, useValue: new ServicoFeatureFlags(executorTenant) }, GuardaFeatureFlag
     ] }).overrideGuard(GuardaJwt).useValue({ canActivate(contexto: ExecutionContext) {
       const req = contexto.switchToHttp().getRequest();
       const identidade = req.headers['x-identidade-sintetica'];
@@ -1427,6 +1431,19 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
       const chamada = (caminho: string, body: unknown, identidade = 'titular') => fetch(`${baseHttp}${caminho}`, { method: 'POST',
         headers: { 'content-type': 'application/json', 'x-identidade-sintetica': identidade }, body: JSON.stringify(body) });
       const chaveHttp = randomUUID();
+      // P2b: sem a flag restricoes.clinicas no tenant, a rota responde 403 e nada é gravado.
+      const auditoriasAntesFlag = await cliente.query('select count(*)::int n from user_action_logs where tenant_id=$1', [tenantP2]);
+      const semFlag = await chamada('/registrar', { chaveCriacao: chaveHttp, conteudo });
+      expect(semFlag.status).toBe(403);
+      expect(await semFlag.json()).toEqual({ statusCode: 403, message: 'Operação não autorizada.' });
+      expect((await cliente.query('select id from restricoes_pacientes where tenant_id=$1 and chave_criacao=$2', [tenantP2, chaveHttp])).rows).toEqual([]);
+      expect((await cliente.query('select count(*)::int n from user_action_logs where tenant_id=$1', [tenantP2])).rows).toEqual(auditoriasAntesFlag.rows);
+      for (const t of [tenantP2, tenantHttpOutro]) {
+        await comoTenant(t);
+        await cliente.query("insert into tenant_configuracoes (tenant_id, chave, valor) values ($1, 'feature_flags', $2::jsonb)",
+          [t, JSON.stringify({ 'restricoes.clinicas': true })]);
+      }
+      await comoTenant(tenantP2);
       const primeiraHttp = await chamada('/registrar', { chaveCriacao: chaveHttp, conteudo });
       expect(primeiraHttp.status).toBe(200); expect(primeiraHttp.headers.get('cache-control')).toBe('private, no-store');
       const pendenciaHttp = await primeiraHttp.json() as { id: string; revisao: number; estado: string; confirmacao: string };

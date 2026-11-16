@@ -34,7 +34,8 @@ describe('ServicoFeatureFlags', () => {
       configuracaoValida: true,
       flags: [
         { chave: 'ia.clinica', habilitada: false, origem: 'tenant' },
-        { chave: 'mobile.sync', habilitada: true, origem: 'tenant' }
+        { chave: 'mobile.sync', habilitada: true, origem: 'tenant' },
+        { chave: 'restricoes.clinicas', habilitada: false, origem: 'padrao' }
       ]
     });
   });
@@ -47,9 +48,20 @@ describe('ServicoFeatureFlags', () => {
       configuracaoValida: false,
       flags: [
         { chave: 'ia.clinica', habilitada: false, origem: 'padrao' },
-        { chave: 'mobile.sync', habilitada: false, origem: 'padrao' }
+        { chave: 'mobile.sync', habilitada: false, origem: 'padrao' },
+        { chave: 'restricoes.clinicas', habilitada: false, origem: 'padrao' }
       ]
     });
+  });
+
+  it('restricoes.clinicas nasce desligada e só liga por valor booleano explícito (FOOD06 P2b)', async () => {
+    delete process.env.OCTACLIN_FEATURE_FLAGS;
+    const desligada = criarServico();
+    await expect(desligada.servico.habilitada('tenant-1', 'restricoes.clinicas')).resolves.toBe(false);
+    const textual = criarServico({ 'restricoes.clinicas': 'true' } as never);
+    await expect(textual.servico.habilitada('tenant-1', 'restricoes.clinicas')).resolves.toBe(false);
+    const ligada = criarServico({ 'restricoes.clinicas': true });
+    await expect(ligada.servico.habilitada('tenant-1', 'restricoes.clinicas')).resolves.toBe(true);
   });
 
   it('persiste apenas flags conhecidas e booleanas', async () => {
