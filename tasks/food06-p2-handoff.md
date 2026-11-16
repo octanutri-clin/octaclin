@@ -31,7 +31,13 @@ atrás de `GuardaFeatureFlag`, middlewares no `main.ts` (antes e depois do parse
    no bootstrap (cabeçalhos antes do parser e erro depois dele); registrar o controlador só com a flag;
    prova com a guarda JWT real e o bootstrap real (o spec JWT local do Codex não foi publicado e será recriado);
    canário de log. Antes de expor, decidir permissão de escrita definitiva (R4-P2a-02 é defesa em profundidade).
-2. **P2c — solicitações do paciente (D7-a) e projeção do portal (Q11):** serviços e DTO por allowlist; Patient
+**P2c entregue em PR própria (branch `claude/food06-p2c-solicitacoes-profissional`, empilhada sobre a P2b) — decisão do
+proprietário: só o lado do PROFISSIONAL.** `ServicoSolicitacoesRestricao` (listar, iniciar análise, decidir) com concessão,
+carteira, READ COMMITTED, CAS e auditoria; o desfecho responde a todos os itens do pedido e só cita revisões clínicas
+posteriores ao pedido; a solicitação nunca altera a restrição. Rotas `solicitacoes/*` atrás da flag. Projeção do portal como
+função pura (`dominio/projecao-portal-solicitacao.ts`). **Criar e cancelar pelo paciente e as rotas do portal ficam na P2d.**
+
+2. ~~**P2c — solicitações do paciente (D7-a) e projeção do portal (Q11):**~~ (lado do profissional feito; ver acima) serviços e DTO por allowlist; Patient
    continua sem acesso até a P2d.
 3. **P2d — carteiras e vínculos:** delegação da carteira pelo titular ao Collaborator e vínculo de representação
    separado de `pacientes.usuario_id` (vários representados por conta), conforme
