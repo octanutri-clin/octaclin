@@ -15,16 +15,24 @@ function preparar() {
   const usuario = { findOne: jest.fn(async (): Promise<unknown> => { ordem.push('usuario'); return { id: conta, role: 'Patient', ativo: true }; }) };
   const paciente = { findOne: jest.fn(async (): Promise<unknown> => { ordem.push('paciente'); return { id: pacienteId, usuarioId: 'outra-conta' }; }) };
   const vinculo = { findOne: jest.fn(async (): Promise<unknown> => { ordem.push('vinculo'); return { id: 'v' }; }) };
-  const g = { queryRunner: { isTransactionActive: true }, getRepository: jest.fn((e: unknown) => {
+  const query = jest.fn(async (_sql: string, _p?: unknown[]): Promise<unknown[]> => [{ total: 1 }]);
+  const g = { query, queryRunner: { isTransactionActive: true }, getRepository: jest.fn((e: unknown) => {
     if (e === UsuarioOrm) return usuario; if (e === PacienteOrm) return paciente; if (e === VinculoRepresentacaoPacienteOrm) return vinculo; throw new Error('Repositório inesperado');
   }) };
-  return { ordem, usuario, paciente, vinculo, g, chamar: (u = ator, p = pacienteId) => autorizarPacientePortal(g as never, u, p) };
+  return { ordem, usuario, paciente, vinculo, query, g, chamar: (u = ator, p = pacienteId) => autorizarPacientePortal(g as never, u, p) };
 }
 
 describe('autorização do portal do paciente (P2d-3a)', () => {
   it('a conta do próprio paciente acessa sem vínculo', async () => {
     const c = preparar(); c.paciente.findOne.mockResolvedValueOnce({ id: pacienteId, usuarioId: conta });
     await expect(c.chamar()).resolves.toBe('propria'); expect(c.vinculo.findOne).not.toHaveBeenCalled();
+    expect(c.query).toHaveBeenCalledWith(expect.stringMatching(/from pacientes where tenant_id = \$1 and usuario_id = \$2/), [tenant, conta]);
+  });
+  it('conta "própria" de mais de uma ficha (usuario_id sem unique) falha fechado', async () => {
+    for (const resposta of [[{ total: 2 }], [{ total: 0 }], []]) {
+      const c = preparar(); c.paciente.findOne.mockResolvedValueOnce({ id: pacienteId, usuarioId: conta }); c.query.mockResolvedValueOnce(resposta);
+      await expect(c.chamar()).rejects.toBeInstanceOf(ForbiddenException);
+    }
   });
   it('representante com vínculo vigente acessa; ordem usuário → paciente → vínculo, com travas', async () => {
     const c = preparar();

@@ -3025,6 +3025,14 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     await comoTenant(tenant); await cliente.query('update pacientes set arquivado_em=null where id=$1', [dados.pacienteId]);
     await expect(acessar(comoUsuario(segundoRep, 'Patient'), dados.pacienteId)).rejects.toMatchObject({ status: 403 });
     await expect(acessar(contaPaciente, dados.pacienteId)).resolves.toBe('propria');
+    // Ficha duplicada com a mesma conta (`usuario_id` sem unique): acesso e seletor falham fechado.
+    await comoTenant(tenant);
+    const duplicada = (await cliente.query<{ id: string }>(`insert into pacientes (tenant_id, profissional_responsavel_id, nome_criptografado, usuario_id)
+      values ($1, $2, $3, $4) returning id`, [tenant, dados.profissionalId, crypto.criptografar('Ficha duplicada sintética'), contaPacienteId])).rows[0].id;
+    await expect(acessar(contaPaciente, dados.pacienteId)).rejects.toMatchObject({ status: 403 });
+    await expect(portal.listarPacientes(contaPaciente)).rejects.toMatchObject({ status: 409 });
+    await comoTenant(tenant); await cliente.query('update pacientes set usuario_id=null where id=$1', [duplicada]);
+    await expect(acessar(contaPaciente, dados.pacienteId)).resolves.toBe('propria');
     // Paciente eliminado por LGPD: nem a própria conta acessa, e some do seletor.
     await comoTenant(tenant); await cliente.query("update pacientes set status_ciclo_vida='DELETED', deleted_at=now() where id=$1", [dados.pacienteId]);
     await expect(acessar(contaPaciente, dados.pacienteId)).rejects.toMatchObject({ status: 403 });

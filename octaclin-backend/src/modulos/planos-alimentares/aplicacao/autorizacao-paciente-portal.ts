@@ -25,7 +25,13 @@ export async function autorizarPacientePortal(g: EntityManager, u: UsuarioAutent
     select: { id: true, usuarioId: true, statusCicloVida: true }, lock: { mode: 'pessimistic_write' } });
   // Paciente eliminado por LGPD nunca é acessível pelo portal (mesma regra do portal legado).
   if (!linha || linha.statusCicloVida === 'DELETED') throw negar();
-  if (linha.usuarioId === usuarioId) return 'propria';
+  if (linha.usuarioId === usuarioId) {
+    // `pacientes.usuario_id` não tem unique no banco: uma conta "própria" de mais de uma ficha falha fechado.
+    const fichas: Array<{ total: number }> = await g.query('select count(*)::int as total from pacientes where tenant_id = $1 and usuario_id = $2',
+      [tenantId, usuarioId]);
+    if (fichas.length !== 1 || fichas[0].total !== 1) throw negar();
+    return 'propria';
+  }
   const vinculo = await g.getRepository(VinculoRepresentacaoPacienteOrm).findOne({ where: { tenantId, pacienteId: paciente,
     representanteUsuarioId: usuarioId, revogadoEm: IsNull() }, select: { id: true }, lock: { mode: 'pessimistic_read' } });
   if (!vinculo) throw negar();
