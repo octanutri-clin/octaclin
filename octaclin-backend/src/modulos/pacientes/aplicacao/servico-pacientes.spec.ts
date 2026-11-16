@@ -34,7 +34,7 @@ import { LIMITE_LINHAS_EXPORTACAO, ServicoPacientes } from './servico-pacientes'
 function criarGerenciadorFake(repositorio: Record<string, unknown>) {
   if ('paciente' in repositorio || 'profissional' in repositorio) {
     return {
-      query: jest.fn(async () => []),
+      query: jest.fn(async (sql: string) => (/^\s*update\s/i.test(String(sql)) ? [[], 0] : [])),
       getRepository: jest.fn((entidade: unknown) => {
         if (entidade === WebhookAssinaturaOrm) return { find: jest.fn(async () => []) };
         if (entidade === PerfilCadastroPacienteOrm) return { findOne: jest.fn(async () => null) };
@@ -47,7 +47,7 @@ function criarGerenciadorFake(repositorio: Record<string, unknown>) {
   }
 
   return {
-    query: jest.fn(async () => []),
+    query: jest.fn(async (sql: string) => (/^\s*update\s/i.test(String(sql)) ? [[], 0] : [])),
     getRepository: jest.fn((entidade: unknown) => {
       if (entidade === WebhookAssinaturaOrm) return { find: jest.fn(async () => []) };
       if (entidade === PerfilCadastroPacienteOrm) return { findOne: jest.fn(async () => null) };
@@ -1184,7 +1184,7 @@ describe('ServicoPacientes', () => {
         executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
           operacao({
             getRepository: jest.fn((entidade) => repositorios.get(entidade)),
-            query: jest.fn(async () => [])
+            query: jest.fn(async (sql: string) => (/^\s*update\s/i.test(String(sql)) ? [[], 0] : []))
           })
         )
       } as never,
@@ -1287,7 +1287,7 @@ describe('ServicoPacientes', () => {
         executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
           operacao({
             getRepository: jest.fn((entidade) => repositorios.get(entidade)),
-            query: jest.fn(async () => [])
+            query: jest.fn(async (sql: string) => (/^\s*update\s/i.test(String(sql)) ? [[], 0] : []))
           })
         )
       } as never,
@@ -1782,7 +1782,7 @@ describe('ServicoPacientes', () => {
         executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
           operacao({
             getRepository: jest.fn((entidade) => repositorios.get(entidade)),
-            query: jest.fn(async () => [])
+            query: jest.fn(async (sql: string) => (/^\s*update\s/i.test(String(sql)) ? [[], 0] : []))
           })
         )
       } as never,
@@ -1871,7 +1871,7 @@ describe('ServicoPacientes', () => {
         executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
           operacao({
             getRepository: jest.fn((entidade) => repositorios.get(entidade)),
-            query: jest.fn(async () => [])
+            query: jest.fn(async (sql: string) => (/^\s*update\s/i.test(String(sql)) ? [[], 0] : []))
           })
         )
       } as never,
@@ -2045,7 +2045,7 @@ describe('ServicoPacientes', () => {
         executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
           operacao({
             getRepository: jest.fn((entidade) => repositorios.get(entidade)),
-            query: jest.fn(async () => [])
+            query: jest.fn(async (sql: string) => (/^\s*update\s/i.test(String(sql)) ? [[], 0] : []))
           })
         )
       } as never,
@@ -2103,7 +2103,7 @@ describe('ServicoPacientes', () => {
         executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
           operacao({
             getRepository: jest.fn((entidade) => repositorios.get(entidade)),
-            query: jest.fn(async () => [])
+            query: jest.fn(async (sql: string) => (/^\s*update\s/i.test(String(sql)) ? [[], 0] : []))
           })
         )
       } as never,
@@ -2157,7 +2157,7 @@ describe('ServicoPacientes', () => {
         executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
           operacao({
             getRepository: jest.fn((entidade) => repositorios.get(entidade)),
-            query: jest.fn(async () => [])
+            query: jest.fn(async (sql: string) => (/^\s*update\s/i.test(String(sql)) ? [[], 0] : []))
           })
         )
       } as never,
@@ -3616,7 +3616,8 @@ describe('ServicoPacientes - LGPD retencao e eliminacao', () => {
     const repositorioUsuario = { update: jest.fn(async () => undefined) };
     const repositorioRefreshToken = { update: jest.fn(async () => undefined) };
     const repositorioSessao = { update: jest.fn(async () => undefined) };
-    const query = jest.fn(async (sql: string) => sql.includes('as ultimo') ? [{ ultimo: opcoes.ultimoRegistroClinico ?? 'epoch' }] : []);
+    const query = jest.fn(async (sql: string) => sql.includes('as ultimo') ? [{ ultimo: opcoes.ultimoRegistroClinico ?? 'epoch' }]
+      : /^\s*update\s/i.test(sql) ? [[], 0] : []);
 
     const gerenciador = {
       query,

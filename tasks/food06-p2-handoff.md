@@ -77,6 +77,9 @@ função pura (`dominio/projecao-portal-solicitacao.ts`). **Criar e cancelar pel
      titular, representantes por paciente e representações por conta (409 acima; travas consultivas por titular e por
      representante), então nenhuma lista corta sem aviso. Guarda textual `usuarios/infraestrutura/guarda-escritores-acesso.spec.ts`
      exige que todo escritor de `usuarios.ativo`/`role` chame a cascata (exceção nominal: encerramento de tenant).
+   - **Correção pelo CI da #552:** `UPDATE ... RETURNING` via `query()` devolve `[linhas, contagem]`; as cascatas de vínculos e
+     de delegações (P2d-2, já na `main`) gravavam uma auditoria extra com `recurso_id` nulo por revogação. Helper
+     `linhasDeUpdateReturning` falha fechado; provas contam a auditoria por linha (ver `docs/agents/LESSONS_LEARNED.md`).
    - **P2d-3b (a seguir):** declaração, pedidos (criar, cancelar pelo autor, listar) e resumo Q11 no portal; encerra a P2.
    - **Backlog para a P3:** se a tela mostrar o histórico de delegações ou de vínculos (revogados), consulta paginada própria.
      (O limite de 100 vigentes foi antecipado para a P2d-3a.)

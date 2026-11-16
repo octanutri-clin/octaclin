@@ -2887,6 +2887,9 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     await comoTenant(tenant);
     expect((await cliente.query('select revogada_por, revogada_em is not null as revogada from delegacoes_carteira_profissional where id=$1', [nova.id])).rows)
       .toEqual([{ revogada_por: dados.usuarioId, revogada: true }]);
+    // Uma auditoria por delegação revogada, com o id certo (UPDATE ... RETURNING via query() devolve [linhas, contagem]).
+    expect((await cliente.query("select recurso_id from user_action_logs where tenant_id=$1 and acao='carteira.delegacao.revogar_por_alteracao_acesso'", [tenant])).rows)
+      .toEqual([{ recurso_id: nova.id }]);
     await cliente.query('update usuarios set ativo=true where id=$1', [colaboradorId]);
     await expect(pendencia(colaborador, dados.pacienteId)).rejects.toMatchObject({ status: 403 });
 
@@ -3031,6 +3034,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     await expect(acessar(contaPaciente, dados.pacienteId)).rejects.toMatchObject({ status: 403 });
     await expect(acessar(comoUsuario(segundoRep, 'Patient'), dados.pacienteId)).rejects.toMatchObject({ status: 403 });
     expect((await cliente.query("select count(*)::int n from user_action_logs where tenant_id=$1 and acao='representacao.vinculo.revogar_por_desativacao_conta'", [tenant])).rows[0].n).toBe(1);
+    expect((await cliente.query("select count(*)::int n from user_action_logs where tenant_id=$1 and acao like 'representacao.vinculo.revogar_por_%' and recurso_id is null", [tenant])).rows[0].n).toBe(0);
     // Reativar a conta não revive nenhuma representação.
     await comoTenant(tenant); await cliente.query('update usuarios set ativo=true where id=$1', [contaPacienteId]);
     await expect(acessar(comoUsuario(segundoRep, 'Patient'), dados.pacienteId)).rejects.toMatchObject({ status: 403 });

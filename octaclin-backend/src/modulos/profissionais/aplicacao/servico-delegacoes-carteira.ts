@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, ForbiddenException, HttpExcepti
 import { isUUID } from 'class-validator';
 import { IsNull, type EntityManager } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
+import { linhasDeUpdateReturning } from '../../../infraestrutura/banco-dados/linhas-update-returning';
 import { registrarAuditoriaNaTransacao } from '../../../infraestrutura/auditoria/servico-auditoria';
 import type { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
@@ -54,11 +55,11 @@ function falharDelegacao(erro: unknown): never {
  */
 export async function revogarDelegacoesPorAlteracaoAcesso(g: EntityManager, tenantId: string, usuarioId: string,
   revogadorUsuarioId: string): Promise<void> {
-  const revogadas: Array<{ id: string }> = await g.query(`update delegacoes_carteira_profissional d
+  const revogadas = linhasDeUpdateReturning(await g.query(`update delegacoes_carteira_profissional d
       set revogada_por = $3, revogada_em = clock_timestamp()
     where d.tenant_id = $1 and d.revogada_em is null and (d.colaborador_usuario_id = $2 or d.profissional_id in
       (select p.id from profissionais p where p.tenant_id = $1 and p.usuario_id = $2))
-    returning d.id`, [tenantId, usuarioId, revogadorUsuarioId]);
+    returning d.id`, [tenantId, usuarioId, revogadorUsuarioId]));
   for (const linha of revogadas) {
     await registrarAuditoriaNaTransacao(g, { tenantId, usuarioId: revogadorUsuarioId, acao: 'carteira.delegacao.revogar_por_alteracao_acesso',
       recursoTipo: 'delegacao_carteira_profissional', recursoId: linha.id, metadados: {} });

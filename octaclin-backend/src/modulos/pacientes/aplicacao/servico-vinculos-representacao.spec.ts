@@ -24,7 +24,8 @@ function preparar() {
   const query = jest.fn(async (sql: string, _p?: unknown[]): Promise<unknown[]> => {
     if (sql === 'show transaction_isolation') return [{ transaction_isolation: 'read committed' }];
     if (sql.includes('insert into vinculos_representacao_paciente')) return [{ id: vinculoId, verificado_em: new Date(0) }];
-    if (sql.includes('update vinculos_representacao_paciente')) return [{ id: vinculoId }];
+    // Formato REAL do TypeORM/pg para UPDATE ... RETURNING via query(): [linhas, contagem].
+    if (sql.includes('update vinculos_representacao_paciente')) return [[{ id: vinculoId }], 1];
     if (sql.includes('as do_paciente')) return [{ do_paciente: 0, do_representante: 0 }];
     return [];
   });
@@ -124,6 +125,14 @@ describe('ServicoVinculosRepresentacao (P2d-3a)', () => {
     const c = preparar(); c.vinculo.find.mockResolvedValueOnce([{ id: vinculoId, representanteUsuarioId: representante, tipoVerificacao: 'presencial', verificadoEm: new Date(0), revogadoPor: 'CANARIO' }]);
     await expect(c.s.listar(profissional, pacienteId)).resolves.toEqual([{ id: vinculoId, representanteUsuarioId: representante, tipoVerificacao: 'presencial', verificadoEm: new Date(0) }]);
     expect(c.vinculo.find).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ tenantId: tenant, pacienteId, revogadoEm: expect.anything() }) }));
+  });
+  it('cascata grava exatamente uma auditoria por vínculo revogado, com o id certo, e falha fechado com formato inesperado', async () => {
+    const c = preparar();
+    await revogarVinculosPorAlteracaoAcesso(c.g as never, tenant, representante, ator);
+    const auditorias = (c.g.getRepository('auditoria' as never) as unknown as { save: jest.Mock; create: jest.Mock }).create.mock.calls.map(([x]) => x);
+    expect(auditorias).toEqual([expect.objectContaining({ recursoId: vinculoId, acao: 'representacao.vinculo.revogar_por_alteracao_acesso', metadados: {} })]);
+    const d = preparar(); d.query.mockImplementation(async (sql: string) => sql.includes('update vinculos') ? [{ id: vinculoId }] : []);
+    await expect(revogarVinculosPorAlteracaoAcesso(d.g as never, tenant, representante, ator)).rejects.toThrow();
   });
   it('cascatas revogam pela conta representante ou pelo paciente', async () => {
     const c = preparar();

@@ -10,7 +10,7 @@ describe('revogacao administrativa do contexto317',()=>{
     };
     const m={getRepository:()=>repo,query:jest.fn(async(sql:string)=>{
       eventos.push(sql);
-      return sql.includes('select id from profissionais') ? [{id:'prof'}] : [];
+      return sql.includes('select id from profissionais') ? [{id:'prof'}] : /^\s*update\s/i.test(sql) ? [[],0] : [];
     })};
     const executor={executar:async(_tenant:string,fn:Function)=>fn(m)};
     const s=new ServicoUsuariosCliente(executor as never,{} as never,{} as never,{} as never,{} as never,{} as never);

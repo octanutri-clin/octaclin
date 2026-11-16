@@ -290,3 +290,16 @@ varchar e em comparações condicionais, e o PostgreSQL recusou a inferência de
 tipos; o Backend falhou antes de percorrer as combinações. A fixture passou a
 enviar autor e instante confirmados em parâmetros próprios. O controle é executar
 as combinações no PostgreSQL do CI: typecheck e mocks não validam inferência SQL.
+
+## 2026-11-16 — `UPDATE ... RETURNING` por `query()` devolve `[linhas, contagem]`
+
+Na P2d-3a, o CI em PostgreSQL contou duas auditorias para uma única revogação de
+vínculo. Causa: `EntityManager.query()` do TypeORM com PostgreSQL devolve o par
+`[linhas, contagem]` para `UPDATE`/`DELETE` (só as linhas para `SELECT`/`INSERT`);
+as cascatas de revogação de vínculos e de delegações (esta já mergeada na P2d-2)
+iteravam o par e gravavam auditoria extra com `recurso_id` nulo. A revogação em si
+estava certa. Os testes unitários simulavam o formato errado, e o teste de banco da
+P2d-2 não contava a auditoria. Controle: `linhasDeUpdateReturning`
+(`infraestrutura/banco-dados/linhas-update-returning.ts`) aceita só o formato real
+e falha fechado; mocks de `UPDATE` usam `[linhas, contagem]`; provas em banco
+contam a auditoria por linha. Mock não substitui o formato do driver.

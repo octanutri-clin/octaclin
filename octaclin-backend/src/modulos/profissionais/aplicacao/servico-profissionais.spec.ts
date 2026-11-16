@@ -39,7 +39,7 @@ describe('ServicoProfissionais', () => {
     };
     const repositorioUsuarios = { update: jest.fn(async () => ({ affected: 1 })) };
     const repositorioRefreshTokens = { update: jest.fn(async () => ({ affected: 1 })) };
-    const query = jest.fn(async (_sql: string, _params?: unknown[]) => [] as unknown[]);
+    const query = jest.fn(async (sql: string, _params?: unknown[]) => (/^\s*update\s/i.test(String(sql)) ? [[], 0] : []) as unknown[]);
     const servico = new ServicoProfissionais(
       {
         executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>

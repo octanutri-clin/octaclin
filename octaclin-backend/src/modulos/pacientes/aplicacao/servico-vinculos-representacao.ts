@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, ForbiddenException, HttpExcepti
 import { isUUID } from 'class-validator';
 import { IsNull, type EntityManager } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
+import { linhasDeUpdateReturning } from '../../../infraestrutura/banco-dados/linhas-update-returning';
 import { registrarAuditoriaNaTransacao } from '../../../infraestrutura/auditoria/servico-auditoria';
 import type { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { autorizarPendenciaRestricao } from '../../planos-alimentares/aplicacao/autorizacao-pendencia-restricao';
@@ -36,9 +37,9 @@ function falharVinculo(erro: unknown): never {
 }
 
 async function revogarEmLote(g: EntityManager, tenantId: string, filtroSql: string, parametro: string, revogador: string, acao: string): Promise<void> {
-  const revogados: Array<{ id: string }> = await g.query(`update vinculos_representacao_paciente v
+  const revogados = linhasDeUpdateReturning(await g.query(`update vinculos_representacao_paciente v
       set revogado_por = $3, revogado_em = clock_timestamp()
-    where v.tenant_id = $1 and v.revogado_em is null and ${filtroSql} returning v.id`, [tenantId, parametro, revogador]);
+    where v.tenant_id = $1 and v.revogado_em is null and ${filtroSql} returning v.id`, [tenantId, parametro, revogador]));
   for (const linha of revogados) {
     await registrarAuditoriaNaTransacao(g, { tenantId, usuarioId: revogador, acao, recursoTipo: 'vinculo_representacao_paciente',
       recursoId: linha.id, metadados: {} });
