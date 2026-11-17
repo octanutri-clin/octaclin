@@ -14,6 +14,9 @@ import { RevisaoAvaliacaoRestricoesOrm } from '../infraestrutura/revisao-avaliac
 import { autorizarPendenciaRestricao } from './autorizacao-pendencia-restricao';
 import { falharRestricao } from './falha-restricao';
 
+/** P2d-3b: máximo de declarações do portal aguardando conferência por paciente. */
+export const LIMITE_DECLARACOES_ABERTAS = 50;
+
 @Injectable()
 export class ServicoRegistroPendenciaRestricao {
   constructor(private readonly executor: ExecutorTenant, private readonly cripto: CriptografiaDadosSensiveis) {}
@@ -48,6 +51,12 @@ export class ServicoRegistroPendenciaRestricao {
           { tenantId: usuario.tenantId, pacienteId, restricaoId: existente.id, revisao: 1, finalidade: 'revisao_restricao' });
         if (JSON.stringify(original) !== JSON.stringify(conteudo)) throw new ConflictException('Chave já utilizada.');
         return { id: existente.id, revisao: existente.revisao, confirmacao: existente.confirmacao, estado: existente.estado };
+      }
+      if (origem === 'declaracao_paciente') {
+        // P2d-3b: teto de declarações do portal aguardando conferência (o resumo nunca corta sem aviso). O lock do paciente serializa.
+        const abertas: Array<{ total: number }> = await g.query(`select count(*)::int as total from restricoes_pacientes where tenant_id = $1
+          and paciente_id = $2 and origem = 'declaracao_paciente' and confirmacao = 'pendente' and estado <> 'inativa'`, [usuario.tenantId, pacienteId]);
+        if ((abertas[0]?.total ?? LIMITE_DECLARACOES_ABERTAS) >= LIMITE_DECLARACOES_ABERTAS) throw new ConflictException('Operação indisponível ou concorrente.');
       }
       const avaliacoes = g.getRepository(AvaliacaoRestricoesPacienteOrm);
       const avaliacao = await avaliacoes.findOne({ where: { tenantId: usuario.tenantId, pacienteId }, lock: { mode: 'pessimistic_write' } });

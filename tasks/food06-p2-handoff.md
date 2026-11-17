@@ -89,6 +89,11 @@ função pura (`dominio/projecao-portal-solicitacao.ts`). **Criar e cancelar pel
      conferência, data da última confirmação; nunca observação, justificativa, autor, origem crua, revisão). Rotas
      `portal/pacientes/:pacienteId/restricoes/{resumo,declarar,pedidos/listar,pedidos/criar,pedidos/:id/cancelar}` atrás da flag.
      O pedido nunca altera a restrição.
+     Revisão R4 (subagente de tenant, mesmo modelo): sem bloqueantes; corrigidos a resposta de `declarar` (só id e selo, nunca
+     revisão ou desfecho), tetos de 50 declarações e 50 pedidos abertos por paciente, lista de pedidos com `maisAntigos` e
+     `listar`/`revogar` de vínculos exigindo autorização da equipe. Limites: sem prova em banco de que a declaração do paciente
+     invalida `sem_restricoes_confirmadas` (código compartilhado, coberto com o Professional); `criarPedido` aceita como alvo
+     uma preferência que o resumo não mostra (id nunca exposto); `registrar` não exige READ COMMITTED por conta própria (anterior).
    - **Migration 1086 (PR própria, empilhada na #552):** unique parcial `pacientes (tenant_id, usuario_id)`; roteiro de aplicação
      fora de banda 1083–1086 em `tasks/food06-migracoes-fora-de-banda.md`.
 

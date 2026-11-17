@@ -88,6 +88,17 @@ describe('ServicoVinculosRepresentacao (P2d-3a)', () => {
     await expect(agir(c)).rejects.toMatchObject({ status: 403, message: 'Operação não autorizada.' });
     expect(inseriu(c)).toBe(false);
   });
+  it.each(['listar', 'revogar'] as const)('%s exige que a autorização seja da equipe (nunca de um paciente)', async metodo => {
+    const c = preparar(); c.autorizar.mockResolvedValue('declaracao_paciente' as never); c.vinculo.findOne.mockResolvedValue({ id: vinculoId, revogadoEm: null });
+    const chamada = metodo === 'listar' ? c.s.listar(profissional, pacienteId) : c.s.revogar(profissional, pacienteId, vinculoId);
+    await expect(chamada).rejects.toMatchObject({ status: 403 });
+    expect(c.vinculo.find).not.toHaveBeenCalled(); expect(c.vinculo.update).not.toHaveBeenCalled();
+  });
+  it.each(['listar', 'revogar'] as const)('Patient não usa %s', async metodo => {
+    const c = preparar(); const patient = { ...profissional, papel: 'Patient' as const };
+    await expect(metodo === 'listar' ? c.s.listar(patient, pacienteId) : c.s.revogar(patient, pacienteId, vinculoId)).rejects.toMatchObject({ status: 403 });
+    expect(c.executor.executar).not.toHaveBeenCalled();
+  });
   it('entrada inválida responde 400 antes do banco', async () => {
     const c = preparar();
     await expect(c.s.registrar(profissional, pacienteId, representante, 'CANARIO_TIPO')).rejects.toMatchObject({ status: 400 });

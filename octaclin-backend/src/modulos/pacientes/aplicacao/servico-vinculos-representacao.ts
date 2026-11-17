@@ -80,7 +80,8 @@ export class ServicoVinculosRepresentacao {
     try {
       return await this.executor.executar(u.tenantId, async g => {
         await exigirReadCommitted(g);
-        await autorizarPendenciaRestricao(g, u, paciente);
+        const equipe = await autorizarPendenciaRestricao(g, u, paciente);
+        if (equipe !== 'profissional' && equipe !== 'colaborador') throw negar();
         const linhas = await g.getRepository(VinculoRepresentacaoPacienteOrm).find({
           where: { tenantId: u.tenantId, pacienteId: paciente, revogadoEm: IsNull() },
           select: { id: true, representanteUsuarioId: true, tipoVerificacao: true, verificadoEm: true }, order: { verificadoEm: 'DESC' }, take: LIMITE_VINCULOS_VIGENTES });
@@ -138,7 +139,8 @@ export class ServicoVinculosRepresentacao {
     try {
       return await this.executor.executar(u.tenantId, async g => {
         await exigirReadCommitted(g);
-        await autorizarPendenciaRestricao(g, u, paciente);
+        const equipe = await autorizarPendenciaRestricao(g, u, paciente);
+        if (equipe !== 'profissional' && equipe !== 'colaborador') throw negar();
         const repo = g.getRepository(VinculoRepresentacaoPacienteOrm);
         const linha = await repo.findOne({ where: { id, tenantId: u.tenantId, pacienteId: paciente }, select: { id: true, revogadoEm: true },
           lock: { mode: 'pessimistic_write' } });

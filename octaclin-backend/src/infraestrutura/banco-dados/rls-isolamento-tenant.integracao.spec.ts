@@ -3121,6 +3121,8 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     expect(JSON.stringify(resumo)).not.toMatch(/CANARIO_|observacao/);
     expect((await portal.resumo(representante, outro.pacienteId)).restricoes.map(r => r.id)).toEqual([deOutro.id]);
     await expect(portal.resumo(contaPaciente, outro.pacienteId)).rejects.toMatchObject({ status: 403 });
+    // Patient de outro tenant com o pacienteId deste tenant: negado (o tenant vem do token; RLS esconde o paciente).
+    await expect(portal.resumo({ ...contaPaciente, tenantId: tenantB }, dados.pacienteId)).rejects.toMatchObject({ status: 403 });
 
     // Pedido de correção do representante: idempotente; restrição de outro paciente pelo seletor errado é negada.
     const chave = randomUUID();
@@ -3133,7 +3135,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
       .toEqual([{ tipo: 'correcao', estado: 'criada', autor_usuario_id: representanteId }]);
     expect((await cliente.query('select acao, metadados from user_action_logs where recurso_id=$1', [pedido.id])).rows).toEqual([{ acao: 'restricoes.solicitacao_criar', metadados: {} }]);
     // A conta do paciente vê o pedido do representante, mas não o cancela; o profissional vê o pedido decifrado.
-    expect((await portal.listarPedidos(contaPaciente, dados.pacienteId)).map(p => [p.id, p.podeCancelar])).toEqual([[pedido.id, false]]);
+    expect((await portal.listarPedidos(contaPaciente, dados.pacienteId)).itens.map(p => [p.id, p.podeCancelar])).toEqual([[pedido.id, false]]);
     await expect(portal.cancelarPedido(contaPaciente, dados.pacienteId, pedido.id)).rejects.toMatchObject({ status: 403 });
     expect((await solicitacoes.listar(titular, dados.pacienteId) as Array<{ id: string; pedido: unknown }>).find(x => x.id === pedido.id)?.pedido).toEqual({ itens });
 

@@ -79,15 +79,18 @@ export class ControladorPortalRestricoesPaciente {
     @Body() dados: RegistrarPendenciaDto): Promise<unknown> {
     let conteudo: ReturnType<typeof validarConteudoRestricao>;
     try { conteudo = validarConteudoRestricao(dados.conteudo); } catch { throw new HttpException('Solicitação inválida.', 400); }
-    return projetarRegistro(await this.registro.registrar(usuario, pacienteId, { chaveCriacao: dados.chaveCriacao, conteudo }));
+    // Projeção própria do portal: só o id e o selo de "informada por você". Nunca revisão nem desfecho da conferência
+    // (uma repetição da mesma chave depois da decisão da equipe não revela rejeição nem inativação).
+    const r = projetarRegistro(await this.registro.registrar(usuario, pacienteId, { chaveCriacao: dados.chaveCriacao, conteudo }));
+    return { id: r.id, selo: 'restricoes.portal.informada_por_voce' };
   }
 
   @Post('pedidos/listar') @HttpCode(200) @Permissoes('portal.acessar') @Header('Cache-Control', 'private, no-store')
   async listarPedidos(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('pacienteId', ParseUUIDPipe) pacienteId: string, @Body() dados: unknown): Promise<unknown> {
     corpoVazio(dados);
-    const lista = await this.portal.listarPedidos(usuario, pacienteId);
-    if (!Array.isArray(lista)) return indisponivel();
-    return { itens: lista.map(projetarPedido) };
+    const lista = await this.portal.listarPedidos(usuario, pacienteId) as { itens?: unknown; maisAntigos?: unknown };
+    if (!lista || !Array.isArray(lista.itens) || typeof lista.maisAntigos !== 'boolean') return indisponivel();
+    return { itens: lista.itens.map(projetarPedido), maisAntigos: lista.maisAntigos };
   }
 
   @Post('pedidos/criar') @HttpCode(200) @Permissoes('portal.acessar') @Header('Cache-Control', 'private, no-store')

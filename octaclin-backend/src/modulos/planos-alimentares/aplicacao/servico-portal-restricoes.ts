@@ -24,6 +24,8 @@ export interface PedidoPortal extends SolicitacaoPortal { podeCancelar: boolean 
 const CAMPO_PEDIDO = 'solicitacoes_restricoes_pacientes.conteudo_criptografado';
 const CAMPO_EXPLICACAO = 'solicitacoes_restricoes_pacientes.explicacao_paciente_criptografada';
 const LIMITE_PEDIDOS = 100;
+/** Máximo de pedidos abertos (enviados ou em análise) por paciente. */
+export const LIMITE_PEDIDOS_ABERTOS = 50;
 const LIMITE_RESTRICOES = 200;
 const DECIDIDOS = ['atendida', 'parcial', 'recusada'];
 const CANCELAVEIS = ['criada', 'em_analise'];
@@ -125,11 +127,12 @@ export class ServicoPortalRestricoes {
     });
   }
 
-  async listarPedidos(usuario: UsuarioAutenticado, pacienteId: string): Promise<PedidoPortal[]> {
+  /** Os 100 pedidos mais recentes; `maisAntigos` avisa quando há mais (a lista nunca corta em silêncio). */
+  async listarPedidos(usuario: UsuarioAutenticado, pacienteId: string): Promise<{ itens: PedidoPortal[]; maisAntigos: boolean }> {
     return this.noPaciente(usuario, [pacienteId], async (g, u, [paciente]) => {
       const linhas = await g.getRepository(SolicitacaoRestricaoPacienteOrm).find({ where: { tenantId: u.tenantId, pacienteId: paciente },
-        order: { criadoEm: 'DESC', id: 'DESC' }, take: LIMITE_PEDIDOS });
-      const itens = linhas.map(s => this.projetarPedido(u, s));
+        order: { criadoEm: 'DESC', id: 'DESC' }, take: LIMITE_PEDIDOS + 1 });
+      const itens = { itens: linhas.slice(0, LIMITE_PEDIDOS).map(s => this.projetarPedido(u, s)), maisAntigos: linhas.length > LIMITE_PEDIDOS };
       await registrarAuditoriaNaTransacao(g, { tenantId: u.tenantId, usuarioId: u.usuarioId, acao: 'portal.restricoes.pedidos_listar',
         recursoTipo: 'paciente', recursoId: paciente, metadados: {} });
       return itens;
@@ -160,6 +163,9 @@ export class ServicoPortalRestricoes {
       const alvo = await g.getRepository(RestricaoPacienteOrm).findOne({ where: { id: restricaoId, tenantId: u.tenantId, pacienteId: paciente,
         estado: In(['ativa', 'em_reavaliacao']), confirmacao: In(['pendente', 'confirmada']) }, select: { id: true } });
       if (!alvo) throw new ForbiddenException('Operação não autorizada.');
+      // Teto de pedidos abertos por paciente (serializado pelo lock do paciente tomado na autorização).
+      const abertos = await repo.count({ where: { tenantId: u.tenantId, pacienteId: paciente, estado: In(CANCELAVEIS as SolicitacaoRestricaoPacienteOrm['estado'][]) } });
+      if (abertos >= LIMITE_PEDIDOS_ABERTOS) throw new ConflictException('Operação indisponível ou concorrente.');
       const id = randomUUID();
       const cifra = cifrarCampo(this.cripto, CAMPO_PEDIDO, pedido, { tenantId: u.tenantId, pacienteId: paciente, registroId: id, revisao: 1 });
       const linhas: Array<{ criado_em: Date }> = await g.query(`insert into solicitacoes_restricoes_pacientes

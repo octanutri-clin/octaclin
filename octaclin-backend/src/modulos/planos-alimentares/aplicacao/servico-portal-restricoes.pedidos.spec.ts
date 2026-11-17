@@ -33,7 +33,7 @@ function preparar() {
     estado: 'criada', autorUsuarioId: conta, chaveCriacao: chave, conteudoCriptografado: Buffer.from('c'), revisao: 1,
     criadoEm: new Date('2026-11-17T10:00:00.000Z'), justificativaInternaCriptografada: Buffer.from('CANARIO_JUSTIFICATIVA'), ...extra });
   const solicitacoes = { findOne: jest.fn(async (): Promise<unknown> => null), find: jest.fn(async (): Promise<unknown[]> => []),
-    update: jest.fn(async () => ({ affected: 1 })) };
+    update: jest.fn(async () => ({ affected: 1 })), count: jest.fn(async () => 0) };
   const restricoes = { findOne: jest.fn(async (): Promise<unknown> => ({ id: restricao })), find: jest.fn(async (): Promise<unknown[]> => []) };
   const avaliacoes = { findOne: jest.fn(async (): Promise<unknown> => null) };
   const query = jest.fn(async (sql: string, _p?: unknown[]): Promise<unknown[]> => {
@@ -122,7 +122,9 @@ describe('portal do paciente: pedidos (P2d-3b)', () => {
     const c = preparar(); c.solicitacoes.find.mockResolvedValueOnce([
       c.solicitacao({ estado: 'parcial', revisao: 3, decididoEm: new Date('2026-11-17T12:00:00.000Z'), explicacaoPacienteCriptografada: Buffer.from('e') }),
       c.solicitacao({ id: '88888888-8888-4888-8888-888888888888', autorUsuarioId: outroAutor })]);
-    const r = await c.s.listarPedidos(ator as never, paciente);
+    const { itens: r, maisAntigos } = await c.s.listarPedidos(ator as never, paciente);
+    expect(maisAntigos).toBe(false);
+    expect(c.solicitacoes.find).toHaveBeenCalledWith(expect.objectContaining({ take: 101 }));
     expect(r[0]).toEqual({ id: pedidoId, tipo: 'correcao', chaveTexto: 'restricoes.solicitacao.parcial', criadoEm: '2026-11-17T10:00:00.000Z',
       decididoEm: '2026-11-17T12:00:00.000Z', explicacao: 'Explicação sintética', podeCancelar: false });
     expect(r[1]).toMatchObject({ chaveTexto: 'restricoes.solicitacao.enviada', podeCancelar: false });
@@ -144,6 +146,17 @@ describe('portal do paciente: pedidos (P2d-3b)', () => {
     expect(inspect(r)).not.toMatch(/CANARIO_/);
     c.restricoes.find.mockResolvedValueOnce([]); c.avaliacoes.findOne.mockResolvedValueOnce({ id: 'a', situacao: 'nao_informado', confirmadoEm: null });
     await expect(c.s.resumo(ator as never, paciente)).resolves.toEqual({ restricoes: [] });
+  });
+  it('lista sinaliza quando há pedidos além dos 100 mais recentes', async () => {
+    const c = preparar(); c.solicitacoes.find.mockResolvedValueOnce(Array.from({ length: 101 }, (_x, i) =>
+      c.solicitacao({ id: `${String(i % 10).repeat(8)}-0000-4000-8000-${String(i).padStart(12, '0')}` })));
+    const r = await c.s.listarPedidos(ator as never, paciente);
+    expect(r.itens).toHaveLength(100); expect(r.maisAntigos).toBe(true);
+  });
+  it('teto de 50 pedidos abertos por paciente: 409 sem gravar', async () => {
+    const c = preparar(); (c.solicitacoes as unknown as { count: jest.Mock }).count = jest.fn(async () => 50);
+    await expect(c.s.criarPedido(ator as never, paciente, { chaveCriacao: chave, tipo: 'correcao', restricaoId: restricao, itens })).rejects.toMatchObject({ status: 409 });
+    expect(inseriu(c)).toBe(false);
   });
   it('resumo acima do limite falha fechado em vez de cortar', async () => {
     const c = preparar(); c.restricoes.find.mockResolvedValueOnce(Array.from({ length: 201 }, () => ({})));

@@ -42,6 +42,19 @@ describe('registro de pendência de restrição', () => {
     expect(registrarAuditoriaNaTransacao).toHaveBeenCalledWith(c.g, expect.objectContaining({ metadados: {} }));
     expect(JSON.stringify(resposta)).not.toContain('alergia');
   });
+  it('P2d-3b: declaração do portal grava origem declaracao_paciente e respeita o teto de 50 abertas por paciente', async () => {
+    const c = preparar(); jest.mocked(autorizarPendenciaRestricao).mockResolvedValue('declaracao_paciente');
+    c.g.query.mockImplementation((async (sql: string) => sql.includes('count(*)::int as total') ? [{ total: 49 }] : []) as never);
+    await c.registrar();
+    expect(c.atuais.insert).toHaveBeenCalledWith(expect.objectContaining({ origem: 'declaracao_paciente', confirmacao: 'pendente' }));
+    const contagem = (c.g.query.mock.calls as unknown as Array<[string, unknown[]]>).find(([sql]) => sql.includes('count(*)::int as total'));
+    expect(contagem?.[0]).toMatch(/origem = 'declaracao_paciente' and confirmacao = 'pendente'/); expect(contagem?.[1]).toEqual([ator.tenantId, pacienteId]);
+    const d = preparar(); jest.mocked(autorizarPendenciaRestricao).mockResolvedValue('declaracao_paciente');
+    d.g.query.mockImplementation((async (sql: string) => sql.includes('count(*)::int as total') ? [{ total: 50 }] : []) as never);
+    await expect(d.registrar()).rejects.toMatchObject({ status: 409 });
+    expect(d.atuais.insert).not.toHaveBeenCalled();
+    jest.mocked(autorizarPendenciaRestricao).mockResolvedValue('profissional');
+  });
   it('nega antes de acessar ou gravar conteúdo quando não autorizado', async () => {
     jest.mocked(autorizarPendenciaRestricao).mockRejectedValueOnce(new ForbiddenException());
     const c = preparar(); await expect(c.registrar()).rejects.toBeInstanceOf(ForbiddenException);

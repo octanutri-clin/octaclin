@@ -34,11 +34,11 @@ const pedidoPortal = { id: pedido, tipo: 'correcao', chaveTexto: 'restricoes.sol
 const portal = {
   resumo: jest.fn(async (): Promise<unknown> => ({ restricoes: [{ id: restricao, selo: 'restricoes.portal.registrada', natureza: 'clinica', alvo: { tipo: 'alergeno', id: 'alvo-sintetico' },
     observacao: 'CANARIO_OBSERVACAO' }], ultimaConfirmacaoEm: new Date(0).toISOString() })),
-  listarPedidos: jest.fn(async (): Promise<unknown> => [pedidoPortal]),
+  listarPedidos: jest.fn(async (): Promise<unknown> => ({ itens: [pedidoPortal], maisAntigos: false })),
   criarPedido: jest.fn(async (): Promise<unknown> => pedidoPortal),
   cancelarPedido: jest.fn(async (): Promise<unknown> => ({ ...pedidoPortal, chaveTexto: 'restricoes.solicitacao.cancelada', podeCancelar: false }))
 };
-const registro = { registrar: jest.fn(async (): Promise<unknown> => ({ id: restricao, revisao: 1, estado: 'ativa', confirmacao: 'pendente', origem: 'CANARIO_INTERNO' })) };
+const registro = { registrar: jest.fn(async (): Promise<unknown> => ({ id: restricao, revisao: 3, estado: 'ativa', confirmacao: 'rejeitada', origem: 'CANARIO_INTERNO' })) };
 let flagLigada = true;
 const flags = { habilitada: jest.fn(async (_t: string, chave: string) => chave === 'restricoes.clinicas' && flagLigada) };
 
@@ -85,10 +85,11 @@ describe('portal de restrições por paciente com guardas reais (P2d-3b)', () =>
       ultimaConfirmacaoEm: new Date(0).toISOString() });
     expect(portal.resumo).toHaveBeenCalledWith(expect.objectContaining({ tenantId: tenant, usuarioId: usuario, papel: 'Patient' }), paciente);
     const dec = await post('declarar', 'Patient', { chaveCriacao: randomUUID(), conteudo });
-    expect(dec.status).toBe(200); expect(await dec.json()).toEqual({ id: restricao, revisao: 1, estado: 'ativa', confirmacao: 'pendente' });
+    // Mesmo se a repetição da chave cair numa declaração já rejeitada, o portal não revela revisão nem desfecho.
+    expect(dec.status).toBe(200); expect(await dec.json()).toEqual({ id: restricao, selo: 'restricoes.portal.informada_por_voce' });
     const lista = await post('pedidos/listar', 'Patient', {});
     const esperado = { id: pedido, tipo: 'correcao', chaveTexto: 'restricoes.solicitacao.enviada', criadoEm: new Date(0).toISOString(), podeCancelar: true };
-    expect(await lista.json()).toEqual({ itens: [esperado] });
+    expect(await lista.json()).toEqual({ itens: [esperado], maisAntigos: false });
     const criado = await post('pedidos/criar', 'Patient', { chaveCriacao: randomUUID(), tipo: 'correcao', restricaoId: restricao, itens: [{ item: 'i1', texto: 'Texto sintético' }] });
     expect(criado.status).toBe(200); expect(await criado.json()).toEqual(esperado);
     const cancelado = await post(`pedidos/${pedido}/cancelar`, 'Patient', {});
