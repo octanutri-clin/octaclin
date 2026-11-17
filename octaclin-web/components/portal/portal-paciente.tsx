@@ -55,6 +55,7 @@ import { usePortalPaciente } from '@/components/portal/portal-contexto';
 import { PlanoAlimentarPaciente } from '@/components/portal/plano-alimentar-paciente';
 import { AcompanhamentoGestacionalPortal } from '@/components/portal/acompanhamento-gestacional-portal';
 import { ReceitasCompartilhadasPortal } from '@/components/portal/receitas-compartilhadas-portal';
+import { LinkRestricoesPortal, RestricoesPortal } from '@/components/portal/restricoes-portal';
 import { StatusPwaPortal } from '@/components/pwa/status-pwa-portal';
 import { assinarOperacoesSincronizadas } from '@/lib/pwa-private-queue';
 
@@ -418,7 +419,7 @@ function PortalCarregando() {
   );
 }
 
-type SecaoPortal = 'inicio' | 'agenda' | 'checkins' | 'plano' | 'receitas' | 'formularios' | 'mensagens' | 'perfil' | 'privacidade' | 'mais';
+type SecaoPortal = 'inicio' | 'agenda' | 'checkins' | 'plano' | 'receitas' | 'formularios' | 'mensagens' | 'perfil' | 'privacidade' | 'mais' | 'restricoes';
 
 export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
   const { portal, setPortal, carregando, erroCarregamento, carregar } = usePortalPaciente();
@@ -785,6 +786,11 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
             {secao === 'receitas' ? (
               <section aria-label="Receitas compartilhadas" className="scroll-mt-4">
                 <ReceitasCompartilhadasPortal />
+              </section>
+            ) : null}
+            {secao === 'restricoes' ? (
+              <section aria-label="Restrições alimentares" className="scroll-mt-4">
+                <RestricoesPortal />
               </section>
             ) : null}
             <section id="resumo" className={secao === 'inicio' ? 'scroll-mt-4 grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_repeat(3,minmax(0,1fr))]' : 'hidden'}>
@@ -1227,6 +1233,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                     </Link>
                   ))}
                   <Link href="/portal/receitas" className={classesBotao({ className: 'justify-between' })}>Receitas compartilhadas</Link>
+                  <LinkRestricoesPortal />
                 </CartaoConteudo>
               </Cartao>
             ) : null}

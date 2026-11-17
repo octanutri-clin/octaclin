@@ -155,6 +155,16 @@
       "bloqueante": true,
       "cobertoPor": "web-suite-visual",
       "motivoDaCobertura": "smoke:visual executa todos os specs, incluindo a Fase 313, nos dois projects."
+    },
+    {
+      "id": "web-food06-restricoes-portal",
+      "comando": "test:restricoes:portal",
+      "diretorio": "octaclin-web",
+      "descricao": "Portal de restrições (FOOD06 P3): própria conta e representante de várias pessoas, troca por teclado, estados vazio/erro/limite, 320 px e axe (WCAG 2.0 a 2.2 AA).",
+      "especificacao": "octaclin-web/tests/visual/food06-restricoes-portal.spec.mjs",
+      "bloqueante": true,
+      "cobertoPor": "web-suite-visual",
+      "motivoDaCobertura": "smoke:visual executa todos os specs, incluindo este, nos dois projects."
     }
   ],
   "linhas": [
@@ -833,6 +843,29 @@
         ]
       },
       "risco": "Leitor de tela real não foi observado; a prova automatizada não o substitui."
+    },
+    {
+      "superficie": "restrições alimentares no portal (atrás de flag desligada)",
+      "rota": "/portal/restricoes",
+      "rotas": [
+        "/portal/restricoes",
+        "/portal/mais"
+      ],
+      "estado": "área desligada, conta própria, representante de três pessoas, vazio, falha com nova tentativa, limite (409) e sem acesso (403)",
+      "interacao": "seleção da pessoa com as setas do teclado, foco no título da pessoa escolhida, leitura de grupos e pedidos e axe",
+      "plataforma": [
+        "desktop-chromium",
+        "mobile-chromium"
+      ],
+      "mecanismo": "automatizado",
+      "resultado": "PASS",
+      "evidencia": {
+        "gate": "web-food06-restricoes-portal",
+        "blocos": [
+          "FOOD06 P3 — portal de restrições (leitura)"
+        ]
+      },
+      "risco": "Leitor de tela real e teste com pessoas não foram observados (ATV-7); a prova automatizada não os substitui. BFF simulado: não prova autorização nem RLS."
     }
   ]
 }

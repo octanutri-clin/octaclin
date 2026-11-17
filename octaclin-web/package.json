@@ -67,7 +67,8 @@
     "test:fase309": "playwright test tests/visual/fase-309-notificacoes.spec.mjs --reporter=list",
     "test:css-security": "node --test scripts/test-css-security.mjs",
     "test:fase318:bff": "node scripts/test-fase-318-bff.mjs",
-    "test:restricoes:bff": "node scripts/test-restricoes-bff.mjs"
+    "test:restricoes:bff": "node scripts/test-restricoes-bff.mjs",
+    "test:restricoes:portal": "playwright test tests/visual/food06-restricoes-portal.spec.mjs --reporter=list"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

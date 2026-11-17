@@ -106,6 +106,7 @@ função pura (`dominio/projecao-portal-solicitacao.ts`). **Criar e cancelar pel
   questionário (Q11); histórico paginado de delegações e vínculos, se exibido.
 - **Fica para a P4:** M04/M12, aplicação no plano com a impressão do motor e invalidação de prévias.
 - **Ativação:** bloqueada por ATV-1 a ATV-9; migrations 1083–1086 fora de banda (o proprietário aplica 1083 e 1085 em 2026-11-17).
+- **P3:** plano aprovado em 2026-11-17, com fatias, decisões Q-A a Q-I e estado de execução em `tasks/food06-p3-plano.md`.
    - **Backlog para a P3:** se a tela mostrar o histórico de delegações ou de vínculos (revogados), consulta paginada própria.
      (O limite de 100 vigentes foi antecipado para a P2d-3a.)
    - **PR própria a seguir:** unique parcial em `pacientes (tenant_id, usuario_id) where usuario_id is not null` (migration R4,
