@@ -6,16 +6,23 @@ import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { autorizarColaboradorDelegado } from '../../profissionais/aplicacao/servico-delegacoes-carteira';
+import { autorizarPacientePortal } from './autorizacao-paciente-portal';
 
 /**
  * Quem pode registrar PENDÊNCIA (nunca confirmação clínica): o Professional responsável pelo paciente ou, desde a P2d-2,
  * o Collaborator com delegação vigente da carteira do responsável ATUAL, provada sob lock na mesma transação.
- * Patient continua fechado até a P2d-3 (vínculo de representação).
+ * Desde a P2d-3b, o Patient (conta do próprio paciente ou representante com vínculo vigente, provado por
+ * `autorizarPacientePortal`) registra DECLARAÇÃO: pendência com origem `declaracao_paciente`, nunca confirmada por si.
+ * Quem administra vínculos ou lê por autoria exige o retorno específico (`profissional`/`colaborador`).
  */
-export async function autorizarPendenciaRestricao(g: EntityManager, u: UsuarioAutenticado, pacienteId: string): Promise<'profissional' | 'colaborador'> {
+export async function autorizarPendenciaRestricao(g: EntityManager, u: UsuarioAutenticado, pacienteId: string): Promise<'profissional' | 'colaborador' | 'declaracao_paciente'> {
   const negar = () => new ForbiddenException('Operação não autorizada.');
   if (!g.queryRunner?.isTransactionActive || !u || !isUUID(u.tenantId) || !isUUID(u.usuarioId) || !isUUID(pacienteId) ||
-    (u.papel !== 'Professional' && u.papel !== 'Collaborator')) throw negar();
+    (u.papel !== 'Professional' && u.papel !== 'Collaborator' && u.papel !== 'Patient')) throw negar();
+  if (u.papel === 'Patient') {
+    await autorizarPacientePortal(g, u, pacienteId);
+    return 'declaracao_paciente';
+  }
   if (u.papel === 'Collaborator') {
     await autorizarColaboradorDelegado(g, u.tenantId, u.usuarioId, pacienteId);
     return 'colaborador';

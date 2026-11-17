@@ -17,6 +17,7 @@ import { ControladorDelegacoesCarteira } from '../profissionais/apresentacao/con
 import { ServicoDelegacoesCarteira } from '../profissionais/aplicacao/servico-delegacoes-carteira';
 import { ControladorRepresentantesPaciente } from '../pacientes/apresentacao/controlador-representantes-paciente';
 import { ControladorPortalRestricoes } from './apresentacao/controlador-portal-restricoes';
+import { ControladorPortalRestricoesPaciente } from './apresentacao/controlador-portal-restricoes-paciente';
 import { ServicoVinculosRepresentacao } from '../pacientes/aplicacao/servico-vinculos-representacao';
 import { ServicoPortalRestricoes } from './aplicacao/servico-portal-restricoes';
 import { CHAVE_FEATURE_FLAG, GuardaFeatureFlag } from '../../infraestrutura/feature-flags/guarda-feature-flag';
@@ -34,7 +35,7 @@ class AuthSintetico {}
 describe('módulo de restrições clínicas', () => {
   it('publica só os controladores clínico, do colaborador e da delegação, todos atrás da flag restricoes.clinicas depois da guarda JWT (P2b/P2d-2)', () => {
     const controladores = [ControladorRestricoesClinicas, ControladorRestricoesColaborador, ControladorDelegacoesCarteira,
-      ControladorRepresentantesPaciente, ControladorPortalRestricoes];
+      ControladorRepresentantesPaciente, ControladorPortalRestricoes, ControladorPortalRestricoesPaciente];
     expect(Reflect.getMetadata('controllers', ModuloRestricoes)).toEqual(controladores);
     for (const c of controladores) {
       expect(Reflect.getMetadata(CHAVE_FEATURE_FLAG, c)).toBe('restricoes.clinicas');

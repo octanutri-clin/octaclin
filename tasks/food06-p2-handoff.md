@@ -80,7 +80,27 @@ função pura (`dominio/projecao-portal-solicitacao.ts`). **Criar e cancelar pel
    - **Correção pelo CI da #552:** `UPDATE ... RETURNING` via `query()` devolve `[linhas, contagem]`; as cascatas de vínculos e
      de delegações (P2d-2, já na `main`) gravavam uma auditoria extra com `recurso_id` nulo por revogação. Helper
      `linhasDeUpdateReturning` falha fechado; provas contam a auditoria por linha (ver `docs/agents/LESSONS_LEARNED.md`).
-   - **P2d-3b (a seguir):** declaração, pedidos (criar, cancelar pelo autor, listar) e resumo Q11 no portal; encerra a P2.
+   - **P2d-3b (branch `claude/food06-p2d3b-portal-paciente`, empilhada na #552):** o Patient (própria conta ou representante,
+     provado por `autorizarPacientePortal`) **declara** restrição nova como pendência `declaracao_paciente` (preferência continua
+     recusada; declaração nunca confirma e invalida a avaliação `sem_restricoes_confirmadas`, como a do colaborador); **pede**
+     correção/remoção de restrição visível do mesmo paciente (idempotente por chave do autor); **cancela** só o próprio pedido,
+     de enviado ou em análise; **lista** os pedidos do paciente pela projeção do portal (`podeCancelar` só para o autor); vê o
+     **resumo Q11** (`dominio/projecao-portal-restricoes.ts`: confirmadas/ativas, declarações dele e registros da equipe aguardando
+     conferência, data da última confirmação; nunca observação, justificativa, autor, origem crua, revisão). Rotas
+     `portal/pacientes/:pacienteId/restricoes/{resumo,declarar,pedidos/listar,pedidos/criar,pedidos/:id/cancelar}` atrás da flag.
+     O pedido nunca altera a restrição.
+   - **Migration 1086 (PR própria, empilhada na #552):** unique parcial `pacientes (tenant_id, usuario_id)`; roteiro de aplicação
+     fora de banda 1083–1086 em `tasks/food06-migracoes-fora-de-banda.md`.
+
+### Estado da P2 ao fim da P2d-3b
+- **Código da P2 completo** (atrás da flag `restricoes.clinicas`, desligada): Professional com concessão (P2a), exposição fechada
+  (P2b), decisão de pedidos (P2c), tabelas de delegação e vínculo (P2d-1), colaborador delegado (P2d-2), vínculo e acesso do
+  paciente (P2d-3a) e portal do paciente (P2d-3b).
+- **Fica para a P3:** telas do profissional, do colaborador e do portal; textos das chaves (`restricoes.solicitacao.*`,
+  `restricoes.portal.*`) e teste de compreensão (ATV-7); UX B e C (ATV-9); convite para atualizar respostas antigas do
+  questionário (Q11); histórico paginado de delegações e vínculos, se exibido.
+- **Fica para a P4:** M04/M12, aplicação no plano com a impressão do motor e invalidação de prévias.
+- **Ativação:** bloqueada por ATV-1 a ATV-9; migrations 1083–1086 fora de banda (o proprietário aplica 1083 e 1085 em 2026-11-17).
    - **Backlog para a P3:** se a tela mostrar o histórico de delegações ou de vínculos (revogados), consulta paginada própria.
      (O limite de 100 vigentes foi antecipado para a P2d-3a.)
    - **PR própria a seguir:** unique parcial em `pacientes (tenant_id, usuario_id) where usuario_id is not null` (migration R4,

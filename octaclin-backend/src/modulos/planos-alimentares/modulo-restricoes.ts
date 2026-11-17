@@ -13,6 +13,7 @@ import { ServicoDelegacoesCarteira } from '../profissionais/aplicacao/servico-de
 import { ControladorDelegacoesCarteira } from '../profissionais/apresentacao/controlador-delegacoes-carteira';
 import { ServicoPortalRestricoes } from './aplicacao/servico-portal-restricoes';
 import { ControladorPortalRestricoes } from './apresentacao/controlador-portal-restricoes';
+import { ControladorPortalRestricoesPaciente } from './apresentacao/controlador-portal-restricoes-paciente';
 import { ServicoVinculosRepresentacao } from '../pacientes/aplicacao/servico-vinculos-representacao';
 import { ControladorRepresentantesPaciente } from '../pacientes/apresentacao/controlador-representantes-paciente';
 
@@ -20,7 +21,7 @@ import { ControladorRepresentantesPaciente } from '../pacientes/apresentacao/con
 @Module({
   imports: [ModuloTenancy, ModuloAuth],
   controllers: [ControladorRestricoesClinicas, ControladorRestricoesColaborador, ControladorDelegacoesCarteira,
-    ControladorRepresentantesPaciente, ControladorPortalRestricoes],
+    ControladorRepresentantesPaciente, ControladorPortalRestricoes, ControladorPortalRestricoesPaciente],
   providers: [CriptografiaDadosSensiveis, ServicoRegistroPendenciaRestricao, ServicoConfirmacaoRestricao,
     ServicoReconfirmacaoRestricao, ServicoLeituraRestricao, ServicoSolicitacoesRestricao, ServicoDelegacoesCarteira,
     ServicoVinculosRepresentacao, ServicoPortalRestricoes]
