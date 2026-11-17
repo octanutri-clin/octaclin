@@ -4,6 +4,7 @@ import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import type { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import * as delegacoes from '../../profissionais/aplicacao/servico-delegacoes-carteira';
+import * as portal from './autorizacao-paciente-portal';
 import { autorizarPendenciaRestricao } from './autorizacao-pendencia-restricao';
 
 const tenant = '11111111-1111-4111-8111-111111111111';
@@ -21,7 +22,6 @@ function preparar() {
   return { usuario, profissional, paciente, g, chamar: (u = ator) => autorizarPendenciaRestricao(g as never, u, pacienteId) };
 }
 describe('autorização para registrar pendência', () => {
-  it.todo('permitir Patient após garantir unicidade do vínculo em todos os escritores e testar concorrência');
   it('permite profissional ativo da carteira sem exigir concessão clínica', async () => {
     const c = preparar(); await expect(c.chamar()).resolves.toBe('profissional');
     expect(c.paciente.findOne).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ id: pacienteId, tenantId: tenant, profissionalResponsavelId: 'profissional' }), lock: { mode: 'pessimistic_write' } }));
@@ -34,9 +34,18 @@ describe('autorização para registrar pendência', () => {
     const c = preparar(); c.usuario.findOne.mockResolvedValueOnce({ id: 'usuario', role: 'Collaborator', ativo: false });
     await expect(c.chamar()).rejects.toBeInstanceOf(ForbiddenException);
   });
-  it('mantém paciente fechado até provar vínculo único sob concorrência', async () => {
-    const c = preparar(); c.usuario.findOne.mockResolvedValueOnce({ id: 'usuario', role: 'Patient', ativo: true });
-    await expect(c.chamar({ ...ator, papel: 'Patient' })).rejects.toBeInstanceOf(ForbiddenException);
+  describe('Patient (P2d-3b)', () => {
+    afterEach(() => jest.restoreAllMocks());
+    it('própria conta ou representante registra como declaração do paciente, pela prova do portal', async () => {
+      const c = preparar(); const prova = jest.spyOn(portal, 'autorizarPacientePortal').mockResolvedValue('representante');
+      await expect(c.chamar({ ...ator, papel: 'Patient' })).resolves.toBe('declaracao_paciente');
+      expect(prova).toHaveBeenCalledWith(c.g, expect.objectContaining({ papel: 'Patient' }), pacienteId);
+      expect(c.usuario.findOne).not.toHaveBeenCalled(); expect(c.paciente.findOne).not.toHaveBeenCalled();
+    });
+    it('sem acesso ao paciente (prova do portal falha) nega', async () => {
+      const c = preparar(); jest.spyOn(portal, 'autorizarPacientePortal').mockRejectedValue(new ForbiddenException('Operação não autorizada.'));
+      await expect(c.chamar({ ...ator, papel: 'Patient' })).rejects.toBeInstanceOf(ForbiddenException);
+    });
   });
   describe('Collaborator (P2d-2)', () => {
     afterEach(() => jest.restoreAllMocks());

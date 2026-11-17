@@ -3060,6 +3060,123 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     expect((await cliente.query('select id from vinculos_representacao_paciente where representante_usuario_id=$1', [representanteId])).rows).toEqual([]);
   }, 120_000);
 
+  it('P2d-3b: portal do paciente declara, pede correção, cancela só o próprio pedido e vê o resumo Q11, sob RLS e locks reais', async () => {
+    if (!cliente || !executorTenant) throw new Error('ExecutorTenant da prova RLS nao foi inicializado.');
+    const tenant = randomUUID();
+    await cliente.query('insert into tenants (id, nome, slug) values ($1, $2, $3)', [tenant, 'Prova P2d-3b sintetica', `prova-p2d3b-${tenant}`]);
+    const dados = await prepararDadosRepresentativos(tenant, `p2d3b-${randomUUID()}`);
+    const outro = await prepararDadosRepresentativos(tenant, `p2d3b-outro-${randomUUID()}`);
+    const criarUsuario = async (role: string) => {
+      await comoTenant(tenant);
+      return (await cliente!.query<{ id: string }>(`insert into usuarios (tenant_id, email_hash, email_criptografado, senha_hash, role)
+        values ($1, $2, $3, 'prova-rls-senha', $4) returning id`, [tenant, `prova-p2d3b-${randomUUID()}`, Buffer.from('usuario-sintetico'), role])).rows[0].id;
+    };
+    const crypto = new CriptografiaDadosSensiveis();
+    const contaPacienteId = await criarUsuario('Patient');
+    const representanteId = await criarUsuario('Patient');
+    await comoTenant(tenant);
+    await cliente.query('update pacientes set usuario_id=$2 where id=$1', [dados.pacienteId, contaPacienteId]);
+    const comoUsuario = (usuarioId: string, papel: UsuarioAutenticado['papel']): UsuarioAutenticado => ({ tenantId: tenant, usuarioId, papel, emailHash: '', permissoes: [] });
+    const titular = comoUsuario(dados.usuarioId, 'Professional'), titularOutro = comoUsuario(outro.usuarioId, 'Professional');
+    const contaPaciente = comoUsuario(contaPacienteId, 'Patient'), representante = comoUsuario(representanteId, 'Patient');
+    const concessoes = new ServicoConcessoesPermissao(executorTenant);
+    const registro = new ServicoRegistroPendenciaRestricao(executorTenant, crypto);
+    const confirmar = new ServicoConfirmacaoRestricao(executorTenant, crypto, concessoes);
+    const solicitacoes = new ServicoSolicitacoesRestricao(executorTenant, crypto, concessoes);
+    const vinculos = new ServicoVinculosRepresentacao(executorTenant);
+    const portal = new ServicoPortalRestricoes(executorTenant, crypto);
+    await comoTenant(tenant);
+    await cliente.query(`insert into concessoes_permissao_usuario (tenant_id, usuario_id, permissao, concedida_por, motivo)
+      values ($1, $2, 'restricoes.confirmar', $2, 'habilitacao_administrativa')`, [tenant, dados.usuarioId]);
+    const alergia = { schemaVersao: 1, natureza: 'clinica', subtipoClinico: 'alergia_alimentar', alvo: { tipo: 'alergeno', id: 'alvo-sintetico' },
+      gravidade: 'grave', observacao: 'CANARIO_OBSERVACAO_EQUIPE' };
+    const declaracao = { schemaVersao: 1, natureza: 'clinica', subtipoClinico: 'intolerancia_alimentar', alvo: { tipo: 'constituinte', id: 'lactose-sintetica' } };
+    const itens = [{ item: 'i1', texto: 'Texto sintético do pedido' }];
+
+    // Equipe registra e confirma uma alergia; o representante ainda não tem vínculo.
+    const confirmada = await registro.registrar(titular, dados.pacienteId, { chaveCriacao: randomUUID(), conteudo: alergia }) as { id: string };
+    await confirmar.confirmar(titular, dados.pacienteId, confirmada.id, 1);
+    const deOutro = await registro.registrar(titularOutro, outro.pacienteId, { chaveCriacao: randomUUID(), conteudo: alergia }) as { id: string };
+    await expect(portal.resumo(representante, dados.pacienteId)).rejects.toMatchObject({ status: 403 });
+    await expect(registro.registrar(representante, dados.pacienteId, { chaveCriacao: randomUUID(), conteudo: declaracao })).rejects.toMatchObject({ status: 403 });
+    await vinculos.registrar(titular, dados.pacienteId, representanteId, 'presencial');
+    await vinculos.registrar(titularOutro, outro.pacienteId, representanteId, 'procuracao');
+
+    // Declaração do representante: pendência com origem declaracao_paciente; preferência continua recusada.
+    const declarada = await registro.registrar(representante, dados.pacienteId, { chaveCriacao: randomUUID(), conteudo: declaracao }) as { id: string };
+    await comoTenant(tenant);
+    expect((await cliente.query('select origem, confirmacao, autor_usuario_id from restricoes_pacientes where id=$1', [declarada.id])).rows)
+      .toEqual([{ origem: 'declaracao_paciente', confirmacao: 'pendente', autor_usuario_id: representanteId }]);
+    await expect(registro.registrar(contaPaciente, dados.pacienteId, { chaveCriacao: randomUUID(),
+      conteudo: { schemaVersao: 1, natureza: 'preferencia', alvo: { tipo: 'alimento', id: 'sintetico' } } })).rejects.toMatchObject({ status: 400 });
+    // Declarar não dá ação clínica.
+    await expect(confirmar.confirmar(representante, dados.pacienteId, declarada.id, 1)).rejects.toMatchObject({ status: 403 });
+
+    // Resumo Q11 pela própria conta: registrada + informada, sem observação; o seletor troca de paciente sem vazar.
+    const resumo = await portal.resumo(contaPaciente, dados.pacienteId);
+    expect(resumo.restricoes.map(r => [r.id, r.selo]).sort()).toEqual([[confirmada.id, 'restricoes.portal.registrada'], [declarada.id, 'restricoes.portal.informada_por_voce']].sort());
+    expect(JSON.stringify(resumo)).not.toMatch(/CANARIO_|observacao/);
+    expect((await portal.resumo(representante, outro.pacienteId)).restricoes.map(r => r.id)).toEqual([deOutro.id]);
+    await expect(portal.resumo(contaPaciente, outro.pacienteId)).rejects.toMatchObject({ status: 403 });
+    // Patient de outro tenant com o pacienteId deste tenant: negado (o tenant vem do token; RLS esconde o paciente).
+    await expect(portal.resumo({ ...contaPaciente, tenantId: tenantB }, dados.pacienteId)).rejects.toMatchObject({ status: 403 });
+
+    // Pedido de correção do representante: idempotente; restrição de outro paciente pelo seletor errado é negada.
+    const chave = randomUUID();
+    const pedido = await portal.criarPedido(representante, dados.pacienteId, { chaveCriacao: chave, tipo: 'correcao', restricaoId: confirmada.id, itens });
+    await expect(portal.criarPedido(representante, dados.pacienteId, { chaveCriacao: chave, tipo: 'correcao', restricaoId: confirmada.id, itens })).resolves.toMatchObject({ id: pedido.id });
+    await expect(portal.criarPedido(representante, dados.pacienteId, { chaveCriacao: chave, tipo: 'remocao', restricaoId: confirmada.id, itens })).rejects.toMatchObject({ status: 409 });
+    await expect(portal.criarPedido(representante, dados.pacienteId, { chaveCriacao: randomUUID(), tipo: 'correcao', restricaoId: deOutro.id, itens })).rejects.toMatchObject({ status: 403 });
+    await comoTenant(tenant);
+    expect((await cliente.query('select tipo, estado, autor_usuario_id from solicitacoes_restricoes_pacientes where id=$1', [pedido.id])).rows)
+      .toEqual([{ tipo: 'correcao', estado: 'criada', autor_usuario_id: representanteId }]);
+    expect((await cliente.query('select acao, metadados from user_action_logs where recurso_id=$1', [pedido.id])).rows).toEqual([{ acao: 'restricoes.solicitacao_criar', metadados: {} }]);
+    // A conta do paciente vê o pedido do representante, mas não o cancela; o profissional vê o pedido decifrado.
+    expect((await portal.listarPedidos(contaPaciente, dados.pacienteId)).itens.map(p => [p.id, p.podeCancelar])).toEqual([[pedido.id, false]]);
+    await expect(portal.cancelarPedido(contaPaciente, dados.pacienteId, pedido.id)).rejects.toMatchObject({ status: 403 });
+    expect((await solicitacoes.listar(titular, dados.pacienteId) as Array<{ id: string; pedido: unknown }>).find(x => x.id === pedido.id)?.pedido).toEqual({ itens });
+
+    const prazo = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) => executorTenant!.executar(t, async g => { await g.query("set local lock_timeout = '200ms'"); return fn(g); }) };
+    // Corrida 1: análise em curso → o cancelamento espera; depois do commit, cancelar de "em análise" vale.
+    let liberar!: () => void, avisar!: () => void;
+    const espera = new Promise<void>(r => { liberar = r; }), pronta = new Promise<void>(r => { avisar = r; });
+    const segura = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) => executorTenant!.executar(t, async g => { const r = await fn(g); avisar(); await espera; return r; }) };
+    const analise = new ServicoSolicitacoesRestricao(segura as ExecutorTenant, crypto, concessoes).iniciarAnalise(titular, dados.pacienteId, pedido.id, 1);
+    try {
+      await Promise.race([pronta, analise.then(() => { throw new Error('Transação encerrou cedo.'); })]);
+      await expect(new ServicoPortalRestricoes(prazo as ExecutorTenant, crypto).cancelarPedido(representante, dados.pacienteId, pedido.id)).rejects.toMatchObject({ status: 409 });
+    } finally { liberar(); await analise; }
+    await expect(portal.cancelarPedido(representante, dados.pacienteId, pedido.id)).resolves.toMatchObject({ chaveTexto: 'restricoes.solicitacao.cancelada', podeCancelar: false });
+    await expect(portal.cancelarPedido(representante, dados.pacienteId, pedido.id)).rejects.toMatchObject({ status: 409 });
+    // Corrida 2: cancelamento em curso → a análise espera; depois do commit, a análise é recusada.
+    const pedido2 = await portal.criarPedido(representante, dados.pacienteId, { chaveCriacao: randomUUID(), tipo: 'remocao', restricaoId: confirmada.id, itens });
+    let liberarC!: () => void, avisarC!: () => void;
+    const esperaC = new Promise<void>(r => { liberarC = r; }), prontaC = new Promise<void>(r => { avisarC = r; });
+    const seguraC = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) => executorTenant!.executar(t, async g => { const r = await fn(g); avisarC(); await esperaC; return r; }) };
+    const cancelamento = new ServicoPortalRestricoes(seguraC as ExecutorTenant, crypto).cancelarPedido(representante, dados.pacienteId, pedido2.id);
+    try {
+      await Promise.race([prontaC, cancelamento.then(() => { throw new Error('Transação encerrou cedo.'); })]);
+      await expect(new ServicoSolicitacoesRestricao(prazo as ExecutorTenant, crypto, concessoes).iniciarAnalise(titular, dados.pacienteId, pedido2.id, 1)).rejects.toMatchObject({ status: 409 });
+    } finally { liberarC(); await cancelamento; }
+    await expect(solicitacoes.iniciarAnalise(titular, dados.pacienteId, pedido2.id, 1)).rejects.toMatchObject({ status: 409 });
+    // O pedido nunca alterou a restrição.
+    await comoTenant(tenant);
+    expect((await cliente.query('select revisao, confirmacao, estado from restricoes_pacientes where id=$1', [confirmada.id])).rows)
+      .toEqual([{ revisao: 2, confirmacao: 'confirmada', estado: 'ativa' }]);
+
+    // Vínculo revogado: o representante perde o portal daquele paciente com o mesmo token; o outro representado segue.
+    const [vinculo] = await vinculos.listar(titular, dados.pacienteId);
+    await vinculos.revogar(titular, dados.pacienteId, vinculo.id);
+    await expect(portal.resumo(representante, dados.pacienteId)).rejects.toMatchObject({ status: 403 });
+    await expect(portal.listarPedidos(representante, dados.pacienteId)).rejects.toMatchObject({ status: 403 });
+    await expect(registro.registrar(representante, dados.pacienteId, { chaveCriacao: randomUUID(), conteudo: declaracao })).rejects.toMatchObject({ status: 403 });
+    await expect(portal.resumo(representante, outro.pacienteId)).resolves.toBeDefined();
+    // Outro tenant não enxerga pedidos nem declarações por SQL direto (RLS).
+    await comoTenant(tenantB);
+    expect((await cliente.query('select id from solicitacoes_restricoes_pacientes where id=$1', [pedido.id])).rows).toEqual([]);
+    expect((await cliente.query('select id from restricoes_pacientes where id=$1', [declarada.id])).rows).toEqual([]);
+  }, 120_000);
+
   it('FOOD03 protege favoritos com FORCE RLS e oculta registros ao trocar tenant', async () => {
     if (!cliente) throw new Error('Cliente da prova RLS nao foi inicializado.');
     const alimentoId = randomUUID();
