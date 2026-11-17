@@ -40,8 +40,9 @@ test.describe('FOOD06 P3 — portal de restrições (leitura)', () => {
     const regiao = area(page);
     await expect(regiao.getByRole('heading', { name: 'Suas restrições alimentares' })).toBeVisible();
     await expect(regiao.getByRole('radio')).toHaveCount(0);
-    await expect(regiao.getByRole('heading', { name: 'Suas restrições alimentares' })).not.toBeFocused();
-    await expect(regiao.getByText('Solicite uma correção se alguma informação estiver desatualizada.', { exact: false })).toBeVisible();
+    // PUX-10: enquanto não há botão de pedir correção (P3-2), a tela não pede uma ação que não oferece.
+    await expect(regiao.getByText('Se alguma informação estiver desatualizada, fale com quem faz seu acompanhamento.', { exact: false })).toBeVisible();
+    await expect(regiao.getByText(/Solicite/)).toHaveCount(0);
     for (const grupo of ['Alergias', 'Intolerâncias', 'Outras condições', 'Alimentos que você evita por escolha'])
       await expect(regiao.getByRole('heading', { name: grupo })).toBeVisible();
     const alergias = regiao.getByRole('region', { name: 'Alergias' });
@@ -49,8 +50,8 @@ test.describe('FOOD06 P3 — portal de restrições (leitura)', () => {
     await expect(alergias.getByRole('listitem')).toContainText('Restrição registrada no seu acompanhamento');
     await expect(regiao.getByText('Anotado por quem faz seu acompanhamento; ainda será conferido')).toBeVisible();
     await expect(regiao.getByText('Informação enviada pelo portal; ainda será conferida')).toBeVisible();
-    await expect(regiao.getByText('Item registrado por quem faz seu acompanhamento')).toBeVisible();
-    await expect(regiao.getByText('Última confirmação por quem faz seu acompanhamento: 12/09/2026')).toBeVisible();
+    await expect(regiao.getByText('Item que ainda não aparece com nome aqui. Pergunte a quem faz seu acompanhamento.')).toBeVisible();
+    await expect(regiao.getByText('Última conferência geral por quem faz seu acompanhamento: 12/09/2026.')).toBeVisible();
     await expect(regiao.getByText('As respostas antigas não viram restrição automaticamente.', { exact: false })).toBeVisible();
     await expect(regiao.getByText('Você pediu uma correção')).toBeVisible();
     await expect(regiao.getByText('Sua solicitação foi analisada e não houve alteração')).toBeVisible();
@@ -91,14 +92,19 @@ test.describe('FOOD06 P3 — portal de restrições (leitura)', () => {
     await expect(grupo.getByText('Você acompanha como responsável')).toHaveCount(2);
     await expect(regiao.getByRole('heading', { name: /restrições alimentares/i, level: 2 })).toHaveCount(0);
 
-    // Teclado: foca o primeiro rádio e desce com a seta até a mãe; em seguida troca para o filho antes de a mãe responder.
+    // Teclado (PUX-11): as setas selecionam e o foco precisa continuar no grupo a cada passo, para chegar à terceira
+    // pessoa. A mãe é selecionada no caminho e responde atrasada, depois do filho.
     await grupo.getByRole('radio', { name: /Marcos Sintético/ }).focus();
     await page.keyboard.press('ArrowDown');
     await expect(grupo.getByRole('radio', { name: /Helena Sintética/ })).toBeChecked();
-    await grupo.getByRole('radio', { name: /Pedro Sintético/ }).check();
+    await expect(grupo.getByRole('radio', { name: /Helena Sintética/ })).toBeFocused();
+    await page.keyboard.press('ArrowDown');
+    await expect(grupo.getByRole('radio', { name: /Pedro Sintético/ })).toBeChecked();
+    await expect(grupo.getByRole('radio', { name: /Pedro Sintético/ })).toBeFocused();
     const titulo = regiao.getByRole('heading', { name: 'Restrições alimentares de Pedro Sintético' });
     await expect(titulo).toBeVisible();
-    await expect(titulo).toBeFocused();
+    await expect(regiao.getByRole('status').filter({ hasText: 'Mostrando as informações de Pedro Sintético' })).toBeAttached();
+    await expect(grupo.getByRole('radio', { name: /Pedro Sintético/ })).toBeFocused();
     await expect(regiao.getByText('Alimentos que Pedro Sintético evita por escolha')).toBeVisible();
     await expect(regiao.getByText('Restrição registrada no acompanhamento de Pedro Sintético')).toBeVisible();
     await expect(regiao.getByText('Pedido de remoção feito por outra pessoa que acompanha Pedro Sintético')).toBeVisible();
@@ -126,9 +132,25 @@ test.describe('FOOD06 P3 — portal de restrições (leitura)', () => {
     await semViolacoes(page);
   });
 
+  test('vazio de quem acompanha como responsável usa o nome da pessoa (PUX-15)', async ({ page }) => {
+    await prepararPortalRestricoes(page, {
+      pessoas: [
+        { pacienteId: PROPRIA, via: 'propria', nome: 'Marcos Sintético' },
+        { pacienteId: MAE, via: 'representante', nome: 'Helena Sintética' }
+      ],
+      resumo: () => ({ itens: [] }),
+      pedidos: () => ({ itens: [], maisAntigos: false })
+    });
+    await page.goto('/portal/restricoes');
+    const regiao = area(page);
+    await regiao.getByRole('radio', { name: /Helena Sintética/ }).check();
+    await expect(regiao.getByText('Nenhuma restrição registrada até agora para Helena Sintética.', { exact: false })).toBeVisible();
+    await expect(regiao.getByText(/você não tenha/)).toHaveCount(0);
+  });
+
   for (const [status, esperado] of [
     [409, 'Há muitas informações para mostrar aqui. Fale com quem faz seu acompanhamento.'],
-    [403, 'Não foi possível abrir esta informação com esta conta.']
+    [403, 'Não foi possível abrir esta informação com esta conta. Se achar que isso está errado, fale com quem faz seu acompanhamento.']
   ]) {
     test(`resumo ${status}: mensagem própria, sem nova tentativa automática nem eco`, async ({ page }) => {
       await prepararPortalRestricoes(page, { resumo: () => status });

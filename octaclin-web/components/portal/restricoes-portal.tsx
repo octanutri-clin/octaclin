@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Botao, classesBotao } from '@/components/ui/botao';
 import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
@@ -38,7 +38,7 @@ function dataCurta(iso: string) {
 
 function mensagemFalha(tipo: FalhaRestricoesPortal, contexto: 'resumo' | 'geral') {
   if (tipo === 'sessao') return ERROS_RESTRICOES.sessao;
-  if (tipo === 'semAcesso') return ERROS_RESTRICOES.semAcesso;
+  if (tipo === 'semAcesso') return `${ERROS_RESTRICOES.semAcesso} ${T.semAcessoCaminho}`;
   // No resumo, o 409 do backend é o teto de 200 registros.
   if (tipo === 'mudou') return contexto === 'resumo' ? T.excesso : ERROS_RESTRICOES.mudou;
   return ERROS_RESTRICOES.leitura;
@@ -86,7 +86,7 @@ export function RestricoesPortal() {
   if (inicial.fase === 'falha') {
     return <EstadoFalha titulo={T.titulo} descricao={mensagemFalha(inicial.tipo, 'geral')} aoTentarNovamente={inicial.tipo === 'leitura' ? () => setTentativa((n) => n + 1) : undefined} />;
   }
-  if (inicial.pessoas.length === 0) return <EstadoFalha titulo={T.titulo} descricao={ERROS_RESTRICOES.semAcesso} />;
+  if (inicial.pessoas.length === 0) return <EstadoFalha titulo={T.titulo} descricao={mensagemFalha('semAcesso', 'geral')} />;
 
   const pessoa = inicial.pessoas.find((p) => p.pacienteId === selecionado) ?? null;
   return (
@@ -94,7 +94,11 @@ export function RestricoesPortal() {
       {inicial.pessoas.length > 1 ? (
         <SeletorPessoa pessoas={inicial.pessoas} noLimite={inicial.noLimite} selecionado={selecionado} aoSelecionar={setSelecionado} />
       ) : null}
-      {pessoa ? <ResumoPessoa key={pessoa.pacienteId} pessoa={pessoa} focarTitulo={inicial.pessoas.length > 1} /> : null}
+      {/* PUX-11: trocar a pessoa não move o foco (as setas continuam no grupo); a troca é anunciada. */}
+      {inicial.pessoas.length > 1 ? (
+        <p role="status" aria-live="polite" className="sr-only">{pessoa ? T.trocaPessoa({ representante: pessoa.via === 'representante', nome: pessoa.nome }) : ''}</p>
+      ) : null}
+      {pessoa ? <ResumoPessoa key={pessoa.pacienteId} pessoa={pessoa} /> : null}
     </div>
   );
 }
@@ -126,11 +130,10 @@ type EstadoResumo =
   | { fase: 'falha'; tipo: FalhaRestricoesPortal }
   | { fase: 'pronto'; resumo: ResumoPortalTela; pedidos: PedidosPortalTela | null; falhaPedidos: FalhaRestricoesPortal | null };
 
-function ResumoPessoa({ pessoa, focarTitulo }: { pessoa: PessoaSeletorPortal; focarTitulo: boolean }) {
+function ResumoPessoa({ pessoa }: { pessoa: PessoaSeletorPortal }) {
   const ctx: ContextoPessoaPortal = useMemo(() => ({ representante: pessoa.via === 'representante', nome: pessoa.nome }), [pessoa]);
   const [estado, setEstado] = useState<EstadoResumo>({ fase: 'carregando' });
   const [tentativa, setTentativa] = useState(0);
-  const titulo = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
     const controle = new AbortController();
@@ -155,16 +158,13 @@ function ResumoPessoa({ pessoa, focarTitulo }: { pessoa: PessoaSeletorPortal; fo
     return () => { window.clearTimeout(timer); controle.abort(); };
   }, [pessoa.pacienteId, tentativa]);
 
-  // Depois de escolher uma pessoa no seletor, o foco vai para o título com o nome dela (o leitor de tela anuncia de
-  // quem é a tela). Com uma pessoa só não há escolha, e o foco não é movido no carregamento.
-  useEffect(() => { if (focarTitulo && estado.fase !== 'carregando') titulo.current?.focus(); }, [focarTitulo, pessoa.pacienteId, estado.fase]);
 
   const cabecalho = ctx.representante ? `Restrições alimentares de ${pessoa.nome}` : 'Suas restrições alimentares';
 
   return (
     <Cartao aria-labelledby="titulo-restricoes-pessoa">
       <CartaoCabecalho>
-        <CartaoTitulo id="titulo-restricoes-pessoa" ref={titulo} tabIndex={-1} className="focus:outline-none focus-visible:ring-2 focus-visible:ring-primaria">{cabecalho}</CartaoTitulo>
+        <CartaoTitulo id="titulo-restricoes-pessoa">{cabecalho}</CartaoTitulo>
       </CartaoCabecalho>
       <CartaoConteudo className="grid gap-5">
         {estado.fase === 'carregando' ? (

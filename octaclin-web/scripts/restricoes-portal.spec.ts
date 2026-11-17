@@ -85,7 +85,9 @@ test("textos decididos pelo proprietário (D7-a, Q11, Q-D1, Q-D2)", () => {
   assert.equal(p("restricoes.solicitacao.atendida"), "Sua informação foi atualizada");
   assert.equal(p("restricoes.solicitacao.parcial"), "Sua informação foi atualizada parcialmente");
   assert.equal(p("restricoes.solicitacao.recusada"), "Sua solicitação foi analisada e não houve alteração");
-  assert.match(TEXTOS_PORTAL_RESTRICOES.abertura(propria), /Solicite uma correção se alguma informação estiver desatualizada\./);
+  // P3-1: sem o botão de pedir correção, a abertura não pede essa ação (PUX-10); a P3-2 devolve o texto aprovado.
+  assert.doesNotMatch(TEXTOS_PORTAL_RESTRICOES.abertura(propria), /Solicite/);
+  assert.match(TEXTOS_PORTAL_RESTRICOES.ultimaConfirmacao(propria, "12/09/2026"), /ainda não foram confirmados/);
 });
 
 test("'Você pediu' só para o autor com o pedido aberto; pedido alheio não é atribuído", () => {

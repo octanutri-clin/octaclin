@@ -96,13 +96,17 @@ export function tituloGrupoPortal(grupo: GrupoRestricaoPortal, ctx: ContextoPess
 export const TEXTOS_PORTAL_RESTRICOES = Object.freeze({
   titulo: "Restrições alimentares",
   abertura: (ctx: ContextoPessoaPortal) =>
-    `Estas são as restrições alimentares registradas ${deQuem(ctx)}. Solicite uma correção se alguma informação estiver desatualizada.`,
+    // P3-1 (PUX-10/NUX-13): enquanto o portal não oferece o pedido de correção, a frase aponta o caminho que existe.
+    // A P3-2 devolve o texto aprovado ("Solicite uma correção se alguma informação estiver desatualizada.") com o botão.
+    `Estas são as restrições alimentares registradas ${deQuem(ctx)}. Se alguma informação estiver desatualizada, fale com ${QUEM_ACOMPANHA}.`,
   vazio: (ctx: ContextoPessoaPortal) =>
     ctx.representante
       ? `Nenhuma restrição registrada até agora para ${ctx.nome}. Isso não quer dizer que não existam restrições. Se houver alguma alergia ou restrição, fale com ${QUEM_ACOMPANHA}.`
       : `Nenhuma restrição registrada até agora. Isso não quer dizer que você não tenha restrições. Se tiver alguma alergia ou restrição, fale com ${QUEM_ACOMPANHA}.`,
   conviteQuestionario: `Respondeu um questionário há algum tempo? Se algo mudou, conte para ${QUEM_ACOMPANHA}. As respostas antigas não viram restrição automaticamente.`,
-  ultimaConfirmacao: (_ctx: ContextoPessoaPortal, data: string) => `Última confirmação por ${QUEM_ACOMPANHA}: ${data}`,
+  // NUX-15: a data é da conferência geral; não pode sugerir que itens pendentes já foram confirmados.
+  ultimaConfirmacao: (_ctx: ContextoPessoaPortal, data: string) =>
+    `Última conferência geral por ${QUEM_ACOMPANHA}: ${data}. Itens marcados como "ainda será conferido" ainda não foram confirmados.`,
   seletorPergunta: "De quem você quer ver as informações?",
   seletorVoce: "Você",
   seletorResponsavel: "Você acompanha como responsável",
@@ -111,9 +115,11 @@ export const TEXTOS_PORTAL_RESTRICOES = Object.freeze({
   pedidosVazio: "Nenhum pedido de correção ou remoção.",
   pedidosMaisAntigos: "Mostrando os 100 pedidos mais recentes.",
   respostaEquipe: "Resposta de quem faz seu acompanhamento",
-  alimentoSemTexto: "Item registrado por quem faz seu acompanhamento",
+  alimentoSemTexto: `Item que ainda não aparece com nome aqui. Pergunte a ${QUEM_ACOMPANHA}.`,
   excesso: `Há muitas informações para mostrar aqui. Fale com ${QUEM_ACOMPANHA}.`,
   indisponivel: "Esta área ainda não está disponível.",
+  trocaPessoa: (ctx: ContextoPessoaPortal) => `Mostrando as informações de ${ctx.nome}.`,
+  semAcessoCaminho: `Se achar que isso está errado, fale com ${QUEM_ACOMPANHA}.`,
 });
 
 export const ERROS_RESTRICOES: Readonly<Record<string, string>> = Object.freeze({
