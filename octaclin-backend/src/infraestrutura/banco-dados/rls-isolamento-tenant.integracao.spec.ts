@@ -3046,13 +3046,10 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     await comoTenant(tenant); await cliente.query('update pacientes set arquivado_em=null where id=$1', [dados.pacienteId]);
     await expect(acessar(comoUsuario(segundoRep, 'Patient'), dados.pacienteId)).rejects.toMatchObject({ status: 403 });
     await expect(acessar(contaPaciente, dados.pacienteId)).resolves.toBe('propria');
-    // Ficha duplicada com a mesma conta (`usuario_id` sem unique): acesso e seletor falham fechado.
+    // Ficha duplicada com a mesma conta: desde a 1086 o próprio banco recusa (o código continua falhando fechado).
     await comoTenant(tenant);
-    const duplicada = (await cliente.query<{ id: string }>(`insert into pacientes (tenant_id, profissional_responsavel_id, nome_criptografado, usuario_id)
-      values ($1, $2, $3, $4) returning id`, [tenant, dados.profissionalId, crypto.criptografar('Ficha duplicada sintética'), contaPacienteId])).rows[0].id;
-    await expect(acessar(contaPaciente, dados.pacienteId)).rejects.toMatchObject({ status: 403 });
-    await expect(portal.listarPacientes(contaPaciente)).rejects.toMatchObject({ status: 409 });
-    await comoTenant(tenant); await cliente.query('update pacientes set usuario_id=null where id=$1', [duplicada]);
+    await expect(cliente.query(`insert into pacientes (tenant_id, profissional_responsavel_id, nome_criptografado, usuario_id)
+      values ($1, $2, $3, $4)`, [tenant, dados.profissionalId, crypto.criptografar('Ficha duplicada sintética'), contaPacienteId])).rejects.toMatchObject({ code: '23505' });
     await expect(acessar(contaPaciente, dados.pacienteId)).resolves.toBe('propria');
     // Paciente eliminado por LGPD: nem a própria conta acessa, e some do seletor.
     await comoTenant(tenant); await cliente.query("update pacientes set status_ciclo_vida='DELETED', deleted_at=now() where id=$1", [dados.pacienteId]);
@@ -5535,9 +5532,9 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     await expect(servico.mudar(tenantA,pacienteIdTenantA,g.id,u,{ confirmar: true,versao: g.versao,referencia: {} } as import('../../modulos/pacientes/aplicacao/dtos-gestacoes').NovaReferenciaGestacaoDto,'referencia')).rejects.toThrow('Reabra');
     const desvinculado = { ...patient,usuarioId: usuarioIdTenantB };
     await expect(servico.detalhePortal(tenantA,g.id,desvinculado)).rejects.toThrow();
-    const ambiguo = await cliente.query<{ id: string }>('insert into pacientes(tenant_id,usuario_id,profissional_responsavel_id,nome_criptografado) values ($1,$2,$3,$4) returning id',[tenantA,patient.usuarioId,profissionalIdTenantA,Buffer.from('vinculo-ambiguo-sintetico')]);
-    await expect(servico.listarPortal(tenantA,patient)).rejects.toThrow('Vinculo do paciente indisponivel');
-    await cliente.query('update pacientes set arquivado_em = now() where id = $1',[ambiguo.rows[0].id]);
+    // Vínculo ambíguo (mesma conta em duas fichas): desde a 1086 o banco recusa; o serviço continua falhando fechado (unidade).
+    await expect(cliente.query('insert into pacientes(tenant_id,usuario_id,profissional_responsavel_id,nome_criptografado) values ($1,$2,$3,$4)',
+      [tenantA,patient.usuarioId,profissionalIdTenantA,Buffer.from('vinculo-ambiguo-sintetico')])).rejects.toMatchObject({ code: '23505' });
     await comoTenant(tenantB);expect((await cliente.query('select id from consentimentos_gestacao where gestacao_id = $1',[g.id])).rows).toHaveLength(0);
   },60000);
 
