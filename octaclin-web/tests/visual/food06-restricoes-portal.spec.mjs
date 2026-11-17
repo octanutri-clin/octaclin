@@ -40,6 +40,7 @@ test.describe('FOOD06 P3 — portal de restrições (leitura)', () => {
     const regiao = area(page);
     await expect(regiao.getByRole('heading', { name: 'Suas restrições alimentares' })).toBeVisible();
     await expect(regiao.getByRole('radio')).toHaveCount(0);
+    await expect(regiao.getByRole('heading', { name: 'Suas restrições alimentares' })).not.toBeFocused();
     await expect(regiao.getByText('Solicite uma correção se alguma informação estiver desatualizada.', { exact: false })).toBeVisible();
     for (const grupo of ['Alergias', 'Intolerâncias', 'Outras condições', 'Alimentos que você evita por escolha'])
       await expect(regiao.getByRole('heading', { name: grupo })).toBeVisible();

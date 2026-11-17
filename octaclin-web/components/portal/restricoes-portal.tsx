@@ -94,7 +94,7 @@ export function RestricoesPortal() {
       {inicial.pessoas.length > 1 ? (
         <SeletorPessoa pessoas={inicial.pessoas} noLimite={inicial.noLimite} selecionado={selecionado} aoSelecionar={setSelecionado} />
       ) : null}
-      {pessoa ? <ResumoPessoa key={pessoa.pacienteId} pessoa={pessoa} /> : null}
+      {pessoa ? <ResumoPessoa key={pessoa.pacienteId} pessoa={pessoa} focarTitulo={inicial.pessoas.length > 1} /> : null}
     </div>
   );
 }
@@ -126,7 +126,7 @@ type EstadoResumo =
   | { fase: 'falha'; tipo: FalhaRestricoesPortal }
   | { fase: 'pronto'; resumo: ResumoPortalTela; pedidos: PedidosPortalTela | null; falhaPedidos: FalhaRestricoesPortal | null };
 
-function ResumoPessoa({ pessoa }: { pessoa: PessoaSeletorPortal }) {
+function ResumoPessoa({ pessoa, focarTitulo }: { pessoa: PessoaSeletorPortal; focarTitulo: boolean }) {
   const ctx: ContextoPessoaPortal = useMemo(() => ({ representante: pessoa.via === 'representante', nome: pessoa.nome }), [pessoa]);
   const [estado, setEstado] = useState<EstadoResumo>({ fase: 'carregando' });
   const [tentativa, setTentativa] = useState(0);
@@ -155,8 +155,9 @@ function ResumoPessoa({ pessoa }: { pessoa: PessoaSeletorPortal }) {
     return () => { window.clearTimeout(timer); controle.abort(); };
   }, [pessoa.pacienteId, tentativa]);
 
-  // Ao trocar de pessoa, o foco vai para o título com o nome dela (leitor de tela anuncia de quem é a tela).
-  useEffect(() => { if (estado.fase !== 'carregando') titulo.current?.focus(); }, [pessoa.pacienteId, estado.fase]);
+  // Depois de escolher uma pessoa no seletor, o foco vai para o título com o nome dela (o leitor de tela anuncia de
+  // quem é a tela). Com uma pessoa só não há escolha, e o foco não é movido no carregamento.
+  useEffect(() => { if (focarTitulo && estado.fase !== 'carregando') titulo.current?.focus(); }, [focarTitulo, pessoa.pacienteId, estado.fase]);
 
   const cabecalho = ctx.representante ? `Restrições alimentares de ${pessoa.nome}` : 'Suas restrições alimentares';
 
