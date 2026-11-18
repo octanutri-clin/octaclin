@@ -192,7 +192,12 @@ function ResumoPessoa({ pessoa }: { pessoa: PessoaSeletorPortal }) {
           <>
             <p className="text-tinta">{T.abertura(ctx)}</p>
             <Link href="/portal/mensagens" className="w-fit text-sm font-medium text-primaria-forte underline underline-offset-2">{T.linkMensagens}</Link>
-            {pedidosAbertos(estado.pedidos) >= LIMITE_ABERTOS ? <p className="rounded-md border border-linha p-3 text-sm text-tinta">{T.limitePedidos}</p> : null}
+            {pedidosAbertos(estado.pedidos) >= LIMITE_ABERTOS ? (
+              <p className="rounded-md border border-linha p-3 text-sm text-tinta">
+                {T.limitePedidos}{' '}
+                <Link href="/portal/mensagens" className="font-medium text-primaria-forte underline underline-offset-2">{T.linkMensagens}</Link>
+              </p>
+            ) : null}
             <ListaRestricoes itens={estado.resumo.itens} ctx={ctx} pacienteId={pessoa.pacienteId} pedidosNoLimite={pedidosAbertos(estado.pedidos) >= LIMITE_ABERTOS} aoAlterar={aoAlterar} />
             <FormularioInformarRestricao pacienteId={pessoa.pacienteId} ctx={ctx} noLimite={declaracoesAbertas(estado.resumo) >= LIMITE_ABERTOS} aoEnviar={aoAlterar} />
             {estado.resumo.ultimaConfirmacaoEm && dataCurta(estado.resumo.ultimaConfirmacaoEm) ? (

@@ -28,9 +28,13 @@ test.describe('FOOD06 P3 — portal de restrições (escrita)', () => {
     await formulario.getByRole('button', { name: 'Enviar informação' }).click();
     await expect(formulario.getByText('Escolha o tipo de restrição.')).toBeVisible();
     await expect(formulario.getByText('Escreva o alimento.')).toBeVisible();
+    // PUX-21: o foco vai para o primeiro campo com erro.
+    await expect(formulario.getByRole('radio', { name: /Alergia/ })).toBeFocused();
     expect(enviados(pedidosAoBff, '/declarar')).toEqual([]);
 
     await formulario.getByRole('radio', { name: /Não sei dizer/ }).check();
+    await formulario.getByRole('button', { name: 'Enviar informação' }).click();
+    await expect(formulario.getByRole('textbox', { name: 'Qual alimento?' })).toBeFocused();
     await formulario.getByRole('textbox', { name: 'Qual alimento?' }).fill('  Leite  ');
     await formulario.getByRole('textbox', { name: 'Qual alimento?' }).press('Enter');
     const aviso = regiao.getByRole('status').filter({ hasText: 'Enviamos a informação.' });
@@ -57,7 +61,7 @@ test.describe('FOOD06 P3 — portal de restrições (escrita)', () => {
     await formulario.getByRole('radio', { name: /Alergia/ }).check();
     await formulario.getByRole('textbox', { name: 'Qual alimento?' }).fill('Castanha');
     await formulario.getByRole('button', { name: 'Enviar informação' }).click();
-    await expect(formulario.getByRole('alert')).toHaveText('Não conseguimos confirmar se o envio foi concluído. Confira a lista antes de enviar de novo.');
+    await expect(formulario.getByRole('alert')).toHaveText('Não conseguimos confirmar se o envio foi concluído. Você pode tentar de novo: não vamos registrar duas vezes.');
     await expect(regiao).not.toContainText('Enviamos a informação');
     await expect(regiao).not.toContainText('CANARIO');
     await formulario.getByRole('button', { name: 'Tentar de novo' }).click();
@@ -73,9 +77,9 @@ test.describe('FOOD06 P3 — portal de restrições (escrita)', () => {
     const regiao = area(page);
     await regiao.getByRole('button', { name: 'Pedir correção ou remoção de Amendoim' }).click();
     const formulario = regiao.getByRole('form', { name: 'Pedir correção ou remoção de Amendoim' });
-    await expect(formulario.getByRole('textbox', { name: 'O que está errado?' })).toBeFocused();
+    await expect(formulario.getByRole('textbox', { name: 'O que está errado e como deveria ficar?' })).toBeFocused();
     await formulario.getByRole('radio', { name: 'Remover esta informação' }).check();
-    await formulario.getByRole('textbox', { name: 'O que está errado?' }).fill('Fiz o exame e não tenho mais.\nSegue com a nutricionista.');
+    await formulario.getByRole('textbox', { name: 'Por que remover esta informação?' }).fill('Fiz o exame e não tenho mais.\nSegue com a nutricionista.');
     await formulario.getByRole('button', { name: 'Enviar pedido' }).click();
     await expect(regiao.getByRole('status').filter({ hasText: 'Pedido enviado. A informação atual continua valendo' })).toBeFocused();
     const [corpo] = enviados(pedidosAoBff, '/pedidos/criar');
@@ -89,10 +93,10 @@ test.describe('FOOD06 P3 — portal de restrições (escrita)', () => {
     const regiao = area(page);
     await regiao.getByRole('button', { name: 'Pedir correção ou remoção de Lactose' }).click();
     const formulario = regiao.getByRole('form', { name: 'Pedir correção ou remoção de Lactose' });
-    await formulario.getByRole('textbox', { name: 'O que está errado?' }).fill('Não tenho intolerância.');
+    await formulario.getByRole('textbox', { name: 'O que está errado e como deveria ficar?' }).fill('Não tenho intolerância.');
     await formulario.getByRole('button', { name: 'Enviar pedido' }).click();
     await expect(formulario.getByRole('alert')).toHaveText('Esta informação mudou ou um limite foi atingido. Recarregue para ver a versão atual.');
-    await expect(formulario.getByRole('textbox', { name: 'O que está errado?' })).toHaveValue('Não tenho intolerância.');
+    await expect(formulario.getByRole('textbox', { name: 'O que está errado e como deveria ficar?' })).toHaveValue('Não tenho intolerância.');
     await expect(regiao).not.toContainText('CANARIO');
   });
 
@@ -132,6 +136,8 @@ test.describe('FOOD06 P3 — portal de restrições (escrita)', () => {
     await expect(regiao.getByText('Já há muitos pedidos aguardando análise.', { exact: false })).toBeVisible();
     await expect(regiao.getByRole('button', { name: /Informar uma restrição/ })).toHaveCount(0);
     await expect(regiao.getByRole('button', { name: /Pedir correção ou remoção/ })).toHaveCount(0);
+    // PUX-18: mesmo no limite, há um caminho para Mensagens.
+    await expect(regiao.getByRole('link', { name: 'Escrever para quem faz seu acompanhamento' })).toHaveCount(3);
   });
 
   test('representante: textos com o nome da pessoa e axe com os formulários abertos', async ({ page }) => {

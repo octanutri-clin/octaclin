@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useId, useRef, useState } from 'react';
+import Link from 'next/link';
 import { Botao } from '@/components/ui/botao';
 import { AreaTexto, Campo, Rotulo } from '@/components/ui/campo';
 import { ModalConfirmacao } from '@/components/ui/modal';
@@ -57,10 +58,20 @@ export function FormularioInformarRestricao({ pacienteId, ctx, noLimite, aoEnvia
   const [falha, setFalha] = useState<FalhaRestricoesPortal | null>(null);
   const [tentouEnviar, setTentouEnviar] = useState(false);
   const titulo = useRef<HTMLHeadingElement>(null);
+  const primeiroTipo = useRef<HTMLInputElement>(null);
+  const campoAlimento = useRef<HTMLInputElement>(null);
 
   useEffect(() => { if (aberto) titulo.current?.focus(); }, [aberto]);
 
-  if (noLimite) return <p className="rounded-md border border-linha p-3 text-sm text-tinta">{T.limiteDeclaracoes}</p>;
+  // PUX-18: no limite, a pessoa ainda tem um caminho para avisar algo novo.
+  if (noLimite) {
+    return (
+      <p className="rounded-md border border-linha p-3 text-sm text-tinta">
+        {T.limiteDeclaracoes}{' '}
+        <Link href="/portal/mensagens" className="font-medium text-primaria-forte underline underline-offset-2">{T.linkMensagens}</Link>
+      </p>
+    );
+  }
   if (!aberto) return <Botao variante="secundario" onClick={() => setAberto(true)}>{T.informarAbrir(ctx)}</Botao>;
 
   const alimentoLimpo = alimento.trim();
@@ -71,7 +82,10 @@ export function FormularioInformarRestricao({ pacienteId, ctx, noLimite, aoEnvia
     evento.preventDefault();
     evento.stopPropagation();
     setTentouEnviar(true);
-    if (!tipo || !alimentoLimpo || enviando) return;
+    // PUX-21: o foco vai para o primeiro campo com erro.
+    if (!tipo) { primeiroTipo.current?.focus(); return; }
+    if (!alimentoLimpo) { campoAlimento.current?.focus(); return; }
+    if (enviando) return;
     setEnviando(true);
     setFalha(null);
     try {
@@ -94,9 +108,9 @@ export function FormularioInformarRestricao({ pacienteId, ctx, noLimite, aoEnvia
       <h3 id={`${id}-titulo`} ref={titulo} tabIndex={-1} className="text-base font-semibold text-tinta focus:outline-none">{T.informarAbrir(ctx)}</h3>
       <fieldset className="grid gap-2" aria-describedby={faltaTipo ? `${id}-erro-tipo` : undefined}>
         <legend className="mb-1 text-sm font-medium text-tinta">{T.informarTipoPergunta}</legend>
-        {TIPOS_DECLARACAO_PORTAL.map((t) => (
+        {TIPOS_DECLARACAO_PORTAL.map((t, indice) => (
           <label key={t.valor} className="flex min-h-11 cursor-pointer items-start gap-3 rounded-md border border-linha px-3 py-2 focus-within:ring-2 focus-within:ring-primaria">
-            <input type="radio" name={`${id}-tipo`} value={t.valor} checked={tipo === t.valor} onChange={() => setTipo(t.valor)} className="mt-1 h-5 w-5" aria-describedby={`${id}-ajuda-${t.valor}`} />
+            <input ref={indice === 0 ? primeiroTipo : undefined} type="radio" name={`${id}-tipo`} value={t.valor} checked={tipo === t.valor} onChange={() => setTipo(t.valor)} className="mt-1 h-5 w-5" aria-describedby={`${id}-ajuda-${t.valor}${faltaTipo ? ` ${id}-erro-tipo` : ''}`} />
             <span className="grid">
               <span className="font-medium text-tinta">{t.rotulo}</span>
               <span id={`${id}-ajuda-${t.valor}`} className="text-sm text-texto-suave">{t.ajuda}</span>
@@ -108,6 +122,7 @@ export function FormularioInformarRestricao({ pacienteId, ctx, noLimite, aoEnvia
       <div className="grid gap-1">
         <Rotulo htmlFor={`${id}-alimento`}>{T.informarAlimento}</Rotulo>
         <Campo
+          ref={campoAlimento}
           id={`${id}-alimento`}
           value={alimento}
           maxLength={200}
@@ -196,7 +211,7 @@ export function FormularioPedido({ pacienteId, restricaoId, alimento, ctx, noLim
         ))}
       </fieldset>
       <div className="grid gap-1">
-        <Rotulo htmlFor={`${id}-texto`}>{T.pedirTexto}</Rotulo>
+        <Rotulo htmlFor={`${id}-texto`}>{tipo === 'remocao' ? T.pedirTextoRemocao : T.pedirTexto}</Rotulo>
         <AreaTexto
           id={`${id}-texto`}
           ref={campo}

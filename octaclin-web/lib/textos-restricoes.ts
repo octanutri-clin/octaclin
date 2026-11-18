@@ -123,7 +123,7 @@ export const TEXTOS_PORTAL_RESTRICOES = Object.freeze({
   informarAbrir: (ctx: ContextoPessoaPortal) => (ctx.representante ? `Informar uma restrição de ${ctx.nome}` : "Informar uma restrição"),
   informarTipoPergunta: "Que tipo de restrição é?",
   informarAlimento: "Qual alimento?",
-  informarAlimentoAjuda: "Exemplo: amendoim, leite, camarão.",
+  informarAlimentoAjuda: "Um alimento por vez. Exemplo: amendoim, leite, camarão.",
   informarEnviar: "Enviar informação",
   // PUX-01: texto de espera ainda depende de validação clínica (ATV-1, ATV-7) antes da ativação.
   informarSucesso: (ctx: ContextoPessoaPortal) =>
@@ -133,7 +133,8 @@ export const TEXTOS_PORTAL_RESTRICOES = Object.freeze({
   pedirTipoPergunta: "O que você quer pedir?",
   pedirCorrecao: "Corrigir esta informação",
   pedirRemocao: "Remover esta informação",
-  pedirTexto: "O que está errado?",
+  pedirTexto: "O que está errado e como deveria ficar?",
+  pedirTextoRemocao: "Por que remover esta informação?",
   pedirEnviar: "Enviar pedido",
   pedirSucesso: `Pedido enviado. A informação atual continua valendo até ${QUEM_ACOMPANHA} conferir.`,
   fecharFormulario: "Fechar",
@@ -145,7 +146,8 @@ export const TEXTOS_PORTAL_RESTRICOES = Object.freeze({
   cancelarSucesso: "Pedido cancelado.",
   limiteDeclaracoes: `Já há muitas informações aguardando conferência. Aguarde ${QUEM_ACOMPANHA} conferir as atuais.`,
   limitePedidos: "Já há muitos pedidos aguardando análise. Aguarde a análise ou cancele um pedido seu.",
-  incertoEnvio: "Não conseguimos confirmar se o envio foi concluído. Confira a lista antes de enviar de novo.",
+  // PUX-20: repetir é seguro porque a tela reenvia com a mesma chave de criação (o backend não registra duas vezes).
+  incertoEnvio: "Não conseguimos confirmar se o envio foi concluído. Você pode tentar de novo: não vamos registrar duas vezes.",
   tentarDeNovo: "Tentar de novo",
   faltaTipo: "Escolha o tipo de restrição.",
   faltaAlimento: "Escreva o alimento.",
@@ -158,8 +160,8 @@ export const TIPOS_DECLARACAO_PORTAL = Object.freeze([
   { valor: "alergia", rotulo: "Alergia", ajuda: "O corpo reage ao alimento, mesmo em pouca quantidade." },
   { valor: "intolerancia", rotulo: "Intolerância", ajuda: "O alimento faz mal na digestão, como acontece com a lactose." },
   { valor: "outra", rotulo: "Outra condição de saúde", ajuda: "Uma doença ou condição que pede evitar o alimento." },
-  { valor: "nao_sei", rotulo: "Não sei dizer", ajuda: "Quem faz seu acompanhamento vai entender e classificar." },
-  { valor: "escolha", rotulo: "Evito por escolha", ajuda: "Você não come o alimento por decisão própria." },
+  { valor: "nao_sei", rotulo: "Não sei dizer", ajuda: "Quem faz o acompanhamento vai entender e classificar." },
+  { valor: "escolha", rotulo: "Evito por escolha", ajuda: "O alimento é evitado por decisão própria." },
 ] as const);
 
 export const ERROS_RESTRICOES: Readonly<Record<string, string>> = Object.freeze({

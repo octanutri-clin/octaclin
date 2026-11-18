@@ -301,3 +301,5 @@ fazer as alterações. Efeito no desenho (ainda não implementado):
   - A projeção passou a aceitar pedidos de `inclusao`, um achado BAIXA da revisão R4 da #555.
 - **Ordem decidida pelo proprietário em 2026-11-18:** a P3-0a fica como última fatia de backend da P3. Como a aba do profissional (P3-3 a P3-5) depende da listagem e da leitura da avaliação que vêm da P3-0a, a ordem viável é: P3-2 → P3-0b → P3-6 → P3-0a → P3-3 → P3-4 → P3-5 → P3-7. **Pendente de confirmação do proprietário.**
 - **Pendência para a ativação (achado MÉDIA da revisão R4 da #555):** a disponibilidade da web precisa considerar também a flag do tenant. Entra na P3-0a.
+- **Condição de ativação nova (NUX-26, UX B/C da P3-2):** não ligar a escrita do portal sem a tela do profissional que mostra as pendências (P3-0a + P3-3); senão o paciente informa uma alergia que ninguém vê.
+- **Decisões pendentes do proprietário (UX B/C da P3-2):** NUX-24 (guardar a marca "não sabia classificar"), NUX-25 (campo opcional de reação), NUX-27 (texto de urgência após informar alergia, conteúdo clínico).
