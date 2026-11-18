@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { ExecutorTenant } from '../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../infraestrutura/seguranca/criptografia-dados-sensiveis';
@@ -18,6 +18,8 @@ import { ServicoDelegacoesCarteira } from '../profissionais/aplicacao/servico-de
 import { ControladorRepresentantesPaciente } from '../pacientes/apresentacao/controlador-representantes-paciente';
 import { ControladorPortalRestricoes } from './apresentacao/controlador-portal-restricoes';
 import { ControladorPortalRestricoesPaciente } from './apresentacao/controlador-portal-restricoes-paciente';
+import { ControladorDisponibilidadeRestricoes } from './apresentacao/controlador-disponibilidade-restricoes';
+import { ServicoFeatureFlags } from '../../infraestrutura/feature-flags/servico-feature-flags';
 import { ServicoVinculosRepresentacao } from '../pacientes/aplicacao/servico-vinculos-representacao';
 import { ServicoPortalRestricoes } from './aplicacao/servico-portal-restricoes';
 import { CHAVE_FEATURE_FLAG, GuardaFeatureFlag } from '../../infraestrutura/feature-flags/guarda-feature-flag';
@@ -31,12 +33,20 @@ const concessoes = { exigir: jest.fn() };
 class TenancySintetico {}
 @Module({ providers: [{ provide: ServicoConcessoesPermissao, useValue: concessoes }], exports: [ServicoConcessoesPermissao] })
 class AuthSintetico {}
+@Global()
+@Module({ providers: [{ provide: ServicoFeatureFlags, useValue: { habilitada: async () => false } }], exports: [ServicoFeatureFlags] })
+class FlagsSintetico {}
 
 describe('módulo de restrições clínicas', () => {
   it('publica só os controladores clínico, do colaborador e da delegação, todos atrás da flag restricoes.clinicas depois da guarda JWT (P2b/P2d-2)', () => {
     const controladores = [ControladorRestricoesClinicas, ControladorRestricoesColaborador, ControladorDelegacoesCarteira,
       ControladorRepresentantesPaciente, ControladorPortalRestricoes, ControladorPortalRestricoesPaciente];
-    expect(Reflect.getMetadata('controllers', ModuloRestricoes)).toEqual(controladores);
+    expect(Reflect.getMetadata('controllers', ModuloRestricoes)).toEqual([...controladores, ControladorDisponibilidadeRestricoes]);
+    // Exceção nominal (P3-0a): a disponibilidade responde se a flag está ligada, então não pode ficar atrás dela. Só JWT e papel;
+    // depende apenas do serviço de flags (sem leitura clínica).
+    expect(Reflect.getMetadata(CHAVE_FEATURE_FLAG, ControladorDisponibilidadeRestricoes)).toBeUndefined();
+    expect(Reflect.getMetadata('__guards__', ControladorDisponibilidadeRestricoes)).toEqual([GuardaJwt, GuardaPapeis]);
+    expect(Reflect.getMetadata('design:paramtypes', ControladorDisponibilidadeRestricoes)).toEqual([ServicoFeatureFlags]);
     for (const c of controladores) {
       expect(Reflect.getMetadata(CHAVE_FEATURE_FLAG, c)).toBe('restricoes.clinicas');
       const guardas = Reflect.getMetadata('__guards__', c) as unknown[];
@@ -47,7 +57,7 @@ describe('módulo de restrições clínicas', () => {
   it('registra os serviços no módulo de planos sem exportá-los', async () => {
     const imports = Reflect.getMetadata('imports', ModuloPlanosAlimentares) as unknown[];
     expect(imports).toContain(ModuloRestricoes);
-    const modulo = await Test.createTestingModule({ imports: [ModuloRestricoes] })
+    const modulo = await Test.createTestingModule({ imports: [ModuloRestricoes, FlagsSintetico] })
       .overrideModule(ModuloTenancy).useModule(TenancySintetico)
       .overrideModule(ModuloAuth).useModule(AuthSintetico)
       .overrideGuard(GuardaJwt).useValue({ canActivate: () => false })

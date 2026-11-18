@@ -3090,7 +3090,8 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
       values ($1, $2, 'restricoes.confirmar', $2, 'habilitacao_administrativa')`, [tenant, dados.usuarioId]);
     const alergia = { schemaVersao: 1, natureza: 'clinica', subtipoClinico: 'alergia_alimentar', alvo: { tipo: 'alergeno', id: 'alvo-sintetico' },
       gravidade: 'grave', observacao: 'CANARIO_OBSERVACAO_EQUIPE' };
-    const declaracao = { schemaVersao: 1, natureza: 'clinica', subtipoClinico: 'intolerancia_alimentar', alvo: { tipo: 'constituinte', id: 'lactose-sintetica' } };
+    // Pelo portal, o alvo é sempre texto declarado (P3-0a: o backend recusa alvo de catálogo, gravidade e observação na declaração).
+    const declaracao = { schemaVersao: 1, natureza: 'clinica', subtipoClinico: 'intolerancia_alimentar', alvo: { tipo: 'nao_catalogado' }, alvoDeclarado: 'Lactose sintética' };
     const itens = [{ item: 'i1', texto: 'Texto sintético do pedido' }];
 
     // Equipe registra e confirma uma alergia; o representante ainda não tem vínculo.
@@ -3104,6 +3105,8 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
 
     // Declaração do representante: pendência com origem declaracao_paciente; preferência continua recusada.
     const declarada = await registro.registrar(representante, dados.pacienteId, { chaveCriacao: randomUUID(), conteudo: declaracao }) as { id: string };
+    await expect(registro.registrar(representante, dados.pacienteId, { chaveCriacao: randomUUID(), conteudo: { ...declaracao, gravidade: 'leve' } }))
+      .rejects.toMatchObject({ status: 400 });
     await comoTenant(tenant);
     expect((await cliente.query('select origem, confirmacao, autor_usuario_id from restricoes_pacientes where id=$1', [declarada.id])).rows)
       .toEqual([{ origem: 'declaracao_paciente', confirmacao: 'pendente', autor_usuario_id: representanteId }]);
@@ -3175,6 +3178,89 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     await comoTenant(tenantB);
     expect((await cliente.query('select id from solicitacoes_restricoes_pacientes where id=$1', [pedido.id])).rows).toEqual([]);
     expect((await cliente.query('select id from restricoes_pacientes where id=$1', [declarada.id])).rows).toEqual([]);
+  }, 120_000);
+
+  it('P3-0a: listagem da equipe (completa ou por autoria), leitura da avaliação e sem alteração a partir de não informada, sob RLS e locks reais', async () => {
+    if (!cliente || !executorTenant) throw new Error('ExecutorTenant da prova RLS nao foi inicializado.');
+    const tenant = randomUUID();
+    await cliente.query('insert into tenants (id, nome, slug) values ($1, $2, $3)', [tenant, 'Prova P3-0a sintetica', `prova-p30a-${tenant}`]);
+    const dados = await prepararDadosRepresentativos(tenant, `p30a-${randomUUID()}`);
+    const outro = await prepararDadosRepresentativos(tenant, `p30a-outro-${randomUUID()}`);
+    await comoTenant(tenant);
+    const colaboradorId = (await cliente.query<{ id: string }>(`insert into usuarios (tenant_id, email_hash, email_criptografado, senha_hash, role)
+      values ($1, $2, $3, 'prova-rls-senha', 'Collaborator') returning id`, [tenant, `prova-p30a-${randomUUID()}`, Buffer.from('usuario-sintetico')])).rows[0].id;
+    const comoUsuario = (usuarioId: string, papel: UsuarioAutenticado['papel']): UsuarioAutenticado => ({ tenantId: tenant, usuarioId, papel, emailHash: '', permissoes: [] });
+    const titular = comoUsuario(dados.usuarioId, 'Professional'), semConcessao = comoUsuario(outro.usuarioId, 'Professional');
+    const colaborador = comoUsuario(colaboradorId, 'Collaborator');
+    const crypto = new CriptografiaDadosSensiveis();
+    const concessoes = new ServicoConcessoesPermissao(executorTenant);
+    const registro = new ServicoRegistroPendenciaRestricao(executorTenant, crypto);
+    const confirmar = new ServicoConfirmacaoRestricao(executorTenant, crypto, concessoes);
+    const leitura = new ServicoLeituraRestricao(executorTenant, crypto, concessoes);
+    const reconfirmar = new ServicoReconfirmacaoRestricao(executorTenant, crypto, concessoes);
+    await comoTenant(tenant);
+    await cliente.query(`insert into concessoes_permissao_usuario (tenant_id, usuario_id, permissao, concedida_por, motivo)
+      values ($1, $2, 'restricoes.confirmar', $2, 'habilitacao_administrativa')`, [tenant, dados.usuarioId]);
+    await new ServicoDelegacoesCarteira(executorTenant).conceder(titular, colaboradorId);
+    const alergia = { schemaVersao: 1, natureza: 'clinica', subtipoClinico: 'alergia_alimentar', alvo: { tipo: 'nao_catalogado' }, alvoDeclarado: 'Amendoim sintético', observacao: 'Observação sintética da equipe' };
+
+    const doTitular = await registro.registrar(titular, dados.pacienteId, { chaveCriacao: randomUUID(), conteudo: alergia }) as { id: string };
+    await confirmar.confirmar(titular, dados.pacienteId, doTitular.id, 1);
+    const doColaborador = await registro.registrar(colaborador, dados.pacienteId, { chaveCriacao: randomUUID(), conteudo: alergia }) as { id: string };
+    const doOutro = await registro.registrar(semConcessao, outro.pacienteId, { chaveCriacao: randomUUID(), conteudo: alergia }) as { id: string };
+    // NUX-24: a marca "não sabia classificar" é só da declaração do paciente; a equipe recebe 400 e nada é gravado.
+    await expect(registro.registrar(titular, dados.pacienteId, { chaveCriacao: randomUUID(), conteudo: { schemaVersao: 1, natureza: 'clinica',
+      subtipoClinico: 'outra_restricao_clinica', alvo: { tipo: 'nao_catalogado' }, alvoDeclarado: 'Camarão sintético', classificacaoPeloPaciente: 'nao_sabe' } }))
+      .rejects.toMatchObject({ status: 400 });
+
+    // Titular com a concessão: todas as do paciente, com o conteúdo (observação incluída, é a equipe clínica).
+    const completa = await leitura.listar(titular, dados.pacienteId) as { escopo: string; itens: Array<{ id: string; confirmacao: string; conteudo: { observacao?: string } }> };
+    expect(completa.escopo).toBe('completo');
+    expect(completa.itens.map(i => [i.id, i.confirmacao]).sort()).toEqual([[doColaborador.id, 'pendente'], [doTitular.id, 'confirmada']].sort());
+    expect(completa.itens[0].conteudo.observacao).toBe('Observação sintética da equipe');
+    // Colaborador delegado: só a dele. Profissional sem a concessão: só as dele, e só na própria carteira.
+    expect((await leitura.listar(colaborador, dados.pacienteId) as { escopo: string; itens: Array<{ id: string }> }))
+      .toEqual(expect.objectContaining({ escopo: 'autoria', itens: [expect.objectContaining({ id: doColaborador.id })] }));
+    expect((await leitura.listar(semConcessao, outro.pacienteId) as { escopo: string; itens: Array<{ id: string }> }))
+      .toEqual(expect.objectContaining({ escopo: 'autoria', itens: [expect.objectContaining({ id: doOutro.id })] }));
+    await expect(leitura.listar(semConcessao, dados.pacienteId)).rejects.toMatchObject({ status: 403 });
+    await expect(leitura.listar(colaborador, outro.pacienteId)).rejects.toMatchObject({ status: 403 });
+    await expect(leitura.listar({ ...titular, tenantId: tenantB }, dados.pacienteId)).rejects.toMatchObject({ status: 403 });
+    await expect(leitura.listar(comoUsuario(dados.usuarioId, 'Patient'), dados.pacienteId)).rejects.toMatchObject({ status: 403 });
+    await comoTenant(tenant);
+    expect((await cliente.query("select metadados from user_action_logs where acao='restricoes.listar' and recurso_id=$1", [dados.pacienteId])).rows.length).toBeGreaterThanOrEqual(2);
+    expect((await cliente.query("select count(*)::int n from user_action_logs where acao='restricoes.listar' and metadados::text <> '{}'")).rows[0].n).toBe(0);
+
+    // Avaliação: lida sem criar; depois de criada, "não informada" e sem vencimento; sem a concessão, negada.
+    expect(await leitura.consultarAvaliacao(titular, dados.pacienteId)).toEqual({ avaliacao: null });
+    await expect(leitura.consultarAvaliacao(semConcessao, outro.pacienteId)).rejects.toMatchObject({ status: 403 });
+    const inicial = await reconfirmar.garantirAvaliacaoInicial(titular, dados.pacienteId) as { id: string; revisao: number };
+    expect(await leitura.consultarAvaliacao(titular, dados.pacienteId)).toEqual({ avaliacao: expect.objectContaining({ id: inicial.id, situacao: 'nao_informado', venceEm: null }) });
+    const pedido = (revisaoAvaliacao: number) => ({ avaliacaoId: inicial.id, revisaoAvaliacao, chaveIdempotencia: randomUUID(), meio: 'presencial', atestacao: true });
+
+    // F3: com pendência aberta, "sem alteração" é recusado; resolvida a pendência, grava restricoes_registradas por 180 dias.
+    await expect(reconfirmar.registrarSemAlteracao(titular, dados.pacienteId, pedido(inicial.revisao))).rejects.toMatchObject({ status: 409 });
+    await confirmar.confirmar(titular, dados.pacienteId, doColaborador.id, 1);
+    await reconfirmar.registrarSemAlteracao(titular, dados.pacienteId, pedido(inicial.revisao));
+    const depois = await leitura.consultarAvaliacao(titular, dados.pacienteId) as { avaliacao: { situacao: string; revisao: number; confirmadoEm: string; venceEm: string } };
+    expect(depois.avaliacao).toEqual(expect.objectContaining({ situacao: 'restricoes_registradas', revisao: inicial.revisao + 1 }));
+    expect(Date.parse(depois.avaliacao.venceEm) - Date.parse(depois.avaliacao.confirmadoEm)).toBe(180 * 86_400_000);
+    // Corrida (revisão R4): duas reconfirmações "sem alteração" com a mesma revisão: uma vence, a outra recebe 409 (CAS sob lock).
+    const corrida = await Promise.allSettled([reconfirmar.registrarSemAlteracao(titular, dados.pacienteId, pedido(depois.avaliacao.revisao)),
+      reconfirmar.registrarSemAlteracao(titular, dados.pacienteId, pedido(depois.avaliacao.revisao))]);
+    expect(corrida.filter(r => r.status === 'fulfilled')).toHaveLength(1);
+    expect(corrida.find(r => r.status === 'rejected')).toMatchObject({ reason: { status: 409 } });
+    const final = await leitura.consultarAvaliacao(titular, dados.pacienteId) as { avaliacao: { situacao: string; revisao: number } };
+    expect(final.avaliacao).toEqual(expect.objectContaining({ situacao: 'restricoes_registradas', revisao: depois.avaliacao.revisao + 1 }));
+    // Com restrição confirmada, a declaração de ausência é recusada e a avaliação não muda.
+    await expect(reconfirmar.registrarAusenciaDeclarada(titular, dados.pacienteId, { ...pedido(final.avaliacao.revisao), confirmacaoExplicitaAusencia: true }))
+      .rejects.toMatchObject({ status: 409 });
+    expect((await leitura.consultarAvaliacao(titular, dados.pacienteId) as { avaliacao: { revisao: number } }).avaliacao.revisao).toBe(final.avaliacao.revisao);
+    // Sem a concessão, nem a avaliação é criada (o caso "nada confirmado" fica no unitário da reconfirmação).
+    await expect(reconfirmar.garantirAvaliacaoInicial(semConcessao, outro.pacienteId)).rejects.toMatchObject({ status: 403 });
+    // RLS por SQL direto: outro tenant não vê a avaliação.
+    await comoTenant(tenantB);
+    expect((await cliente.query('select id from avaliacoes_restricoes_pacientes where id=$1', [inicial.id])).rows).toEqual([]);
   }, 120_000);
 
   it('FOOD03 protege favoritos com FORCE RLS e oculta registros ao trocar tenant', async () => {

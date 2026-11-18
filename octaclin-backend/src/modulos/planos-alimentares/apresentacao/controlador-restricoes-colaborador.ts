@@ -8,7 +8,7 @@ import type { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado'
 import { validarConteudoRestricao } from '../dominio/conteudo-restricao';
 import { ServicoLeituraRestricao } from '../aplicacao/servico-leitura-restricao';
 import { ServicoRegistroPendenciaRestricao } from '../aplicacao/servico-registro-pendencia-restricao';
-import { ConsultarRestricaoDto, FiltroRestricoesClinicas, projetarConsulta, projetarRegistro, RegistrarPendenciaDto } from './controlador-restricoes-clinicas';
+import { ConsultarRestricaoDto, FiltroRestricoesClinicas, projetarConsulta, projetarListagem, projetarRegistro, RegistrarPendenciaDto } from './controlador-restricoes-clinicas';
 
 /**
  * FOOD06 P2d-2 (Q6): o Collaborator com carteira delegada só REGISTRA pendência e lê o que ele mesmo registrou.
@@ -29,6 +29,14 @@ export class ControladorRestricoesColaborador {
     let conteudo: ReturnType<typeof validarConteudoRestricao>;
     try { conteudo = validarConteudoRestricao(dados.conteudo); } catch { throw new HttpException('Solicitação inválida.', 400); }
     return projetarRegistro(await this.registro.registrar(usuario, pacienteId, { chaveCriacao: dados.chaveCriacao, conteudo }));
+  }
+
+  /** FOOD06 P3-0a: só as restrições que o próprio colaborador registrou. */
+  @Post('listar') @HttpCode(200) @Permissoes('pacientes.ler') @Header('Cache-Control', 'private, no-store')
+  async listar(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('pacienteId', ParseUUIDPipe) pacienteId: string,
+    @Body() dados: unknown): Promise<unknown> {
+    if (!dados || typeof dados !== 'object' || Array.isArray(dados) || Reflect.ownKeys(dados).length !== 0) throw new HttpException('Solicitação inválida.', 400);
+    return projetarListagem(await this.leitura.listar(usuario, pacienteId));
   }
 
   @Post('consultar') @HttpCode(200) @Permissoes('pacientes.ler') @Header('Cache-Control', 'private, no-store')

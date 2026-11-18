@@ -16,6 +16,11 @@ export interface ConteudoRestricaoV1 {
   readonly alvoDeclarado?: string;
   readonly gravidade?: GravidadeRestricao;
   readonly observacao?: string;
+  /**
+   * FOOD06 P3-0a (NUX-24): o paciente marcou "Não sei dizer" ao declarar. Só existe em "outra restrição clínica" e só a
+   * declaração do portal grava (o registro recusa para a equipe). Mostra à equipe que a classificação precisa ser feita.
+   */
+  readonly classificacaoPeloPaciente?: 'nao_sabe';
 }
 
 export class ConteudoRestricaoInvalidoError extends Error {
@@ -42,7 +47,7 @@ function opcional(v: unknown, validas: readonly string[]): string | undefined {
 }
 
 export function validarConteudoRestricao(entrada: unknown): ConteudoRestricaoV1 {
-  const o = simples(entrada, ['schemaVersao', 'natureza', 'subtipoClinico', 'alvo', 'alvoDeclarado', 'gravidade', 'observacao']);
+  const o = simples(entrada, ['schemaVersao', 'natureza', 'subtipoClinico', 'alvo', 'alvoDeclarado', 'gravidade', 'observacao', 'classificacaoPeloPaciente']);
   if (o.schemaVersao !== ESQUEMA_CONTEUDO_RESTRICAO) return invalido();
   const natureza = opcional(o.natureza, NATUREZAS) as NaturezaRestricao | undefined;
   if (!natureza) return invalido();
@@ -63,12 +68,14 @@ export function validarConteudoRestricao(entrada: unknown): ConteudoRestricaoV1 
   if (naoCatalogado !== (o.alvoDeclarado !== undefined)) return invalido();
   if (o.alvoDeclarado !== undefined && (typeof o.alvoDeclarado !== 'string' || !TEXTO_CURTO.test(o.alvoDeclarado))) return invalido();
   if (o.observacao !== undefined && (typeof o.observacao !== 'string' || !TEXTO_LONGO.test(o.observacao))) return invalido();
+  if (o.classificacaoPeloPaciente !== undefined && (o.classificacaoPeloPaciente !== 'nao_sabe' || subtipoClinico !== 'outra_restricao_clinica')) return invalido();
 
   return Object.freeze({
     schemaVersao: ESQUEMA_CONTEUDO_RESTRICAO, natureza, ...(subtipoClinico ? { subtipoClinico } : {}),
     alvo: Object.freeze(naoCatalogado ? { tipo } : { tipo, id: a.id as string }),
     ...(o.alvoDeclarado !== undefined ? { alvoDeclarado: o.alvoDeclarado as string } : {}),
-    ...(gravidade ? { gravidade } : {}), ...(o.observacao !== undefined ? { observacao: o.observacao as string } : {})
+    ...(gravidade ? { gravidade } : {}), ...(o.observacao !== undefined ? { observacao: o.observacao as string } : {}),
+    ...(o.classificacaoPeloPaciente !== undefined ? { classificacaoPeloPaciente: 'nao_sabe' as const } : {})
   });
 }
 

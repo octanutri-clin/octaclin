@@ -37,6 +37,7 @@ const INFRAESTRUTURA: Record<string, string> = {
   'modulos/planos-alimentares/aplicacao/servico-registro-pendencia-restricao.spec.ts': 'teste unitário sintético do registro de pendência',
   'modulos/planos-alimentares/aplicacao/servico-reconfirmacao-restricao.spec.ts': 'teste unitário sintético da reconfirmação',
   'modulos/planos-alimentares/aplicacao/servico-leitura-restricao.spec.ts': 'teste sintético da projeção clínica',
+  'modulos/planos-alimentares/aplicacao/servico-leitura-restricao.listar.spec.ts': 'teste unitário sintético da listagem e da avaliação (P3-0a)',
   'modulos/planos-alimentares/aplicacao/servico-solicitacoes-restricao.spec.ts': 'teste unitário sintético das solicitações (P2c)',
   'modulos/planos-alimentares/aplicacao/servico-portal-restricoes.pedidos.spec.ts': 'teste unitário sintético do portal do paciente (P2d-3b)',
   'modulos/planos-alimentares/dominio/conteudo-restricao.ts': 'comentário que nomeia as colunas protegidas'

@@ -35,6 +35,18 @@ describe('FOOD06 D2: conteúdo clínico da restrição', () => {
       { ...alergia, observacao: 1 }, { ...alergia, observacao: 'a'.repeat(1001) }, { ...alergia, observacao: 'linha\u0000' }, Object.create({ ...alergia })
     ]) expect(() => validarConteudoRestricao(ruim)).toThrow(ConteudoRestricaoInvalidoError);
   });
+  it('P3-0a (NUX-24): marca "não sabia classificar" só em outra restrição clínica, com um único valor', () => {
+    const naoSabe = { schemaVersao: 1, natureza: 'clinica', subtipoClinico: 'outra_restricao_clinica', alvo: { tipo: 'nao_catalogado' }, alvoDeclarado: 'Camarão', classificacaoPeloPaciente: 'nao_sabe' };
+    expect(validarConteudoRestricao(naoSabe)).toEqual(naoSabe);
+    for (const ruim of [
+      { ...naoSabe, classificacaoPeloPaciente: 'sabe' },
+      { ...naoSabe, classificacaoPeloPaciente: true },
+      { ...naoSabe, subtipoClinico: 'alergia_alimentar' },
+      { schemaVersao: 1, natureza: 'escolha', alvo: { tipo: 'nao_catalogado' }, alvoDeclarado: 'x', classificacaoPeloPaciente: 'nao_sabe' },
+    ]) expect(() => validarConteudoRestricao(ruim)).toThrow(ConteudoRestricaoInvalidoError);
+    const { classificacaoPeloPaciente: _sem, ...semMarca } = naoSabe;
+    expect(validarConteudoRestricao(semMarca)).not.toHaveProperty('classificacaoPeloPaciente');
+  });
   it('erro genérico, sem eco do conteúdo', () => {
     try { validarConteudoRestricao({ ...alergia, observacao: CANARIO + '\u0007' }); fail('deveria falhar'); } catch (e) {
       expect(e).toBeInstanceOf(ConteudoRestricaoInvalidoError); expect(String((e as Error).message)).not.toContain(CANARIO);

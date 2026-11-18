@@ -221,6 +221,26 @@ it('não renova avaliação não informada ou com restrições pendentes', async
   await expect(c.executarSemAlteracao()).rejects.toBeInstanceOf(ConflictException);
   expect(c.avaliacoes.update).not.toHaveBeenCalled(); expect(c.reconfirmacoes.insert).not.toHaveBeenCalled();
 });
+it('P3-0a (F3): sem alteração a partir de não informada, com restrição confirmada e sem pendência, registra restrições por 180 dias', async () => {
+  const c = preparar();
+  c.restricoes.find.mockResolvedValueOnce([{ ...restricao, estado: 'ativa' }]);
+  jest.mocked(decifrarConteudoRestricao).mockReturnValueOnce({ natureza: 'clinica' } as never);
+  const resposta = await c.executarSemAlteracao();
+  expect(c.avaliacoes.update).toHaveBeenCalledWith(expect.objectContaining({ id: avaliacaoId, revisao: 2 }),
+    expect.objectContaining({ situacao: 'restricoes_registradas', revisao: 3, confirmadoPorUsuarioId: usuario.usuarioId,
+      confirmadoEm: expect.any(Date), venceEm: expect.any(Date) }));
+  const alteracao = c.avaliacoes.update.mock.calls[0][1] as { confirmadoEm: Date; venceEm: Date };
+  expect(alteracao.venceEm.getTime() - alteracao.confirmadoEm.getTime()).toBe(180 * 86_400_000);
+  expect(c.revisoes.insert).toHaveBeenCalledWith(expect.objectContaining({ avaliacaoId, numero: 3, situacao: 'restricoes_registradas' }));
+  expect(resposta).toEqual(expect.objectContaining({ resultado: 'sem_alteracao' }));
+});
+it('P3-0a (F3): a partir de não informada, só preferência ou nada confirmado continua recusado (ausência exige a declaração explícita)', async () => {
+  const c = preparar();
+  c.restricoes.find.mockResolvedValueOnce([{ ...restricao, estado: 'ativa' }]);
+  jest.mocked(decifrarConteudoRestricao).mockReturnValueOnce({ natureza: 'preferencia' } as never);
+  await expect(c.executarSemAlteracao()).rejects.toBeInstanceOf(ConflictException);
+  expect(c.avaliacoes.update).not.toHaveBeenCalled(); expect(c.reconfirmacoes.insert).not.toHaveBeenCalled();
+});
 it('não renova ausência contraditória com restrição confirmada nem avaliação registrada sem confirmação ativa', async () => {
   const c = preparar();
   c.avaliacoes.findOne.mockResolvedValueOnce({ id: avaliacaoId, revisao: 2, situacao: 'sem_restricoes_confirmadas' });
