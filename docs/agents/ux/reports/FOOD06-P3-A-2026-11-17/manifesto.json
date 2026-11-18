@@ -1,0 +1,22 @@
+{
+  "etapa": "A (com D: decisões e backlog herdados)",
+  "base": "91241b1",
+  "data": "2026-11-17",
+  "horarios": "inicio 2026-11-17T16:45:50Z (hash dos papeis); fim aproximado 2026-11-17T17:00Z",
+  "modalidade": "duas instâncias distintas do runtime desta sessão (subagentes), com o papel fornecido como prompt; síntese editorial do coordenador",
+  "instancias": "IDs internos do runtime não copiados para o repositório; constam na trilha da sessão",
+  "entrada": "brief.md (parte comum + parte do público de cada persona)",
+  "papeis_toml_sha256": {
+    "octaclin-nutricionista-ux.toml": "6259b40a98e2c49053cbc6adbc0c59d0312b14e191b228ab73de2f2eac53af6d",
+    "octaclin-paciente-ux.toml": "a40b1ded5e47739a2710caa5ec9a9a7871b57be7efc11deefaae0515028ff7d7"
+  },
+  "ferramentas_do_revisor": [],
+  "ferramentas_observacao": "o runtime reportou 0 chamadas de ferramenta em cada instância",
+  "limitacoes": "somente plano; sem tela, teclado, leitor de tela ou pessoas reais; não independentes do coordenador; não é validação clínica, jurídica nem R4",
+  "sha256": {
+    "brief.md": "000a6117f793406fd475adf406f438558310a3587bb53e5d9f806e108b5d2b8a",
+    "nutricionista.md": "26b3565cbd13e06d5984859e289206086f1d13d9cd930c189b148b2c45485112",
+    "paciente.md": "8e0a85480b8a8e24419c019c7686c76c346275892291b5796ee6e1f739490a9a",
+    "consolidado.md": "1d42082e3fccdab052310baa68979a3f837844ce78a84b1fc2985a2dff1c43cb"
+  }
+}

@@ -136,6 +136,7 @@ do deploy devem ser reiniciados para receber binding de navegador e PKCE.
 | `OCTACLIN_TENANT_SLUG` | Sim em producao | Organizacao atendida pelo frontend | Render/web | Login resolve o tenant sem campo tecnico |
 | `OCTACLIN_API_ORIGENS_PERMITIDAS` | Sim em producao | Allowlist da origem do backend | Render/web | BFF aceita apenas backend correto |
 | `OCTACLIN_WEB_ORIGENS_PERMITIDAS` | Recomendada com proxy/dominio | Origens HTTPS oficiais aceitas nas mutacoes BFF, separadas por virgula | Render/web | Origem oficial passa; origem externa recebe `403` |
+| `OCTACLIN_WEB_RESTRICOES_CLINICAS` | Nao (padrao desligado) | Mostra as telas de restricoes alimentares (FOOD06 P3); so o valor literal `true` liga. Nao liga o backend: a flag `restricoes.clinicas` do tenant continua obrigatoria, e a ativacao segue bloqueada por ATV-1 a ATV-9 | Render/web | Ausente ou diferente de `true`: `/api/portal/paciente/restricoes/*` responde `404` sem chamar o backend e o link some de "Mais" (`pnpm --dir octaclin-web test:restricoes:bff`) |
 | `NEXT_PUBLIC_*` | Evitar secrets | Variaveis publicas do Next, embarcadas no bundle do navegador; **nao decidem nada no servidor** | Render/web | `pnpm --dir octaclin-web test:origem-backend:bff` reprova modulo de servidor que leia uma delas fora de excecao declarada |
 | `NEXT_PUBLIC_API_URL` | Removida | Decidia a origem do backend em onze rotas server-side do BFF ate 2026-09-05 | -- | Nao configurar; o codigo nao a le mais |
 
