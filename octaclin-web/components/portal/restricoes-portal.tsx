@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Botao, classesBotao } from '@/components/ui/botao';
 import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
@@ -14,6 +14,7 @@ import {
   type FalhaRestricoesPortal
 } from '@/lib/restricoes-portal-api';
 import type { ItemResumoPortal, PedidosPortalTela, PessoaSeletorPortal, ResumoPortalTela } from '@/lib/restricoes-portal';
+import { BotaoCancelarPedido, FormularioInformarRestricao, FormularioPedido } from '@/components/portal/restricoes-portal-escrita';
 import {
   ERROS_RESTRICOES,
   TEXTOS_PORTAL_RESTRICOES as T,
@@ -44,6 +45,12 @@ function mensagemFalha(tipo: FalhaRestricoesPortal, contexto: 'resumo' | 'geral'
   return ERROS_RESTRICOES.leitura;
 }
 
+// Tetos do backend (P2d-3b): 50 declarações e 50 pedidos abertos por paciente. A tela avisa antes de enviar.
+const LIMITE_ABERTOS = 50;
+const declaracoesAbertas = (resumo: ResumoPortalTela) => resumo.itens.filter((i) => i.chaveSelo === 'restricoes.portal.informada_por_voce').length;
+const pedidosAbertos = (pedidos: PedidosPortalTela | null) =>
+  (pedidos?.itens ?? []).filter((p) => p.chaveTexto === 'restricoes.solicitacao.enviada' || p.chaveTexto === 'restricoes.solicitacao.analisando').length;
+
 const tipoDe = (falha: unknown): FalhaRestricoesPortal => (falha instanceof ErroRestricoesPortal ? falha.tipo : 'leitura');
 
 type EstadoInicial =
@@ -52,7 +59,7 @@ type EstadoInicial =
   | { fase: 'falha'; tipo: FalhaRestricoesPortal }
   | { fase: 'pronto'; pessoas: PessoaSeletorPortal[]; noLimite: boolean };
 
-/** Área "Restrições alimentares" do portal: própria conta ou representante de várias pessoas. Só leitura (P3-1). */
+/** Área "Restrições alimentares" do portal: própria conta ou representante de várias pessoas (leitura P3-1, escrita P3-2). */
 export function RestricoesPortal() {
   const [inicial, setInicial] = useState<EstadoInicial>({ fase: 'carregando' });
   const [selecionado, setSelecionado] = useState<string | null>(null);
@@ -134,6 +141,15 @@ function ResumoPessoa({ pessoa }: { pessoa: PessoaSeletorPortal }) {
   const ctx: ContextoPessoaPortal = useMemo(() => ({ representante: pessoa.via === 'representante', nome: pessoa.nome }), [pessoa]);
   const [estado, setEstado] = useState<EstadoResumo>({ fase: 'carregando' });
   const [tentativa, setTentativa] = useState(0);
+  const [aviso, setAviso] = useState<string | null>(null);
+  const caixaAviso = useRef<HTMLParagraphElement>(null);
+
+  // Depois de enviar ou cancelar: recarrega a lista e leva o foco à confirmação (o formulário deixa de existir).
+  const aoAlterar = useCallback((mensagem: string) => {
+    setAviso(mensagem);
+    setTentativa((n) => n + 1);
+  }, []);
+  useEffect(() => { if (aviso) caixaAviso.current?.focus(); }, [aviso]);
 
   useEffect(() => {
     const controle = new AbortController();
@@ -167,6 +183,7 @@ function ResumoPessoa({ pessoa }: { pessoa: PessoaSeletorPortal }) {
         <CartaoTitulo id="titulo-restricoes-pessoa">{cabecalho}</CartaoTitulo>
       </CartaoCabecalho>
       <CartaoConteudo className="grid gap-5">
+        <p ref={caixaAviso} tabIndex={-1} role="status" aria-live="polite" className={aviso ? 'rounded-md border border-sucesso-borda bg-sucesso-suave p-3 text-sm text-tinta focus:outline-none focus-visible:ring-2 focus-visible:ring-primaria' : 'sr-only'}>{aviso ?? ''}</p>
         {estado.fase === 'carregando' ? (
           <div role="status" aria-live="polite" className="grid gap-2"><span className="sr-only">Carregando</span><Esqueleto className="h-20" /></div>
         ) : estado.fase === 'falha' ? (
@@ -174,12 +191,15 @@ function ResumoPessoa({ pessoa }: { pessoa: PessoaSeletorPortal }) {
         ) : (
           <>
             <p className="text-tinta">{T.abertura(ctx)}</p>
-            <ListaRestricoes itens={estado.resumo.itens} ctx={ctx} />
+            <Link href="/portal/mensagens" className="w-fit text-sm font-medium text-primaria-forte underline underline-offset-2">{T.linkMensagens}</Link>
+            {pedidosAbertos(estado.pedidos) >= LIMITE_ABERTOS ? <p className="rounded-md border border-linha p-3 text-sm text-tinta">{T.limitePedidos}</p> : null}
+            <ListaRestricoes itens={estado.resumo.itens} ctx={ctx} pacienteId={pessoa.pacienteId} pedidosNoLimite={pedidosAbertos(estado.pedidos) >= LIMITE_ABERTOS} aoAlterar={aoAlterar} />
+            <FormularioInformarRestricao pacienteId={pessoa.pacienteId} ctx={ctx} noLimite={declaracoesAbertas(estado.resumo) >= LIMITE_ABERTOS} aoEnviar={aoAlterar} />
             {estado.resumo.ultimaConfirmacaoEm && dataCurta(estado.resumo.ultimaConfirmacaoEm) ? (
               <p className="text-sm text-texto-suave">{T.ultimaConfirmacao(ctx, dataCurta(estado.resumo.ultimaConfirmacaoEm))}</p>
             ) : null}
             <p className="rounded-md border border-linha bg-superficie-hover p-3 text-sm text-tinta">{T.conviteQuestionario}</p>
-            <PedidosPessoa pedidos={estado.pedidos} falha={estado.falhaPedidos} ctx={ctx} aoTentarNovamente={() => setTentativa((n) => n + 1)} />
+            <PedidosPessoa pedidos={estado.pedidos} falha={estado.falhaPedidos} ctx={ctx} pacienteId={pessoa.pacienteId} aoAlterar={aoAlterar} aoTentarNovamente={() => setTentativa((n) => n + 1)} />
           </>
         )}
       </CartaoConteudo>
@@ -187,7 +207,7 @@ function ResumoPessoa({ pessoa }: { pessoa: PessoaSeletorPortal }) {
   );
 }
 
-function ListaRestricoes({ itens, ctx }: { itens: ItemResumoPortal[]; ctx: ContextoPessoaPortal }) {
+function ListaRestricoes({ itens, ctx, pacienteId, pedidosNoLimite, aoAlterar }: { itens: ItemResumoPortal[]; ctx: ContextoPessoaPortal; pacienteId: string; pedidosNoLimite: boolean; aoAlterar: (mensagem: string) => void }) {
   if (itens.length === 0) return <EstadoVazio titulo="Nenhuma restrição registrada" descricao={T.vazio(ctx)} />;
   return (
     <div className="grid gap-4">
@@ -203,6 +223,7 @@ function ListaRestricoes({ itens, ctx }: { itens: ItemResumoPortal[]; ctx: Conte
                 <li key={item.id} className="rounded-md border border-linha p-3">
                   <p className="font-medium text-tinta">{item.alimento || T.alimentoSemTexto}</p>
                   <p className="text-sm text-texto-suave">{textoSeloPortal(item.chaveSelo, ctx)}</p>
+                  <FormularioPedido pacienteId={pacienteId} restricaoId={item.id} alimento={item.alimento || T.alimentoSemTexto} ctx={ctx} noLimite={pedidosNoLimite} aoEnviar={aoAlterar} />
                 </li>
               ))}
             </ul>
@@ -213,7 +234,7 @@ function ListaRestricoes({ itens, ctx }: { itens: ItemResumoPortal[]; ctx: Conte
   );
 }
 
-function PedidosPessoa({ pedidos, falha, ctx, aoTentarNovamente }: { pedidos: PedidosPortalTela | null; falha: FalhaRestricoesPortal | null; ctx: ContextoPessoaPortal; aoTentarNovamente: () => void }) {
+function PedidosPessoa({ pedidos, falha, ctx, pacienteId, aoAlterar, aoTentarNovamente }: { pedidos: PedidosPortalTela | null; falha: FalhaRestricoesPortal | null; ctx: ContextoPessoaPortal; pacienteId: string; aoAlterar: (mensagem: string) => void; aoTentarNovamente: () => void }) {
   return (
     <section aria-labelledby="titulo-pedidos-restricoes" className="grid gap-2">
       <h3 id="titulo-pedidos-restricoes" className="text-base font-semibold text-tinta">{T.pedidosTitulo(ctx)}</h3>
@@ -237,6 +258,7 @@ function PedidosPessoa({ pedidos, falha, ctx, aoTentarNovamente }: { pedidos: Pe
                   {pedido.explicacao ? (
                     <p className="mt-2 text-sm text-tinta"><span className="font-medium">{T.respostaEquipe}:</span> {pedido.explicacao}</p>
                   ) : null}
+                  {pedido.podeCancelar ? <BotaoCancelarPedido pacienteId={pacienteId} solicitacaoId={pedido.id} aoCancelar={aoAlterar} /> : null}
                 </li>
               );
             })}

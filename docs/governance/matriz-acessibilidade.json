@@ -165,6 +165,16 @@
       "bloqueante": true,
       "cobertoPor": "web-suite-visual",
       "motivoDaCobertura": "smoke:visual executa todos os specs, incluindo este, nos dois projects."
+    },
+    {
+      "id": "web-food06-restricoes-portal-escrita",
+      "comando": "test:restricoes:portal:escrita",
+      "diretorio": "octaclin-web",
+      "descricao": "Escrita do portal de restrições (FOOD06 P3-2): informar, pedir correção ou remoção e cancelar; campos obrigatórios, resultado incerto, limites, foco e axe (WCAG 2.0 a 2.2 AA).",
+      "especificacao": "octaclin-web/tests/visual/food06-restricoes-portal-escrita.spec.mjs",
+      "bloqueante": true,
+      "cobertoPor": "web-suite-visual",
+      "motivoDaCobertura": "smoke:visual executa todos os specs, incluindo este, nos dois projects."
     }
   ],
   "linhas": [
@@ -866,6 +876,28 @@
         ]
       },
       "risco": "Leitor de tela real e teste com pessoas não foram observados (ATV-7); a prova automatizada não os substitui. BFF simulado: não prova autorização nem RLS."
+    },
+    {
+      "superficie": "escrita de restrições alimentares no portal (atrás de flag desligada)",
+      "rota": "/portal/restricoes",
+      "rotas": [
+        "/portal/restricoes"
+      ],
+      "estado": "formulários de informar e de pedir abertos, erros de campo, resultado incerto com nova tentativa, 409, limites de 50 e confirmação de cancelamento",
+      "interacao": "preenchimento por teclado com Enter dentro do formulário, foco no título e no campo ao abrir, foco na confirmação depois de enviar, Esc no diálogo e axe",
+      "plataforma": [
+        "desktop-chromium",
+        "mobile-chromium"
+      ],
+      "mecanismo": "automatizado",
+      "resultado": "PASS",
+      "evidencia": {
+        "gate": "web-food06-restricoes-portal-escrita",
+        "blocos": [
+          "FOOD06 P3 — portal de restrições (escrita)"
+        ]
+      },
+      "risco": "Leitor de tela real e teste com pessoas não foram observados (ATV-7). BFF simulado: não prova autorização, idempotência real nem RLS."
     }
   ]
 }

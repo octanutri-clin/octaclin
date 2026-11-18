@@ -37,9 +37,10 @@ export function textoSeloPortal(chave: string, ctx: ContextoPessoaPortal): strin
   return texto ? texto(ctx) : SELO_NEUTRO;
 }
 
-const NOME_PEDIDO: Readonly<Record<TipoPedidoPortal, string>> = Object.freeze({
+const NOME_PEDIDO: Readonly<Record<string, string>> = Object.freeze({
   correcao: "correção",
   remocao: "remoção",
+  inclusao: "inclusão",
 });
 
 const VALE_ATE_CONFERIR = `A informação atual continua valendo até ${QUEM_ACOMPANHA} conferir.`;
@@ -54,7 +55,7 @@ export interface TextoPedidoPortal {
  * é o único caso em que a tela pode dizer "Você pediu" (depois da decisão a API não informa o autor).
  */
 export function textoPedidoPortal(
-  pedido: { chaveTexto: string; tipo: TipoPedidoPortal; podeCancelar: boolean },
+  pedido: { chaveTexto: string; tipo: TipoPedidoPortal | "inclusao"; podeCancelar: boolean },
   ctx: ContextoPessoaPortal,
 ): TextoPedidoPortal {
   const nome = NOME_PEDIDO[pedido.tipo] ?? "alteração";
@@ -96,9 +97,8 @@ export function tituloGrupoPortal(grupo: GrupoRestricaoPortal, ctx: ContextoPess
 export const TEXTOS_PORTAL_RESTRICOES = Object.freeze({
   titulo: "Restrições alimentares",
   abertura: (ctx: ContextoPessoaPortal) =>
-    // P3-1 (PUX-10/NUX-13): enquanto o portal não oferece o pedido de correção, a frase aponta o caminho que existe.
-    // A P3-2 devolve o texto aprovado ("Solicite uma correção se alguma informação estiver desatualizada.") com o botão.
-    `Estas são as restrições alimentares registradas ${deQuem(ctx)}. Se alguma informação estiver desatualizada, fale com ${QUEM_ACOMPANHA}.`,
+    // P3-2: o pedido de correção existe na tela, então volta o texto aprovado (Q11).
+    `Estas são as restrições alimentares registradas ${deQuem(ctx)}. Solicite uma correção se alguma informação estiver desatualizada.`,
   vazio: (ctx: ContextoPessoaPortal) =>
     ctx.representante
       ? `Nenhuma restrição registrada até agora para ${ctx.nome}. Isso não quer dizer que não existam restrições. Se houver alguma alergia ou restrição, fale com ${QUEM_ACOMPANHA}.`
@@ -118,9 +118,49 @@ export const TEXTOS_PORTAL_RESTRICOES = Object.freeze({
   alimentoSemTexto: `Item que ainda não aparece com nome aqui. Pergunte a ${QUEM_ACOMPANHA}.`,
   excesso: `Há muitas informações para mostrar aqui. Fale com ${QUEM_ACOMPANHA}.`,
   indisponivel: "Esta área ainda não está disponível.",
+  // P3-2: escrita. NUX-20 (a): caminho real para falar com quem acompanha.
+  linkMensagens: `Escrever para ${QUEM_ACOMPANHA}`,
+  informarAbrir: (ctx: ContextoPessoaPortal) => (ctx.representante ? `Informar uma restrição de ${ctx.nome}` : "Informar uma restrição"),
+  informarTipoPergunta: "Que tipo de restrição é?",
+  informarAlimento: "Qual alimento?",
+  informarAlimentoAjuda: "Exemplo: amendoim, leite, camarão.",
+  informarEnviar: "Enviar informação",
+  // PUX-01: texto de espera ainda depende de validação clínica (ATV-1, ATV-7) antes da ativação.
+  informarSucesso: (ctx: ContextoPessoaPortal) =>
+    `Enviamos a informação${ctx.representante ? ` sobre ${ctx.nome}` : ""}. Quem faz seu acompanhamento vai conferir. Em caso de dúvida ou sintomas, fale com ${QUEM_ACOMPANHA}.`,
+  pedirAbrir: "Pedir correção ou remoção",
+  pedirAbrirDe: (_ctx: ContextoPessoaPortal, alimento: string) => `Pedir correção ou remoção de ${alimento}`,
+  pedirTipoPergunta: "O que você quer pedir?",
+  pedirCorrecao: "Corrigir esta informação",
+  pedirRemocao: "Remover esta informação",
+  pedirTexto: "O que está errado?",
+  pedirEnviar: "Enviar pedido",
+  pedirSucesso: `Pedido enviado. A informação atual continua valendo até ${QUEM_ACOMPANHA} conferir.`,
+  fecharFormulario: "Fechar",
+  cancelarAbrir: "Cancelar pedido",
+  cancelarTitulo: "Cancelar este pedido?",
+  cancelarMensagem: "O pedido deixa de ser analisado. A informação atual não muda.",
+  cancelarSim: "Sim, cancelar pedido",
+  cancelarNao: "Não, manter pedido",
+  cancelarSucesso: "Pedido cancelado.",
+  limiteDeclaracoes: `Já há muitas informações aguardando conferência. Aguarde ${QUEM_ACOMPANHA} conferir as atuais.`,
+  limitePedidos: "Já há muitos pedidos aguardando análise. Aguarde a análise ou cancele um pedido seu.",
+  incertoEnvio: "Não conseguimos confirmar se o envio foi concluído. Confira a lista antes de enviar de novo.",
+  tentarDeNovo: "Tentar de novo",
+  faltaTipo: "Escolha o tipo de restrição.",
+  faltaAlimento: "Escreva o alimento.",
+  faltaTexto: "Escreva o que está errado.",
   trocaPessoa: (ctx: ContextoPessoaPortal) => `Mostrando as informações de ${ctx.nome}.`,
   semAcessoCaminho: `Se achar que isso está errado, fale com ${QUEM_ACOMPANHA}.`,
 });
+
+export const TIPOS_DECLARACAO_PORTAL = Object.freeze([
+  { valor: "alergia", rotulo: "Alergia", ajuda: "O corpo reage ao alimento, mesmo em pouca quantidade." },
+  { valor: "intolerancia", rotulo: "Intolerância", ajuda: "O alimento faz mal na digestão, como acontece com a lactose." },
+  { valor: "outra", rotulo: "Outra condição de saúde", ajuda: "Uma doença ou condição que pede evitar o alimento." },
+  { valor: "nao_sei", rotulo: "Não sei dizer", ajuda: "Quem faz seu acompanhamento vai entender e classificar." },
+  { valor: "escolha", rotulo: "Evito por escolha", ajuda: "Você não come o alimento por decisão própria." },
+] as const);
 
 export const ERROS_RESTRICOES: Readonly<Record<string, string>> = Object.freeze({
   invalida: "Revise os campos destacados.",
