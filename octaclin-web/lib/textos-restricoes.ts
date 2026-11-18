@@ -124,6 +124,10 @@ export const TEXTOS_PORTAL_RESTRICOES = Object.freeze({
   informarTipoPergunta: "Que tipo de restrição é?",
   informarAlimento: "Qual alimento?",
   informarAlimentoAjuda: "Um alimento por vez. Exemplo: amendoim, leite, camarão.",
+  // NUX-27 (decisão do proprietário de 2026-11-18): aviso de urgência. RASCUNHO pendente de validação clínica (ATV-1, ATV-7);
+  // a redação final é do responsável clínico.
+  urgencia: (ctx: ContextoPessoaPortal) =>
+    `Se ${ctx.representante ? `${ctx.nome} tiver` : "você tiver"} uma reação forte agora, como falta de ar ou inchaço na boca ou na garganta, procure atendimento de urgência ou ligue 192 (SAMU).`,
   informarEnviar: "Enviar informação",
   // PUX-01: texto de espera ainda depende de validação clínica (ATV-1, ATV-7) antes da ativação.
   informarSucesso: (ctx: ContextoPessoaPortal) =>

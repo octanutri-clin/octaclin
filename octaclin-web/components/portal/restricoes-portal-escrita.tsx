@@ -95,7 +95,8 @@ export function FormularioInformarRestricao({ pacienteId, ctx, noLimite, aoEnvia
       setTipo('');
       setAlimento('');
       setTentouEnviar(false);
-      aoEnviar(T.informarSucesso(ctx));
+      // NUX-27: depois de informar algo clínico, repete o aviso de urgência na confirmação.
+      aoEnviar(tipo === 'escolha' ? T.informarSucesso(ctx) : `${T.informarSucesso(ctx)} ${T.urgencia(ctx)}`);
     } catch (erro) {
       setFalha(tipoDe(erro));
     } finally {
@@ -106,6 +107,7 @@ export function FormularioInformarRestricao({ pacienteId, ctx, noLimite, aoEnvia
   return (
     <form noValidate onSubmit={enviar} aria-labelledby={`${id}-titulo`} className="grid gap-3 rounded-md border border-linha p-3">
       <h3 id={`${id}-titulo`} ref={titulo} tabIndex={-1} className="text-base font-semibold text-tinta focus:outline-none">{T.informarAbrir(ctx)}</h3>
+      <p role="note" className="rounded-md border border-alerta-borda bg-alerta-suave p-3 text-sm text-tinta">{T.urgencia(ctx)}</p>
       <fieldset className="grid gap-2" aria-describedby={faltaTipo ? `${id}-erro-tipo` : undefined}>
         <legend className="mb-1 text-sm font-medium text-tinta">{T.informarTipoPergunta}</legend>
         {TIPOS_DECLARACAO_PORTAL.map((t, indice) => (

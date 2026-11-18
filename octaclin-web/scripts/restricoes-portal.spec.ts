@@ -279,3 +279,8 @@ test("pedidos de inclusão não somem da lista (achado da revisão R4)", () => {
 test("com o pedido disponível, a abertura volta ao texto aprovado (P3-2)", () => {
   assert.match(TEXTOS_PORTAL_RESTRICOES.abertura(propria), /Solicite uma correção se alguma informação estiver desatualizada\./);
 });
+
+test("NUX-27: aviso de urgência com o 192 e o nome da pessoa para representante", () => {
+  assert.match(TEXTOS_PORTAL_RESTRICOES.urgencia(propria), /você tiver uma reação forte agora.*192 \(SAMU\)/);
+  assert.match(TEXTOS_PORTAL_RESTRICOES.urgencia(representada), /Ana Sintética tiver uma reação forte agora/);
+});

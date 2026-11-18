@@ -25,6 +25,7 @@ test.describe('FOOD06 P3 — portal de restrições (escrita)', () => {
     await regiao.getByRole('button', { name: 'Informar uma restrição' }).click();
     const formulario = regiao.getByRole('form', { name: 'Informar uma restrição' });
     await expect(formulario.getByRole('heading', { name: 'Informar uma restrição' })).toBeFocused();
+    await expect(formulario.getByRole('note')).toContainText('procure atendimento de urgência ou ligue 192 (SAMU)');
     await formulario.getByRole('button', { name: 'Enviar informação' }).click();
     await expect(formulario.getByText('Escolha o tipo de restrição.')).toBeVisible();
     await expect(formulario.getByText('Escreva o alimento.')).toBeVisible();
@@ -41,6 +42,8 @@ test.describe('FOOD06 P3 — portal de restrições (escrita)', () => {
     await expect(aviso).toBeVisible();
     await expect(aviso).toBeFocused();
     await expect(aviso).toContainText('Em caso de dúvida ou sintomas, fale com quem faz seu acompanhamento.');
+    // NUX-27: aviso de urgência fixo no formulário e repetido na confirmação de algo clínico.
+    await expect(aviso).toContainText('ligue 192 (SAMU)');
     const [corpo] = enviados(pedidosAoBff, '/declarar');
     expect(Object.keys(corpo).sort()).toEqual(['alimento', 'chaveCriacao', 'tipo']);
     expect(corpo).toMatchObject({ tipo: 'nao_sei', alimento: 'Leite' });
@@ -158,5 +161,7 @@ test.describe('FOOD06 P3 — portal de restrições (escrita)', () => {
     await formulario.getByRole('textbox', { name: 'Qual alimento?' }).fill('Carne de porco');
     await formulario.getByRole('button', { name: 'Enviar informação' }).click();
     await expect(regiao.getByRole('status').filter({ hasText: 'Enviamos a informação sobre Helena Sintética.' })).toBeVisible();
+    // "Evito por escolha" não é clínico: a confirmação não repete o aviso de urgência.
+    await expect(regiao.getByRole('status').filter({ hasText: 'Enviamos a informação sobre Helena Sintética.' })).not.toContainText('192');
   });
 });
