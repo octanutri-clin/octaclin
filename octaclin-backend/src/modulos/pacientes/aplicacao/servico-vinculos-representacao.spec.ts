@@ -204,6 +204,9 @@ describe('ServicoVinculosRepresentacao — pessoas (P3-0b)', () => {
     const c = preparar();
     await c.s.buscarCandidato(profissional, pacienteId, 'x@example.test');
     expect(c.protecao.consumirTentativa).toHaveBeenCalledWith(`representante.candidato:${tenant}:${ator}`, expect.objectContaining({ maxTentativas: 10 }));
+    // Revisão R4 (MÉDIA): cota agregada por tenant, para varredura com várias contas da equipe.
+    expect(c.protecao.consumirTentativa).toHaveBeenCalledWith(`representante.candidato:${tenant}`, expect.objectContaining({ maxTentativas: 60 }));
+    expect(c.protecao.consumirTentativa.mock.invocationCallOrder[1]).toBeLessThan(c.executor.executar.mock.invocationCallOrder[0]);
     expect(c.protecao.consumirTentativa.mock.invocationCallOrder[0]).toBeLessThan(c.executor.executar.mock.invocationCallOrder[0]);
     const { HttpException } = await import('@nestjs/common');
     c.protecao.consumirTentativa.mockRejectedValueOnce(new HttpException('Muitas', 429));

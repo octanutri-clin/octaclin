@@ -30,6 +30,8 @@ os do momento da consulta, provados sob lock.
   resposta, `{candidato: null}`. Nenhum desses casos abre e-mail nem ficha. Não existe listagem de contas.
 - **Cota:** 10 buscas por usuário a cada 15 minutos, com bloqueio de 15 minutos (`ServicoProtecaoAbuso`, a mesma usada no
   login).
+  - Há também uma cota agregada de 60 buscas por tenant a cada 15 minutos, com bloqueio de 15 minutos. Ela foi
+    acrescentada por causa do achado MÉDIA da revisão R4: varredura feita com várias contas da mesma equipe.
   - A cota é consumida antes do banco, a cada busca com e-mail válido.
   - A chave da cota leva o tenant e o usuário, nunca o e-mail.
   - Quando a cota acaba, a rota responde 429 com mensagem fixa. Para isso, o `FiltroRestricoesClinicas` passou a deixar o
@@ -79,5 +81,12 @@ os do momento da consulta, provados sob lock.
 - **Diferença de tempo:** a busca abre o e-mail só quando acha uma conta elegível, então existe uma diferença de tempo
   entre "achou" e "não achou". O risco é mitigado pela cota por usuário e pela exigência de que o ator seja da equipe de um
   paciente do tenant. **Sem prova de tempo constante.**
+- **Risco residual (revisão R4, MÉDIA):** uma resposta não nula confirma, dentro do tenant, que aquele e-mail é de uma
+  conta Patient ativa, mesmo quando a ficha é de outra carteira. Só o e-mail mascarado e o id voltam. O risco é mitigado
+  pelas duas cotas e pela autorização da equipe. **Precisa de aceite do proprietário.**
+- **Filtro 429 global:** a passagem do 429 vale para todos os controladores que usam `FiltroRestricoesClinicas`. A
+  mensagem é fixa e sem eco. Hoje só a busca de representante gera 429.
+- **Corte dos candidatos:** acima de 200, o corte é por id da conta e só depois a lista é ordenada por e-mail. O e-mail é
+  cifrado, então não dá para ordenar no banco. Com `noLimite`, a tela avisa que a lista está incompleta.
 - **Telas:** as telas de equipe, que delegam e registram representantes (P3-6), ficam para uma PR web depois do merge
   desta.

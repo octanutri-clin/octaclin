@@ -31,6 +31,15 @@ export const POLITICA_BUSCA_REPRESENTANTE: PoliticaProtecaoAbuso = {
   bloqueioMs: 15 * 60 * 1000,
   mensagemBloqueio: 'Muitas buscas. Tente novamente em alguns minutos.'
 };
+/**
+ * Cota agregada por tenant (revisão R4, MÉDIA): limita varredura feita com várias contas da mesma equipe. Também sem e-mail.
+ */
+export const POLITICA_BUSCA_REPRESENTANTE_TENANT: PoliticaProtecaoAbuso = {
+  maxTentativas: 60,
+  janelaMs: 15 * 60 * 1000,
+  bloqueioMs: 15 * 60 * 1000,
+  mensagemBloqueio: 'Muitas buscas. Tente novamente em alguns minutos.'
+};
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const negar = () => new ForbiddenException('Operação não autorizada.');
@@ -133,6 +142,7 @@ export class ServicoVinculosRepresentacao {
     const normalizado = typeof email === 'string' ? email.trim().toLowerCase() : '';
     if (normalizado.length < 3 || normalizado.length > 254 || !EMAIL.test(normalizado)) throw new BadRequestException('Solicitação inválida.');
     await this.protecao.consumirTentativa(`representante.candidato:${u.tenantId}:${u.usuarioId}`, POLITICA_BUSCA_REPRESENTANTE);
+    await this.protecao.consumirTentativa(`representante.candidato:${u.tenantId}`, POLITICA_BUSCA_REPRESENTANTE_TENANT);
     try {
       return await this.executor.executar(u.tenantId, async g => {
         await exigirReadCommitted(g);
