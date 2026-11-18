@@ -272,3 +272,17 @@ Desvios registrados na P3-1:
 - **Como aparece:** botão ou link com o rótulo e a indicação "abre fora do OctaClin", `target="_blank"` com `rel="noopener noreferrer"`, sem parâmetro que identifique o paciente ou a restrição na URL (nada clínico sai para o destino externo).
 - **Risco:** R3/R4 (configuração nova no backend e conteúdo exibido ao paciente; risco de phishing se a validação falhar). Precisa de rota de leitura e escrita, auditoria da alteração e testes negativos de URL.
 - **Fatia sugerida:** PR própria depois da P3-2 (backend + tela de configuração + exibição no portal), com etapa UX A curta. Até ela, o portal mostra só o link interno para "Mensagens".
+
+#### Decisão do proprietário (2026-11-18): quem configura o link externo
+
+**Clínica e profissional.** Exemplo do proprietário: se um nutricionista da clínica for desligado, a clínica precisa conseguir
+fazer as alterações. Efeito no desenho (ainda não implementado):
+- **Dois níveis:** link padrão da clínica (tenant) e link do profissional responsável.
+- **Quem edita:** o profissional edita o próprio link; a clínica (Client, com permissão de gestão) edita o link padrão **e** o
+  link de qualquer profissional do tenant. Toda alteração é auditada (quem, quando, nível), sem guardar a URL anterior em log.
+- **O que o portal mostra:** o link do profissional responsável atual do paciente, se existir e o profissional estiver ativo;
+  senão, o link padrão da clínica; senão, só o link interno para "Mensagens".
+- **Desligamento ou troca de responsável:** o link do profissional inativo deixa de aparecer automaticamente (cai no padrão da
+  clínica), sem depender de alguém lembrar de editar; a clínica pode também apagar ou corrigir o link dele.
+- **Autônomo:** é a própria clínica e o profissional ao mesmo tempo; configura um link só.
+- Mesmas regras de URL do desenho acima (só `https:`, formatos de WhatsApp, sem dado do paciente, validação no backend).
