@@ -3090,7 +3090,8 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
       values ($1, $2, 'restricoes.confirmar', $2, 'habilitacao_administrativa')`, [tenant, dados.usuarioId]);
     const alergia = { schemaVersao: 1, natureza: 'clinica', subtipoClinico: 'alergia_alimentar', alvo: { tipo: 'alergeno', id: 'alvo-sintetico' },
       gravidade: 'grave', observacao: 'CANARIO_OBSERVACAO_EQUIPE' };
-    const declaracao = { schemaVersao: 1, natureza: 'clinica', subtipoClinico: 'intolerancia_alimentar', alvo: { tipo: 'constituinte', id: 'lactose-sintetica' } };
+    // Pelo portal, o alvo é sempre texto declarado (P3-0a: o backend recusa alvo de catálogo, gravidade e observação na declaração).
+    const declaracao = { schemaVersao: 1, natureza: 'clinica', subtipoClinico: 'intolerancia_alimentar', alvo: { tipo: 'nao_catalogado' }, alvoDeclarado: 'Lactose sintética' };
     const itens = [{ item: 'i1', texto: 'Texto sintético do pedido' }];
 
     // Equipe registra e confirma uma alergia; o representante ainda não tem vínculo.
@@ -3104,6 +3105,8 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
 
     // Declaração do representante: pendência com origem declaracao_paciente; preferência continua recusada.
     const declarada = await registro.registrar(representante, dados.pacienteId, { chaveCriacao: randomUUID(), conteudo: declaracao }) as { id: string };
+    await expect(registro.registrar(representante, dados.pacienteId, { chaveCriacao: randomUUID(), conteudo: { ...declaracao, gravidade: 'leve' } }))
+      .rejects.toMatchObject({ status: 400 });
     await comoTenant(tenant);
     expect((await cliente.query('select origem, confirmacao, autor_usuario_id from restricoes_pacientes where id=$1', [declarada.id])).rows)
       .toEqual([{ origem: 'declaracao_paciente', confirmacao: 'pendente', autor_usuario_id: representanteId }]);

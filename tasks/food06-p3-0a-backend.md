@@ -63,3 +63,9 @@ NUX-25 (campo de reação): BACKLOG, por decisão do proprietário. NUX-27 (text
 - **Bloqueante de processo:** a correção da F3 seguiu outro caminho que não o da Q-B aprovada (ver acima). **Pendente de aceite do proprietário** antes do merge.
 - **Sem cobertura em banco:** revogação concorrente da concessão durante a listagem. É seguro pela análise de locks, mas não foi provado.
 - Avaliação inexistente (`{avaliacao: null}`) não gera auditoria, porque não houve leitura de dado. Decisão registrada.
+
+## Achado B da revisão R4 da #558 (corrigido aqui)
+
+A regra "pelo portal não entram gravidade, observação nem alvo de catálogo" valia só no BFF. Agora o registro recusa com 400 esses três casos quando a origem é `declaracao_paciente`.
+- Teste unitário novo cobre os três casos.
+- A prova PostgreSQL da P2d-3b passou a declarar com alvo não catalogado e prova a recusa da gravidade.
