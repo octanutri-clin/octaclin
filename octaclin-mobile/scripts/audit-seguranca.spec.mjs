@@ -172,3 +172,54 @@ test('reprova contadores criticos adicionais junto dos backports locais', () => 
 
   assert.equal(resultado.aprovado, false);
 });
+
+// Exceção temporária GHSA-fc5q-39xc-vjpf (picomatch, ReDoS): sem versão corrigida publicada em 2026-11-18.
+// Aceita só o advisory exato, dentro do prazo, sem avisos silenciados e sem nenhum outro advisory.
+const advisoryPicomatch = {
+  id: 9000001,
+  github_advisory_id: 'GHSA-fc5q-39xc-vjpf',
+  module_name: 'picomatch',
+  severity: 'high',
+  vulnerable_versions: '<=4.0.7',
+};
+const relatorioPicomatch = (extra = {}, totais = { ...totaisZerados, high: 1 }) => ({
+  advisories: { 9000001: advisoryPicomatch, ...extra },
+  muted: [],
+  metadata: { vulnerabilities: totais },
+});
+const dentroDoPrazo = new Date('2026-11-18T12:00:00Z');
+
+test('exceção temporária do picomatch aprova com aviso enquanto o prazo vale', () => {
+  const resultado = avaliarAuditoria(relatorioPicomatch(), { agora: dentroDoPrazo });
+  assert.equal(resultado.aprovado, true);
+  assert.deepEqual(resultado.excecoes, ['GHSA-fc5q-39xc-vjpf']);
+  assert.match(resultado.mensagem, /excecao temporaria/i);
+  assert.match(resultado.mensagem, /2026-12-18/);
+});
+
+test('exceção do picomatch vence no prazo e volta a reprovar', () => {
+  const resultado = avaliarAuditoria(relatorioPicomatch(), { agora: new Date('2026-12-19T00:00:00Z') });
+  assert.equal(resultado.aprovado, false);
+  assert.match(resultado.mensagem, /GHSA-fc5q-39xc-vjpf/);
+});
+
+test('exceção do picomatch não cobre faixa, pacote ou gravidade diferentes (correção publicada exige atualizar)', () => {
+  for (const alterado of [
+    { vulnerable_versions: '<4.0.8' },
+    { module_name: 'micromatch' },
+    { severity: 'critical' },
+  ]) {
+    const relatorio = relatorioPicomatch();
+    relatorio.advisories[9000001] = { ...advisoryPicomatch, ...alterado };
+    if (alterado.severity === 'critical') relatorio.metadata.vulnerabilities = { ...totaisZerados, critical: 1 };
+    assert.equal(avaliarAuditoria(relatorio, { agora: dentroDoPrazo }).aprovado, false, JSON.stringify(alterado));
+  }
+});
+
+test('exceção do picomatch não encobre outro advisory, aviso silenciado nem totais divergentes', () => {
+  const outro = { 1: { id: 1, github_advisory_id: 'GHSA-xxxx-yyyy-zzzz', module_name: 'outro', severity: 'high', vulnerable_versions: '<1.0.0' } };
+  assert.equal(avaliarAuditoria(relatorioPicomatch(outro, { ...totaisZerados, high: 2 }), { agora: dentroDoPrazo }).aprovado, false);
+  assert.equal(avaliarAuditoria({ ...relatorioPicomatch(), muted: [{ id: 1 }] }, { agora: dentroDoPrazo }).aprovado, false);
+  assert.equal(avaliarAuditoria(relatorioPicomatch({}, { ...totaisZerados, high: 1, moderate: 1 }), { agora: dentroDoPrazo }).aprovado, false);
+  assert.equal(avaliarAuditoria(relatorioPicomatch({}, { ...totaisZerados, high: 3 }), { agora: dentroDoPrazo }).aprovado, false);
+});
