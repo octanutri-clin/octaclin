@@ -39,6 +39,8 @@ export class ServicoRegistroPendenciaRestricao {
       let conteudo: ReturnType<typeof validarConteudoRestricao>;
       try { conteudo = validarConteudoRestricao(entrada.conteudo); } catch { throw new BadRequestException('Solicitação inválida.'); }
       if (conteudo.natureza === 'preferencia') throw new BadRequestException('Preferência indisponível neste fluxo.');
+      // P3-0a (NUX-24): a marca "não sabia classificar" é do paciente; a equipe classifica, não marca.
+      if (conteudo.classificacaoPeloPaciente !== undefined && origem !== 'declaracao_paciente') throw new BadRequestException('Solicitação inválida.');
       await g.query('select pg_advisory_xact_lock(hashtextextended($1, 0))', [`registro:${usuario.tenantId}:${usuario.usuarioId}:${chaveCriacao}`]);
       const repo = g.getRepository(RestricaoPacienteOrm);
       const historico = g.getRepository(RevisaoRestricaoPacienteOrm);

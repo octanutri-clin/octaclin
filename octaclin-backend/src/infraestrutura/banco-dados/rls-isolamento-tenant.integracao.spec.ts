@@ -3205,6 +3205,10 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     await confirmar.confirmar(titular, dados.pacienteId, doTitular.id, 1);
     const doColaborador = await registro.registrar(colaborador, dados.pacienteId, { chaveCriacao: randomUUID(), conteudo: alergia }) as { id: string };
     const doOutro = await registro.registrar(semConcessao, outro.pacienteId, { chaveCriacao: randomUUID(), conteudo: alergia }) as { id: string };
+    // NUX-24: a marca "não sabia classificar" é só da declaração do paciente; a equipe recebe 400 e nada é gravado.
+    await expect(registro.registrar(titular, dados.pacienteId, { chaveCriacao: randomUUID(), conteudo: { schemaVersao: 1, natureza: 'clinica',
+      subtipoClinico: 'outra_restricao_clinica', alvo: { tipo: 'nao_catalogado' }, alvoDeclarado: 'Camarão sintético', classificacaoPeloPaciente: 'nao_sabe' } }))
+      .rejects.toMatchObject({ status: 400 });
 
     // Titular com a concessão: todas as do paciente, com o conteúdo (observação incluída, é a equipe clínica).
     const completa = await leitura.listar(titular, dados.pacienteId) as { escopo: string; itens: Array<{ id: string; confirmacao: string; conteudo: { observacao?: string } }> };

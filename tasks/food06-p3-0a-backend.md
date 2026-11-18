@@ -35,3 +35,16 @@ Plano e decisões: `tasks/food06-p3-plano.md` (Q-A e Q-B). Autorização do prop
 - NUX-24 (marca "não sabia classificar"): aguarda decisão do proprietário.
 - P3-0b (pessoas: candidatos a colaborador, busca de representante por e-mail, nomes nas listas): próxima PR.
 - Telas do profissional (P3-3 a P3-5) e a web consumindo a disponibilidade do tenant: depois.
+
+## NUX-24 (decisão do proprietário de 2026-11-18: sim)
+
+- Campo opcional e fechado no conteúdo cifrado: `classificacaoPeloPaciente: 'nao_sabe'`. Só vale em `outra_restricao_clinica`. Sem migration, porque o conteúdo já é JSON cifrado validado pelo domínio.
+- **Só a declaração do paciente grava o campo;** o registro pela equipe ou pelo colaborador recebe 400.
+- **A listagem da equipe mostra o campo;** o resumo do portal não o mostra (projeção por allowlist).
+- **Parte web**, em PR de web depois do merge desta: o BFF do portal manda a marca quando o paciente escolhe "Não sei dizer", e a tela do profissional mostra "Tipo não informado pelo paciente". Antes do merge desta, o backend recusaria a marca.
+- **Provas:**
+  - domínio: valor único, só no subtipo certo, ausente quando não enviado;
+  - registro: equipe 400, paciente grava;
+  - PostgreSQL: titular recebe 400.
+
+NUX-25 (campo de reação): BACKLOG, por decisão do proprietário. NUX-27 (texto de urgência): web, fora desta PR.

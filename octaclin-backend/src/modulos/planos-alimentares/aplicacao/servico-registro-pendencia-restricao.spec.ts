@@ -55,6 +55,20 @@ describe('registro de pendência de restrição', () => {
     expect(d.atuais.insert).not.toHaveBeenCalled();
     jest.mocked(autorizarPendenciaRestricao).mockResolvedValue('profissional');
   });
+  it('P3-0a (NUX-24): só a declaração do paciente grava a marca "não sabia classificar"; a equipe recebe 400', async () => {
+    const comMarca = { schemaVersao: 1, natureza: 'clinica', subtipoClinico: 'outra_restricao_clinica', alvo: { tipo: 'nao_catalogado' }, alvoDeclarado: 'Camarão', classificacaoPeloPaciente: 'nao_sabe' };
+    try {
+    for (const origem of ['profissional', 'colaborador'] as const) {
+      const c = preparar(); jest.mocked(autorizarPendenciaRestricao).mockResolvedValue(origem);
+      await expect(c.registrar({ chaveCriacao, conteudo: comMarca as never })).rejects.toMatchObject({ status: 400 });
+      expect(c.atuais.insert).not.toHaveBeenCalled();
+    }
+    const p = preparar(); jest.mocked(autorizarPendenciaRestricao).mockResolvedValue('declaracao_paciente');
+    p.g.query.mockImplementation((async (sql: string) => sql.includes('count(*)::int as total') ? [{ total: 0 }] : []) as never);
+    await p.registrar({ chaveCriacao, conteudo: comMarca as never });
+    expect(p.atuais.insert).toHaveBeenCalledWith(expect.objectContaining({ origem: 'declaracao_paciente' }));
+    } finally { jest.mocked(autorizarPendenciaRestricao).mockResolvedValue('profissional'); }
+  });
   it('nega antes de acessar ou gravar conteúdo quando não autorizado', async () => {
     jest.mocked(autorizarPendenciaRestricao).mockRejectedValueOnce(new ForbiddenException());
     const c = preparar(); await expect(c.registrar()).rejects.toBeInstanceOf(ForbiddenException);
