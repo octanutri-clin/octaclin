@@ -50,6 +50,9 @@ import { PermissaoIntegracaoProfissionalOrm } from '../../modulos/integracoes/in
 import { ServicoOperacoes } from '../../modulos/operacoes/aplicacao/servico-operacoes';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { CriptografiaDadosSensiveis } from '../seguranca/criptografia-dados-sensiveis';
+import type { ServicoProtecaoAbuso } from '../../modulos/auth/aplicacao/servico-protecao-abuso';
+/** P3-0b: a cota da busca de representante é provada nos testes unitários e HTTP; aqui ela nunca bloqueia. */
+const protecaoSemCota = { consumirTentativa: async () => undefined } as unknown as ServicoProtecaoAbuso;
 import { ProfissionalOrm } from '../../modulos/profissionais/infraestrutura/profissional.orm';
 import { TenantConfiguracaoOrm } from '../../modulos/tenancy/infraestrutura/tenant-configuracao.orm';
 import { TenantOrm } from '../../modulos/tenancy/infraestrutura/tenant.orm';
@@ -2766,7 +2769,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     const criarUsuario = async (t: string, role: string) => {
       await comoTenant(t);
       return (await cliente!.query<{ id: string }>(`insert into usuarios (tenant_id, email_hash, email_criptografado, senha_hash, role)
-        values ($1, $2, $3, 'prova-rls-senha', $4) returning id`, [t, `prova-p2d2-${randomUUID()}`, Buffer.from('usuario-sintetico'), role])).rows[0].id;
+        values ($1, $2, $3, 'prova-rls-senha', $4) returning id`, [t, `prova-p2d2-${randomUUID()}`, new CriptografiaDadosSensiveis().criptografar(`p2d2-${randomUUID()}@example.test`), role])).rows[0].id;
     };
     const colaboradorId = await criarUsuario(tenant, 'Collaborator');
     const colaboradorOutroTenant = await criarUsuario(tenantB, 'Collaborator');
@@ -2775,7 +2778,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     const colaborador: UsuarioAutenticado = { tenantId: tenant, usuarioId: colaboradorId, papel: 'Collaborator', emailHash: '', permissoes: [] };
     const crypto = new CriptografiaDadosSensiveis();
     const concessoes = new ServicoConcessoesPermissao(executorTenant);
-    const delegacoes = new ServicoDelegacoesCarteira(executorTenant);
+    const delegacoes = new ServicoDelegacoesCarteira(executorTenant, new CriptografiaDadosSensiveis());
     const registro = new ServicoRegistroPendenciaRestricao(executorTenant, crypto);
     const leitura = new ServicoLeituraRestricao(executorTenant, crypto, concessoes);
     const confirmar = new ServicoConfirmacaoRestricao(executorTenant, crypto, concessoes);
@@ -2854,7 +2857,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     const escrita = pendencia(colaborador, dados.pacienteId, new ServicoRegistroPendenciaRestricao(segura as ExecutorTenant, crypto));
     try {
       await Promise.race([pronta, escrita.then(() => { throw new Error('Transação encerrou cedo.'); })]);
-      await expect(new ServicoDelegacoesCarteira(prazo as ExecutorTenant).revogar(titular, vigentes[0].id)).rejects.toMatchObject({ status: 409 });
+      await expect(new ServicoDelegacoesCarteira(prazo as ExecutorTenant, new CriptografiaDadosSensiveis()).revogar(titular, vigentes[0].id)).rejects.toMatchObject({ status: 409 });
     } finally { liberar(); await escrita; }
     expect(await ativas()).toHaveLength(1);
 
@@ -2862,7 +2865,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     let liberarRev!: () => void, avisarRev!: () => void;
     const esperaRev = new Promise<void>(r => { liberarRev = r; }), prontaRev = new Promise<void>(r => { avisarRev = r; });
     const seguraRev = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) => executorTenant!.executar(t, async g => { const r = await fn(g); avisarRev(); await esperaRev; return r; }) };
-    const revogacao = new ServicoDelegacoesCarteira(seguraRev as ExecutorTenant).revogar(titular, vigentes[0].id);
+    const revogacao = new ServicoDelegacoesCarteira(seguraRev as ExecutorTenant, new CriptografiaDadosSensiveis()).revogar(titular, vigentes[0].id);
     try {
       await Promise.race([prontaRev, revogacao.then(() => { throw new Error('Transação encerrou cedo.'); })]);
       await expect(pendencia(colaborador, dados.pacienteId, new ServicoRegistroPendenciaRestricao(prazo as ExecutorTenant, crypto))).rejects.toMatchObject({ status: 409 });
@@ -2934,7 +2937,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     const criarUsuario = async (t: string, role: string) => {
       await comoTenant(t);
       return (await cliente!.query<{ id: string }>(`insert into usuarios (tenant_id, email_hash, email_criptografado, senha_hash, role)
-        values ($1, $2, $3, 'prova-rls-senha', $4) returning id`, [t, `prova-p2d3a-${randomUUID()}`, Buffer.from('usuario-sintetico'), role])).rows[0].id;
+        values ($1, $2, $3, 'prova-rls-senha', $4) returning id`, [t, `prova-p2d3a-${randomUUID()}`, new CriptografiaDadosSensiveis().criptografar(`p2d3a-${randomUUID()}@example.test`), role])).rows[0].id;
     };
     const crypto = new CriptografiaDadosSensiveis();
     const representanteId = await criarUsuario(tenant, 'Patient');
@@ -2948,7 +2951,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     const titular = comoUsuario(dados.usuarioId, 'Professional'), titularOutro = comoUsuario(outro.usuarioId, 'Professional');
     const colaborador = comoUsuario(colaboradorId, 'Collaborator');
     const representante = comoUsuario(representanteId, 'Patient'), contaPaciente = comoUsuario(contaPacienteId, 'Patient');
-    const vinculos = new ServicoVinculosRepresentacao(executorTenant);
+    const vinculos = new ServicoVinculosRepresentacao(executorTenant, new CriptografiaDadosSensiveis(), protecaoSemCota);
     const portal = new ServicoPortalRestricoes(executorTenant, crypto);
     const acessar = (u: UsuarioAutenticado, paciente: string, executor: ExecutorTenant = executorTenant!) => executor.executar(tenant, g => autorizarPacientePortal(g, u, paciente));
     const vigentes = async (paciente: string) => { await comoTenant(tenant); return (await cliente!.query('select id from vinculos_representacao_paciente where paciente_id=$1 and revogado_em is null', [paciente])).rows; };
@@ -2972,7 +2975,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     expect((await cliente.query('select acao, metadados from user_action_logs where recurso_id=$1', [vinculoA.id])).rows)
       .toEqual([{ acao: 'representacao.vinculo.registrar', metadados: {} }]);
     // O colaborador delegado também registra (carteira do titular atual), mas não na carteira de outro profissional.
-    await new ServicoDelegacoesCarteira(executorTenant).conceder(titular, colaboradorId);
+    await new ServicoDelegacoesCarteira(executorTenant, new CriptografiaDadosSensiveis()).conceder(titular, colaboradorId);
     const segundoRep = await criarUsuario(tenant, 'Patient');
     await expect(vinculos.registrar(colaborador, dados.pacienteId, segundoRep, 'documento_apresentado')).resolves.toMatchObject({ representanteUsuarioId: segundoRep });
     await expect(vinculos.registrar(colaborador, outro.pacienteId, representanteId, 'presencial')).rejects.toMatchObject({ status: 403 });
@@ -2996,13 +2999,13 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     const acesso = executorTenant.executar(tenant, async g => { const r = await autorizarPacientePortal(g, representante, dados.pacienteId); avisar(); await espera; return r; });
     try {
       await Promise.race([pronta, acesso.then(() => { throw new Error('Transação encerrou cedo.'); })]);
-      await expect(new ServicoVinculosRepresentacao(prazo as ExecutorTenant).revogar(titular, dados.pacienteId, vinculoA.id)).rejects.toMatchObject({ status: 409 });
+      await expect(new ServicoVinculosRepresentacao(prazo as ExecutorTenant, new CriptografiaDadosSensiveis(), protecaoSemCota).revogar(titular, dados.pacienteId, vinculoA.id)).rejects.toMatchObject({ status: 409 });
     } finally { liberar(); await acesso; }
     // Corrida 2: revogação em curso → o acesso espera e, depois do commit, é negado com o mesmo token.
     let liberarRev!: () => void, avisarRev!: () => void;
     const esperaRev = new Promise<void>(r => { liberarRev = r; }), prontaRev = new Promise<void>(r => { avisarRev = r; });
     const seguraRev = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) => executorTenant!.executar(t, async g => { const r = await fn(g); avisarRev(); await esperaRev; return r; }) };
-    const revogacao = new ServicoVinculosRepresentacao(seguraRev as ExecutorTenant).revogar(titular, dados.pacienteId, vinculoA.id);
+    const revogacao = new ServicoVinculosRepresentacao(seguraRev as ExecutorTenant, new CriptografiaDadosSensiveis(), protecaoSemCota).revogar(titular, dados.pacienteId, vinculoA.id);
     try {
       await Promise.race([prontaRev, revogacao.then(() => { throw new Error('Transação encerrou cedo.'); })]);
       await expect(acessar(representante, dados.pacienteId, prazo as ExecutorTenant)).rejects.toMatchObject({ code: '55P03' });
@@ -3060,6 +3063,90 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     expect((await cliente.query('select id from vinculos_representacao_paciente where representante_usuario_id=$1', [representanteId])).rows).toEqual([]);
   }, 120_000);
 
+  it('P3-0b: candidatos a colaborador, e-mail nas delegações e busca de representante por e-mail exato, sob RLS reais', async () => {
+    if (!cliente || !executorTenant) throw new Error('ExecutorTenant da prova RLS nao foi inicializado.');
+    const tenant = randomUUID();
+    await cliente.query('insert into tenants (id, nome, slug) values ($1, $2, $3)', [tenant, 'Prova P3-0b sintetica', `prova-p30b-${tenant}`]);
+    const dados = await prepararDadosRepresentativos(tenant, `p30b-${randomUUID()}`);
+    const outro = await prepararDadosRepresentativos(tenant, `p30b-outro-${randomUUID()}`);
+    const crypto = new CriptografiaDadosSensiveis();
+    const sufixo = randomUUID().slice(0, 8);
+    const em = (nome: string) => `${nome}-${sufixo}@example.test`;
+    // Contas sintéticas com e-mail cifrado de verdade e hash de busca real (o mesmo do login).
+    const criarUsuario = async (t: string, role: string, email: string, ativo = true) => {
+      await comoTenant(t);
+      return (await cliente!.query<{ id: string }>(`insert into usuarios (tenant_id, email_hash, email_criptografado, senha_hash, role, ativo)
+        values ($1, $2, $3, 'prova-rls-senha', $4, $5) returning id`, [t, crypto.gerarHashBusca(email), crypto.criptografar(email), role, ativo])).rows[0].id;
+    };
+    const ficha = async (profissionalId: string, usuarioId: string, nome: string, arquivada = false) => {
+      await comoTenant(tenant);
+      await cliente!.query(`insert into pacientes (tenant_id, profissional_responsavel_id, nome_criptografado, usuario_id, arquivado_em)
+        values ($1, $2, $3, $4, $5)`, [tenant, profissionalId, crypto.criptografar(nome), usuarioId, arquivada ? new Date() : null]);
+    };
+    const colaboradorId = await criarUsuario(tenant, 'Collaborator', em('carla'));
+    await criarUsuario(tenant, 'Collaborator', em('inativa'), false);
+    await criarUsuario(tenantB, 'Collaborator', em('fora'));
+    const contaPacienteId = await criarUsuario(tenant, 'Patient', em('conta'));
+    const comFicha = await criarUsuario(tenant, 'Patient', em('helena'));
+    const fichaAlheia = await criarUsuario(tenant, 'Patient', em('rita'));
+    const fichaArquivada = await criarUsuario(tenant, 'Patient', em('joana'));
+    const semFicha = await criarUsuario(tenant, 'Patient', em('pedro'));
+    const inativo = await criarUsuario(tenant, 'Patient', em('inativo'), false);
+    await criarUsuario(tenantB, 'Patient', em('externo'));
+    await comoTenant(tenant);
+    await cliente.query('update pacientes set usuario_id=$2 where id=$1', [dados.pacienteId, contaPacienteId]);
+    await ficha(dados.profissionalId, comFicha, 'Helena Sintética');
+    await ficha(outro.profissionalId, fichaAlheia, 'Rita Sintética');
+    await ficha(dados.profissionalId, fichaArquivada, 'Joana Sintética', true);
+    const comoUsuario = (usuarioId: string, papel: UsuarioAutenticado['papel'], t: string = tenant): UsuarioAutenticado => ({ tenantId: t, usuarioId, papel, emailHash: '', permissoes: [] });
+    const titular = comoUsuario(dados.usuarioId, 'Professional'), titularOutro = comoUsuario(outro.usuarioId, 'Professional');
+    const colaborador = comoUsuario(colaboradorId, 'Collaborator');
+    const delegacoes = new ServicoDelegacoesCarteira(executorTenant, crypto);
+    const vinculos = new ServicoVinculosRepresentacao(executorTenant, crypto, protecaoSemCota);
+    const auditorias = async (acao: string) => { await comoTenant(tenant);
+      return (await cliente!.query('select usuario_id, recurso_id, metadados from user_action_logs where tenant_id=$1 and acao=$2', [tenant, acao])).rows; };
+
+    // Candidatos: só Collaborators ATIVOS deste tenant (RLS + filtro), pelo e-mail completo; colaborador não lista.
+    const candidatos = await delegacoes.candidatos(titular);
+    expect(candidatos).toEqual({ itens: [{ usuarioId: colaboradorId, email: em('carla') }], noLimite: false });
+    await expect(delegacoes.candidatos(colaborador)).rejects.toMatchObject({ status: 403 });
+    expect(await auditorias('carteira.delegacao.candidatos.listar')).toEqual([{ usuario_id: dados.usuarioId, recurso_id: dados.profissionalId, metadados: {} }]);
+    // Concessão e lista trazem o e-mail completo do colaborador.
+    await expect(delegacoes.conceder(titular, colaboradorId)).resolves.toMatchObject({ colaboradorUsuarioId: colaboradorId, colaboradorEmail: em('carla') });
+    expect((await delegacoes.listar(titular)).map(d => [d.colaboradorUsuarioId, d.colaboradorEmail])).toEqual([[colaboradorId, em('carla')]]);
+
+    // Busca por e-mail exato (maiúsculas e espaços normalizados), pela equipe do paciente.
+    const buscar = (u: UsuarioAutenticado, email: string, paciente = dados.pacienteId) => vinculos.buscarCandidato(u, paciente, email);
+    await expect(buscar(titular, `  ${em('helena').toUpperCase()} `)).resolves
+      .toEqual({ candidato: { usuarioId: comFicha, identificacao: { tipo: 'nome_ficha', nome: 'Helena Sintética' } } });
+    // Colaborador delegado vê o mesmo (a carteira é a do titular atual do paciente).
+    await expect(buscar(colaborador, em('helena'))).resolves.toMatchObject({ candidato: { identificacao: { tipo: 'nome_ficha' } } });
+    // Ficha de outra carteira ou arquivada não revela nome: e-mail mascarado.
+    await expect(buscar(titular, em('rita'))).resolves.toEqual({ candidato: { usuarioId: fichaAlheia, identificacao: { tipo: 'email_mascarado', email: 'r***@e***.test' } } });
+    await expect(buscar(titular, em('joana'))).resolves.toEqual({ candidato: { usuarioId: fichaArquivada, identificacao: { tipo: 'email_mascarado', email: 'j***@e***.test' } } });
+    await expect(buscar(titular, em('pedro'))).resolves.toEqual({ candidato: { usuarioId: semFicha, identificacao: { tipo: 'email_mascarado', email: 'p***@e***.test' } } });
+    // Mesma resposta para quem não existe e para quem não é elegível (outro tenant, inativo, Collaborator, a própria conta do paciente).
+    for (const email of [em('nao-existe'), em('externo'), em('inativo'), em('carla'), em('conta')]) await expect(buscar(titular, email)).resolves.toEqual({ candidato: null });
+    expect(inativo).toBeTruthy();
+    // Quem não é da equipe do paciente não busca; o tenant do token manda (RLS esconde o paciente de outro tenant).
+    await expect(buscar(titularOutro, em('helena'))).rejects.toMatchObject({ status: 403 });
+    await expect(buscar(comoUsuario(dados.usuarioId, 'Professional', tenantB), em('helena'))).rejects.toMatchObject({ status: 403 });
+    // A auditoria da busca nunca guarda o e-mail nem o hash.
+    const buscas = await auditorias('representacao.candidato.buscar');
+    expect(buscas.length).toBeGreaterThanOrEqual(9);
+    for (const linha of buscas) expect(linha).toMatchObject({ recurso_id: dados.pacienteId, metadados: {} });
+    expect(JSON.stringify(buscas)).not.toMatch(/example|@/);
+
+    // Representantes: registrar e listar devolvem a identificação pela mesma regra.
+    await expect(vinculos.registrar(titular, dados.pacienteId, comFicha, 'presencial')).resolves.toMatchObject({ identificacao: { tipo: 'nome_ficha', nome: 'Helena Sintética' } });
+    await vinculos.registrar(colaborador, dados.pacienteId, semFicha, 'procuracao');
+    expect((await vinculos.listar(titular, dados.pacienteId)).map(v => [v.representanteUsuarioId, v.identificacao]).sort())
+      .toEqual([[comFicha, { tipo: 'nome_ficha', nome: 'Helena Sintética' }], [semFicha, { tipo: 'email_mascarado', email: 'p***@e***.test' }]].sort());
+    // Na carteira do outro profissional, Helena não tem ficha: lá aparece mascarada.
+    await vinculos.registrar(titularOutro, outro.pacienteId, comFicha, 'presencial');
+    expect((await vinculos.listar(titularOutro, outro.pacienteId)).map(v => v.identificacao)).toEqual([{ tipo: 'email_mascarado', email: 'h***@e***.test' }]);
+  }, 120_000);
+
   it('P2d-3b: portal do paciente declara, pede correção, cancela só o próprio pedido e vê o resumo Q11, sob RLS e locks reais', async () => {
     if (!cliente || !executorTenant) throw new Error('ExecutorTenant da prova RLS nao foi inicializado.');
     const tenant = randomUUID();
@@ -3069,7 +3156,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     const criarUsuario = async (role: string) => {
       await comoTenant(tenant);
       return (await cliente!.query<{ id: string }>(`insert into usuarios (tenant_id, email_hash, email_criptografado, senha_hash, role)
-        values ($1, $2, $3, 'prova-rls-senha', $4) returning id`, [tenant, `prova-p2d3b-${randomUUID()}`, Buffer.from('usuario-sintetico'), role])).rows[0].id;
+        values ($1, $2, $3, 'prova-rls-senha', $4) returning id`, [tenant, `prova-p2d3b-${randomUUID()}`, new CriptografiaDadosSensiveis().criptografar(`p2d3b-${randomUUID()}@example.test`), role])).rows[0].id;
     };
     const crypto = new CriptografiaDadosSensiveis();
     const contaPacienteId = await criarUsuario('Patient');
@@ -3083,7 +3170,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     const registro = new ServicoRegistroPendenciaRestricao(executorTenant, crypto);
     const confirmar = new ServicoConfirmacaoRestricao(executorTenant, crypto, concessoes);
     const solicitacoes = new ServicoSolicitacoesRestricao(executorTenant, crypto, concessoes);
-    const vinculos = new ServicoVinculosRepresentacao(executorTenant);
+    const vinculos = new ServicoVinculosRepresentacao(executorTenant, new CriptografiaDadosSensiveis(), protecaoSemCota);
     const portal = new ServicoPortalRestricoes(executorTenant, crypto);
     await comoTenant(tenant);
     await cliente.query(`insert into concessoes_permissao_usuario (tenant_id, usuario_id, permissao, concedida_por, motivo)

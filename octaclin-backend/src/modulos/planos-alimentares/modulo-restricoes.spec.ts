@@ -3,6 +3,7 @@ import { Test } from '@nestjs/testing';
 import { ExecutorTenant } from '../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { ServicoConcessoesPermissao } from '../auth/aplicacao/servico-concessoes-permissao';
+import { ServicoProtecaoAbuso } from '../auth/aplicacao/servico-protecao-abuso';
 import { ModuloAuth } from '../auth/modulo-auth';
 import { ModuloTenancy } from '../tenancy/modulo-tenancy';
 import { ServicoConfirmacaoRestricao } from './aplicacao/servico-confirmacao-restricao';
@@ -29,7 +30,10 @@ const executor = { executar: jest.fn() };
 const concessoes = { exigir: jest.fn() };
 @Module({ providers: [{ provide: ExecutorTenant, useValue: executor }], exports: [ExecutorTenant] })
 class TenancySintetico {}
-@Module({ providers: [{ provide: ServicoConcessoesPermissao, useValue: concessoes }], exports: [ServicoConcessoesPermissao] })
+// P3-0b: a busca de representante consome a cota de `ServicoProtecaoAbuso`, exportado pelo ModuloAuth real.
+const protecao = { consumirTentativa: jest.fn() };
+@Module({ providers: [{ provide: ServicoConcessoesPermissao, useValue: concessoes }, { provide: ServicoProtecaoAbuso, useValue: protecao }],
+  exports: [ServicoConcessoesPermissao, ServicoProtecaoAbuso] })
 class AuthSintetico {}
 
 describe('módulo de restrições clínicas', () => {

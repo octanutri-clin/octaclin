@@ -18,7 +18,10 @@ const ator: UsuarioAutenticado = { tenantId: tenant, usuarioId: titular, papel: 
 function preparar() {
   const papeis: Record<string, { role: string; ativo: boolean } | null> = { [titular]: { role: 'Professional', ativo: true }, [colaborador]: { role: 'Collaborator', ativo: true } };
   const ordemUsuarios: string[] = [];
-  const usuario = { findOne: jest.fn(async ({ where }: { where: { id: string } }) => { ordemUsuarios.push(where.id); const p = papeis[where.id]; return p ? { id: where.id, ...p } : null; }) };
+  const usuario = { findOne: jest.fn(async ({ where }: { where: { id: string } }) => { ordemUsuarios.push(where.id); const p = papeis[where.id]; return p ? { id: where.id, ...p } : null; }),
+    // E-mails cifrados sintéticos: o "cifrado" é o texto com prefixo, aberto pelo mock de criptografia abaixo.
+    find: jest.fn(async (): Promise<unknown[]> => [{ id: colaborador, emailCriptografado: Buffer.from('cifrado:carla@example.test') }]) };
+  const criptografia = { descriptografar: jest.fn((b: Buffer) => { const t = b.toString(); if (!t.startsWith('cifrado:')) throw new Error('CANARIO_CRIPTO'); return t.slice(8); }) };
   const profissional = { findOne: jest.fn(async (): Promise<unknown> => ({ id: profissionalId, usuarioId: titular })) };
   const delegacao = { findOne: jest.fn(async (): Promise<unknown> => null), find: jest.fn(async () => []), update: jest.fn(async () => ({ affected: 1 })) };
   const paciente = { findOne: jest.fn(async (): Promise<unknown> => ({ id: pacienteId })) };
@@ -37,13 +40,15 @@ function preparar() {
     if (e === DelegacaoCarteiraProfissionalOrm) return delegacao; if (e === PacienteOrm) return paciente; return auditoria;
   }) };
   const executor = { executar: jest.fn(async (_t: string, fn: (x: unknown) => unknown) => fn(g)) };
-  return { papeis, ordemUsuarios, usuario, profissional, delegacao, paciente, query, g, executor, s: new ServicoDelegacoesCarteira(executor as never) };
+  return { papeis, ordemUsuarios, usuario, profissional, delegacao, paciente, query, g, executor, criptografia, auditoria,
+    s: new ServicoDelegacoesCarteira(executor as never, criptografia as never) };
 }
 
 describe('ServicoDelegacoesCarteira (P2d-2)', () => {
   it('titular concede ao colaborador ativo; trava usuários por id antes do profissional e audita sem conteúdo', async () => {
     const c = preparar();
-    await expect(c.s.conceder(ator, colaborador.toUpperCase())).resolves.toEqual({ id: delegacaoId, colaboradorUsuarioId: colaborador, concedidaEm: new Date(0) });
+    await expect(c.s.conceder(ator, colaborador.toUpperCase())).resolves.toEqual({ id: delegacaoId, colaboradorUsuarioId: colaborador,
+      colaboradorEmail: 'carla@example.test', concedidaEm: new Date(0) });
     expect(c.ordemUsuarios).toEqual([titular, colaborador].sort());
     expect(c.usuario.findOne).toHaveBeenCalledWith(expect.objectContaining({ lock: { mode: 'pessimistic_read' } }));
     const insercao = c.query.mock.calls.find(([sql]) => String(sql).includes('insert into delegacoes'));
@@ -120,6 +125,50 @@ describe('ServicoDelegacoesCarteira (P2d-2)', () => {
     const [sql, params] = c.query.mock.calls.find(([s]) => String(s).includes('update delegacoes'))!;
     expect(String(sql)).toMatch(/colaborador_usuario_id = \$2 or d\.profissional_id in/);
     expect(params).toEqual([tenant, colaborador, titular]);
+  });
+});
+
+describe('ServicoDelegacoesCarteira — pessoas (P3-0b)', () => {
+  const outra = '77777777-7777-4777-8777-777777777777';
+  it('listar devolve o e-mail completo do colaborador, aberto no servidor', async () => {
+    const c = preparar(); c.delegacao.find.mockResolvedValueOnce([{ id: delegacaoId, colaboradorUsuarioId: colaborador, concedidaEm: new Date(0) }] as never);
+    await expect(c.s.listar(ator)).resolves.toEqual([{ id: delegacaoId, colaboradorUsuarioId: colaborador, colaboradorEmail: 'carla@example.test', concedidaEm: new Date(0) }]);
+    expect(c.usuario.find).toHaveBeenCalledWith(expect.objectContaining({ where: { tenantId: tenant, id: expect.anything() }, select: { id: true, emailCriptografado: true } }));
+  });
+  it('listar falha fechado (500 genérico) se o e-mail não abre ou a conta some', async () => {
+    const c = preparar(); c.delegacao.find.mockResolvedValue([{ id: delegacaoId, colaboradorUsuarioId: colaborador, concedidaEm: new Date(0) }] as never);
+    c.usuario.find.mockResolvedValueOnce([{ id: colaborador, emailCriptografado: Buffer.from('CANARIO') }]);
+    await expect(c.s.listar(ator)).rejects.toMatchObject({ status: 500, message: 'Operação indisponível.' });
+    c.usuario.find.mockResolvedValueOnce([]);
+    await expect(c.s.listar(ator)).rejects.toMatchObject({ status: 500, message: 'Operação indisponível.' });
+  });
+  it('candidatos: só o titular; Collaborators ativos do tenant, ordenados por e-mail, com auditoria sem conteúdo', async () => {
+    const c = preparar();
+    c.usuario.find.mockResolvedValueOnce([{ id: colaborador, emailCriptografado: Buffer.from('cifrado:carla@example.test') },
+      { id: outra, emailCriptografado: Buffer.from('cifrado:bia@example.test') }]);
+    await expect(c.s.candidatos(ator)).resolves.toEqual({ itens: [{ usuarioId: outra, email: 'bia@example.test' }, { usuarioId: colaborador, email: 'carla@example.test' }], noLimite: false });
+    expect(c.usuario.find).toHaveBeenCalledWith(expect.objectContaining({ where: { tenantId: tenant, role: 'Collaborator', ativo: true },
+      select: { id: true, emailCriptografado: true }, take: 201 }));
+    expect(c.auditoria.save).toHaveBeenCalledTimes(1);
+    expect(c.auditoria.create).toHaveBeenCalledWith(expect.objectContaining({ acao: 'carteira.delegacao.candidatos.listar', metadados: {} }));
+    expect(JSON.stringify(c.auditoria.create.mock.calls)).not.toMatch(/example\.test/);
+  });
+  it('candidatos acima de 200 corta e avisa', async () => {
+    const c = preparar();
+    c.usuario.find.mockResolvedValueOnce(Array.from({ length: 201 }, (_, i) => ({ id: `${String(i).padStart(8, '0')}-1111-4111-8111-111111111111`,
+      emailCriptografado: Buffer.from(`cifrado:p${String(i).padStart(3, '0')}@example.test`) })));
+    const r = await c.s.candidatos(ator);
+    expect(r.itens).toHaveLength(200); expect(r.noLimite).toBe(true);
+  });
+  it.each(['Collaborator', 'Patient', 'Client', 'SuperAdmin'] as const)('candidatos negado para %s sem consultar contas', async papel => {
+    const c = preparar();
+    await expect(c.s.candidatos({ ...ator, papel })).rejects.toMatchObject({ status: 403 });
+    expect(c.usuario.find).not.toHaveBeenCalled();
+  });
+  it('candidatos negado se o papel no banco não é mais Professional', async () => {
+    const c = preparar(); c.papeis[titular] = { role: 'Collaborator', ativo: true };
+    await expect(c.s.candidatos(ator)).rejects.toMatchObject({ status: 403 });
+    expect(c.usuario.find).not.toHaveBeenCalled();
   });
 });
 

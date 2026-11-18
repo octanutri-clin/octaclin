@@ -102,11 +102,13 @@ export class FiltroRestricoesClinicas implements ExceptionFilter {
   catch(erro: unknown, host: ArgumentsHost): void {
     const resposta = host.switchToHttp().getResponse<Response>();
     const original = erro instanceof HttpException ? erro.getStatus() : 500;
-    const status = [400, 401, 403, 409].includes(original) ? original : 500;
+    // 429: cota da busca de representante por e-mail (P3-0b). Mensagem fixa, sem eco.
+    const status = [400, 401, 403, 409, 429].includes(original) ? original : 500;
     resposta.setHeader('Cache-Control', 'private, no-store');
     resposta.status(status).json({ statusCode: status, message: status === 400 ? 'Solicitação inválida.' :
       status === 401 ? 'Autenticação necessária.' : status === 403 ? 'Operação não autorizada.' :
-        status === 409 ? 'Operação indisponível ou concorrente.' : 'Operação indisponível.' });
+        status === 409 ? 'Operação indisponível ou concorrente.' : status === 429 ? 'Muitas tentativas. Tente novamente em alguns minutos.' :
+          'Operação indisponível.' });
   }
 }
 
