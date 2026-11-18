@@ -153,6 +153,11 @@ export const TEXTOS_PORTAL_RESTRICOES = Object.freeze({
   // PUX-20: repetir é seguro porque a tela reenvia com a mesma chave de criação (o backend não registra duas vezes).
   incertoEnvio: "Não conseguimos confirmar se o envio foi concluído. Você pode tentar de novo: não vamos registrar duas vezes.",
   tentarDeNovo: "Tentar de novo",
+  // Achado A da revisão R4 da #558: depois de um resultado incerto, o conteúdo fica travado (repetir é seguro só com o mesmo
+  // conteúdo e a mesma chave); para mudar, descarta-se e confere-se a lista.
+  descartarIncerto: "Descartar e conferir a lista",
+  conferirLista: "Confira a lista: se a informação aparecer, ela já foi registrada.",
+  cancelarMudou: "Este pedido mudou enquanto você tentava cancelar. Confira a lista atualizada.",
   faltaTipo: "Escolha o tipo de restrição.",
   faltaAlimento: "Escreva o alimento.",
   faltaTexto: "Escreva o que está errado.",

@@ -74,6 +74,49 @@ test.describe('FOOD06 P3 — portal de restrições (escrita)', () => {
     expect(corpos[1].chaveCriacao).toBe(corpos[0].chaveCriacao);
   });
 
+  test('incerto trava o conteúdo; descartar recarrega a lista e o próximo envio usa chave nova (achado A da revisão R4)', async ({ page }) => {
+    let vez = 0;
+    const { pedidosAoBff } = await prepararPortalRestricoes(page, {
+      declarar: () => (++vez === 1 ? 503 : { id: '99999999-0000-4000-8000-000000000001', selo: 'restricoes.portal.informada_por_voce' })
+    });
+    await page.goto('/portal/restricoes');
+    const regiao = area(page);
+    await regiao.getByRole('button', { name: 'Informar uma restrição' }).click();
+    let formulario = regiao.getByRole('form', { name: 'Informar uma restrição' });
+    await formulario.getByRole('radio', { name: /Alergia/ }).check();
+    await formulario.getByRole('textbox', { name: 'Qual alimento?' }).fill('Amendoin');
+    await formulario.getByRole('button', { name: 'Enviar informação' }).click();
+    await expect(formulario.getByRole('alert')).toContainText('não vamos registrar duas vezes');
+    await expect(formulario.getByRole('textbox', { name: 'Qual alimento?' })).not.toBeEditable();
+    await expect(formulario.getByRole('radio', { name: /Intolerância/ })).toBeDisabled();
+    await expect(formulario.getByRole('button', { name: 'Fechar' })).toHaveCount(0);
+    const resumosAntes = pedidosAoBff.filter((p) => p.caminho.endsWith('/resumo')).length;
+    await formulario.getByRole('button', { name: 'Descartar e conferir a lista' }).click();
+    await expect(regiao.getByRole('status').filter({ hasText: 'Confira a lista: se a informação aparecer, ela já foi registrada.' })).toBeVisible();
+    await expect.poll(() => pedidosAoBff.filter((p) => p.caminho.endsWith('/resumo')).length).toBeGreaterThan(resumosAntes);
+    await regiao.getByRole('button', { name: 'Informar uma restrição' }).click();
+    formulario = regiao.getByRole('form', { name: 'Informar uma restrição' });
+    await formulario.getByRole('radio', { name: /Alergia/ }).check();
+    await formulario.getByRole('textbox', { name: 'Qual alimento?' }).fill('Amendoim');
+    await formulario.getByRole('button', { name: 'Enviar informação' }).click();
+    await expect(regiao.getByRole('status').filter({ hasText: 'Enviamos a informação.' })).toBeVisible();
+    const corpos = enviados(pedidosAoBff, '/declarar');
+    expect(corpos).toHaveLength(2);
+    expect(corpos[1].chaveCriacao).not.toBe(corpos[0].chaveCriacao);
+  });
+
+  test('cancelar com 409 (pedido já mudou) recarrega a lista com mensagem própria, sem eco', async ({ page }) => {
+    const { pedidosAoBff } = await prepararPortalRestricoes(page, { cancelar: () => 409 });
+    await page.goto('/portal/restricoes');
+    const regiao = area(page);
+    await regiao.getByRole('button', { name: 'Cancelar pedido' }).click();
+    const resumosAntes = pedidosAoBff.filter((p) => p.caminho.endsWith('/resumo')).length;
+    await page.getByRole('dialog', { name: 'Cancelar este pedido?' }).getByRole('button', { name: 'Sim, cancelar pedido' }).click();
+    await expect(regiao.getByRole('status').filter({ hasText: 'Este pedido mudou enquanto você tentava cancelar. Confira a lista atualizada.' })).toBeVisible();
+    await expect.poll(() => pedidosAoBff.filter((p) => p.caminho.endsWith('/resumo')).length).toBeGreaterThan(resumosAntes);
+    await expect(regiao).not.toContainText('CANARIO');
+  });
+
   test('pedir remoção de um item: foco no texto, corpo mínimo e mensagem de que a informação continua valendo', async ({ page }) => {
     const { pedidosAoBff } = await prepararPortalRestricoes(page);
     await page.goto('/portal/restricoes');

@@ -303,3 +303,7 @@ fazer as alterações. Efeito no desenho (ainda não implementado):
 - **Pendência para a ativação (achado MÉDIA da revisão R4 da #555):** a disponibilidade da web precisa considerar também a flag do tenant. Entra na P3-0a.
 - **Condição de ativação nova (NUX-26, UX B/C da P3-2):** não ligar a escrita do portal sem a tela do profissional que mostra as pendências (P3-0a + P3-3); senão o paciente informa uma alergia que ninguém vê.
 - **Decisões pendentes do proprietário (UX B/C da P3-2):** NUX-24 (guardar a marca "não sabia classificar"), NUX-25 (campo opcional de reação), NUX-27 (texto de urgência após informar alergia, conteúdo clínico).
+- **Revisão R4 cruzada da #558** (subagente `tenant-security-reviewer`, mesmo modelo): sem bloqueante.
+  - **Achado A, corrigido nesta PR:** depois de um resultado incerto, o conteúdo fica travado e a repetição usa a mesma chave. "Descartar e conferir a lista" recarrega a lista e gera chave nova. Um 409 ou um resultado incerto no cancelamento recarregam a lista.
+  - **Achado B, corrigido na #559:** o backend passou a recusar gravidade, observação e alvo de catálogo na declaração do paciente.
+- **NUX-27 incluído na #558:** aviso de urgência, rascunho pendente de validação clínica.

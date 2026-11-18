@@ -75,6 +75,7 @@ export function FormularioInformarRestricao({ pacienteId, ctx, noLimite, aoEnvia
   if (!aberto) return <Botao variante="secundario" onClick={() => setAberto(true)}>{T.informarAbrir(ctx)}</Botao>;
 
   const alimentoLimpo = alimento.trim();
+  const travado = falha === 'incerto';
   const faltaTipo = tentouEnviar && !tipo;
   const faltaAlimento = tentouEnviar && !alimentoLimpo;
 
@@ -112,7 +113,7 @@ export function FormularioInformarRestricao({ pacienteId, ctx, noLimite, aoEnvia
         <legend className="mb-1 text-sm font-medium text-tinta">{T.informarTipoPergunta}</legend>
         {TIPOS_DECLARACAO_PORTAL.map((t, indice) => (
           <label key={t.valor} className="flex min-h-11 cursor-pointer items-start gap-3 rounded-md border border-linha px-3 py-2 focus-within:ring-2 focus-within:ring-primaria">
-            <input ref={indice === 0 ? primeiroTipo : undefined} type="radio" name={`${id}-tipo`} value={t.valor} checked={tipo === t.valor} onChange={() => setTipo(t.valor)} className="mt-1 h-5 w-5" aria-describedby={`${id}-ajuda-${t.valor}${faltaTipo ? ` ${id}-erro-tipo` : ''}`} />
+            <input ref={indice === 0 ? primeiroTipo : undefined} disabled={travado} type="radio" name={`${id}-tipo`} value={t.valor} checked={tipo === t.valor} onChange={() => setTipo(t.valor)} className="mt-1 h-5 w-5" aria-describedby={`${id}-ajuda-${t.valor}${faltaTipo ? ` ${id}-erro-tipo` : ''}`} />
             <span className="grid">
               <span className="font-medium text-tinta">{t.rotulo}</span>
               <span id={`${id}-ajuda-${t.valor}`} className="text-sm text-texto-suave">{t.ajuda}</span>
@@ -126,6 +127,7 @@ export function FormularioInformarRestricao({ pacienteId, ctx, noLimite, aoEnvia
         <Campo
           ref={campoAlimento}
           id={`${id}-alimento`}
+          readOnly={travado}
           value={alimento}
           maxLength={200}
           required
@@ -139,8 +141,12 @@ export function FormularioInformarRestricao({ pacienteId, ctx, noLimite, aoEnvia
       </div>
       {falha ? <p role="alert" className="text-sm text-tinta">{mensagemEscrita(falha)}</p> : null}
       <div className="flex flex-wrap gap-2">
-        <Botao type="submit" variante="primario" carregando={enviando} disabled={enviando}>{falha === 'incerto' ? T.tentarDeNovo : T.informarEnviar}</Botao>
-        <Botao type="button" variante="secundario" onClick={() => { setAberto(false); setFalha(null); setTentouEnviar(false); }} disabled={enviando}>{T.fecharFormulario}</Botao>
+        <Botao type="submit" variante="primario" carregando={enviando} disabled={enviando}>{travado ? T.tentarDeNovo : T.informarEnviar}</Botao>
+        {travado ? (
+          <Botao type="button" variante="secundario" disabled={enviando} onClick={() => { setChave(novaChave()); setAberto(false); setFalha(null); setTentouEnviar(false); setTipo(''); setAlimento(''); aoEnviar(T.conferirLista); }}>{T.descartarIncerto}</Botao>
+        ) : (
+          <Botao type="button" variante="secundario" onClick={() => { setAberto(false); setFalha(null); setTentouEnviar(false); }} disabled={enviando}>{T.fecharFormulario}</Botao>
+        )}
       </div>
     </form>
   );
@@ -178,6 +184,7 @@ export function FormularioPedido({ pacienteId, restricaoId, alimento, ctx, noLim
   }
 
   const textoLimpo = texto.trim();
+  const travado = falha === 'incerto';
   const faltaTexto = tentouEnviar && !textoLimpo;
 
   async function enviar(evento: React.FormEvent) {
@@ -207,7 +214,7 @@ export function FormularioPedido({ pacienteId, restricaoId, alimento, ctx, noLim
         <legend className="mb-1 text-sm font-medium text-tinta">{T.pedirTipoPergunta}</legend>
         {([['correcao', T.pedirCorrecao], ['remocao', T.pedirRemocao]] as const).map(([valor, rotulo]) => (
           <label key={valor} className="flex min-h-11 cursor-pointer items-center gap-3 rounded-md border border-linha px-3 py-2 focus-within:ring-2 focus-within:ring-primaria">
-            <input type="radio" name={`${id}-tipo`} value={valor} checked={tipo === valor} onChange={() => setTipo(valor)} className="h-5 w-5" />
+            <input type="radio" disabled={travado} name={`${id}-tipo`} value={valor} checked={tipo === valor} onChange={() => setTipo(valor)} className="h-5 w-5" />
             <span className="text-tinta">{rotulo}</span>
           </label>
         ))}
@@ -217,6 +224,7 @@ export function FormularioPedido({ pacienteId, restricaoId, alimento, ctx, noLim
         <AreaTexto
           id={`${id}-texto`}
           ref={campo}
+          readOnly={travado}
           value={texto}
           maxLength={1000}
           rows={3}
@@ -230,8 +238,12 @@ export function FormularioPedido({ pacienteId, restricaoId, alimento, ctx, noLim
       </div>
       {falha ? <p role="alert" className="text-sm text-tinta">{mensagemEscrita(falha)}</p> : null}
       <div className="flex flex-wrap gap-2">
-        <Botao type="submit" variante="primario" carregando={enviando} disabled={enviando}>{falha === 'incerto' ? T.tentarDeNovo : T.pedirEnviar}</Botao>
-        <Botao type="button" variante="secundario" onClick={() => { setAberto(false); setFalha(null); setTentouEnviar(false); }} disabled={enviando}>{T.fecharFormulario}</Botao>
+        <Botao type="submit" variante="primario" carregando={enviando} disabled={enviando}>{travado ? T.tentarDeNovo : T.pedirEnviar}</Botao>
+        {travado ? (
+          <Botao type="button" variante="secundario" disabled={enviando} onClick={() => { setChave(novaChave()); setAberto(false); setFalha(null); setTentouEnviar(false); setTexto(''); aoEnviar(T.conferirLista); }}>{T.descartarIncerto}</Botao>
+        ) : (
+          <Botao type="button" variante="secundario" onClick={() => { setAberto(false); setFalha(null); setTentouEnviar(false); }} disabled={enviando}>{T.fecharFormulario}</Botao>
+        )}
       </div>
     </form>
   );
@@ -255,7 +267,11 @@ export function BotaoCancelarPedido({ pacienteId, solicitacaoId, aoCancelar }: {
       aoCancelar(T.cancelarSucesso);
     } catch (erro) {
       setAberto(false);
-      setFalha(tipoDe(erro));
+      const tipo = tipoDe(erro);
+      // Achado A: o cancelamento não tem chave; repetir depois de um cancelamento gravado dá 409. Nos dois casos, recarrega a lista.
+      if (tipo === 'mudou') aoCancelar(T.cancelarMudou);
+      else if (tipo === 'incerto') aoCancelar(T.conferirLista);
+      else setFalha(tipo);
     } finally {
       setCancelando(false);
     }
