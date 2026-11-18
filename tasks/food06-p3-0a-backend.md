@@ -32,7 +32,7 @@ Plano e decisões: `tasks/food06-p3-plano.md` (Q-A e Q-B). Autorização do prop
 
 ## Fora desta fatia
 
-- NUX-24 (marca "não sabia classificar"): aguarda decisão do proprietário.
+- NUX-24: decidido e incluído nesta PR (ver abaixo).
 - P3-0b (pessoas: candidatos a colaborador, busca de representante por e-mail, nomes nas listas): próxima PR.
 - Telas do profissional (P3-3 a P3-5) e a web consumindo a disponibilidade do tenant: depois.
 
