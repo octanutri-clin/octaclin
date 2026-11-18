@@ -303,3 +303,15 @@ P2d-2 não contava a auditoria. Controle: `linhasDeUpdateReturning`
 (`infraestrutura/banco-dados/linhas-update-returning.ts`) aceita só o formato real
 e falha fechado; mocks de `UPDATE` usam `[linhas, contagem]`; provas em banco
 contam a auditoria por linha. Mock não substitui o formato do driver.
+
+## 2026-11-18 — Advisory sem correção publicada derruba o gate de audit de todas as PRs
+
+Na #555 (só web), o job Mobile Expo reprovou em `pnpm audit:security` por um advisory publicado depois da última
+mudança do lockfile: GHSA-fc5q-39xc-vjpf (`picomatch`, ReDoS, alta), dependência indireta de Expo/React Native
+(metro, codegen, jest-util), com faixa `<=4.0.7` e nenhuma versão corrigida no npm. O `pnpm audit` consulta a base
+na hora da execução, então o mesmo job reprova a `main` e qualquer PR, sem relação com o diff. Decisão do
+proprietário: exceção temporária. Controle: `EXCECOES_TEMPORARIAS` em `octaclin-mobile/scripts/audit-seguranca-lib.mjs`
+aceita só o advisory exato (pacote, faixa e gravidade), sem avisos silenciados e sem nenhum outro advisory, até
+**2026-12-18**; o audit imprime `ATENCAO` com o prazo. Publicada a correção, a faixa muda e o gate volta a reprovar,
+exigindo atualizar a dependência; vencido o prazo, também. Exceção nova exige decisão do proprietário, teste e prazo;
+nunca usar `muted` nem afrouxar a regra geral. O app segue NO-GO para distribuição.
