@@ -48,3 +48,18 @@ Plano e decisões: `tasks/food06-p3-plano.md` (Q-A e Q-B). Autorização do prop
   - PostgreSQL: titular recebe 400.
 
 NUX-25 (campo de reação): BACKLOG, por decisão do proprietário. NUX-27 (texto de urgência): web, fora desta PR.
+
+## Revisão R4 cruzada (subagente `tenant-security-reviewer`, mesmo modelo, não independente)
+
+- **Segurança: sem bloqueante.** Tenant e carteira estão corretos.
+  - O fallback sem a concessão não amplia a leitura.
+  - Não há ciclo de locks com os escritores de concessão.
+  - O `try/catch` da concessão não mascara erro de banco.
+  - A disponibilidade devolve só o booleano do tenant do JWT.
+- **Corrigido nesta PR:**
+  - teste de que um erro de banco na concessão é relançado (409) e não vira "autoria";
+  - o histórico agora é buscado só na revisão atual de cada restrição (BAIXA, desempenho);
+  - prova PostgreSQL de corrida entre duas reconfirmações "sem alteração" (só uma vence) e da ausência recusada com restrição confirmada.
+- **Bloqueante de processo:** a correção da F3 seguiu outro caminho que não o da Q-B aprovada (ver acima). **Pendente de aceite do proprietário** antes do merge.
+- **Sem cobertura em banco:** revogação concorrente da concessão durante a listagem. É seguro pela análise de locks, mas não foi provado.
+- Avaliação inexistente (`{avaliacao: null}`) não gera auditoria, porque não houve leitura de dado. Decisão registrada.

@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable } from '@nestjs/common';
 import { isUUID } from 'class-validator';
-import { In, type EntityManager } from 'typeorm';
+import type { EntityManager } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { registrarAuditoriaNaTransacao } from '../../../infraestrutura/auditoria/servico-auditoria';
@@ -87,8 +87,9 @@ export class ServicoLeituraRestricao {
       const linhas = await g.getRepository(RestricaoPacienteOrm).find({ where, order: { criadoEm: 'ASC', id: 'ASC' }, take: LIMITE_LISTAGEM + 1,
         select: { id: true, revisao: true, origem: true, estado: true, confirmacao: true, conteudoCriptografado: true, criadoEm: true } });
       if (linhas.length > LIMITE_LISTAGEM) throw new ConflictException('Limite de registros atingido.');
+      // Só a revisão atual de cada linha (revisão R4): nunca o histórico cifrado inteiro.
       const historicos = linhas.length === 0 ? [] : await g.getRepository(RevisaoRestricaoPacienteOrm).find({
-        where: { tenantId: usuario.tenantId, pacienteId, restricaoId: In(linhas.map(l => l.id)) } });
+        where: linhas.map(l => ({ tenantId: usuario.tenantId, pacienteId, restricaoId: l.id, numero: l.revisao })) });
       const itens = linhas.map(linha => {
         const anterior = historicos.find(h => h.restricaoId === linha.id && h.numero === linha.revisao);
         if (!anterior || !eventoCoerente(anterior.evento, linha)) throw new ConflictException('Restrição indisponível.');

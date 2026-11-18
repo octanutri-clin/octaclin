@@ -69,6 +69,20 @@ describe('listar restrições (P3-0a)', () => {
     expect(c.restricoes.find).toHaveBeenCalledWith(expect.objectContaining({ where: { tenantId: profissional.tenantId, pacienteId: paciente, autorUsuarioId: profissional.usuarioId } }));
   });
 
+  it('erro de banco na verificação da concessão é relançado e nunca vira listagem por autoria (revisão R4)', async () => {
+    const c = preparar();
+    c.concessoes.exigir.mockRejectedValueOnce(Object.assign(new Error('lock timeout sintético'), { code: '55P03' }));
+    await expect(c.servico.listar(profissional as never, paciente)).rejects.toBeInstanceOf(ConflictException);
+    expect(c.restricoes.find).not.toHaveBeenCalled();
+  });
+
+  it('busca só a revisão atual de cada restrição no histórico (revisão R4)', async () => {
+    const c = preparar([linha(1, { revisao: 3, estado: 'ativa', confirmacao: 'confirmada' })]);
+    c.revisoes.find.mockResolvedValueOnce([{ restricaoId: linha(1).id, numero: 3, evento: 'confirmacao', conteudoCriptografado: Buffer.from('h') }]);
+    await c.servico.listar(profissional as never, paciente);
+    expect(c.revisoes.find).toHaveBeenCalledWith({ where: [{ tenantId: profissional.tenantId, pacienteId: paciente, restricaoId: linha(1).id, numero: 3 }] });
+  });
+
   it('colaborador delegado vê só as que registrou; sem delegação, nega antes de ler', async () => {
     const c = preparar();
     jest.mocked(autorizarPendenciaRestricao).mockResolvedValueOnce('colaborador');

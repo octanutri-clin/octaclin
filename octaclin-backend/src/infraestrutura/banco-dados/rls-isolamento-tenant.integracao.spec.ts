@@ -3242,6 +3242,17 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     const depois = await leitura.consultarAvaliacao(titular, dados.pacienteId) as { avaliacao: { situacao: string; revisao: number; confirmadoEm: string; venceEm: string } };
     expect(depois.avaliacao).toEqual(expect.objectContaining({ situacao: 'restricoes_registradas', revisao: inicial.revisao + 1 }));
     expect(Date.parse(depois.avaliacao.venceEm) - Date.parse(depois.avaliacao.confirmadoEm)).toBe(180 * 86_400_000);
+    // Corrida (revisão R4): duas reconfirmações "sem alteração" com a mesma revisão: uma vence, a outra recebe 409 (CAS sob lock).
+    const corrida = await Promise.allSettled([reconfirmar.registrarSemAlteracao(titular, dados.pacienteId, pedido(depois.avaliacao.revisao)),
+      reconfirmar.registrarSemAlteracao(titular, dados.pacienteId, pedido(depois.avaliacao.revisao))]);
+    expect(corrida.filter(r => r.status === 'fulfilled')).toHaveLength(1);
+    expect(corrida.find(r => r.status === 'rejected')).toMatchObject({ reason: { status: 409 } });
+    const final = await leitura.consultarAvaliacao(titular, dados.pacienteId) as { avaliacao: { situacao: string; revisao: number } };
+    expect(final.avaliacao).toEqual(expect.objectContaining({ situacao: 'restricoes_registradas', revisao: depois.avaliacao.revisao + 1 }));
+    // Com restrição confirmada, a declaração de ausência é recusada e a avaliação não muda.
+    await expect(reconfirmar.registrarAusenciaDeclarada(titular, dados.pacienteId, { ...pedido(final.avaliacao.revisao), confirmacaoExplicitaAusencia: true }))
+      .rejects.toMatchObject({ status: 409 });
+    expect((await leitura.consultarAvaliacao(titular, dados.pacienteId) as { avaliacao: { revisao: number } }).avaliacao.revisao).toBe(final.avaliacao.revisao);
     // Sem a concessão, nem a avaliação é criada (o caso "nada confirmado" fica no unitário da reconfirmação).
     await expect(reconfirmar.garantirAvaliacaoInicial(semConcessao, outro.pacienteId)).rejects.toMatchObject({ status: 403 });
     // RLS por SQL direto: outro tenant não vê a avaliação.
