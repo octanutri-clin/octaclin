@@ -3,9 +3,15 @@
  * sem cache e sem guardar nada em armazenamento do navegador. Erros viram um tipo fechado; o texto vem de
  * `lib/textos-restricoes.ts`, nunca da resposta.
  */
-import type { PedidosPortalTela, ResumoPortalTela, SeletorPortalTela } from "./restricoes-portal";
+import type {
+  PedidoPortalTela,
+  PedidosPortalTela,
+  ResumoPortalTela,
+  SeletorPortalTela,
+  TipoDeclaracaoPortal,
+} from "./restricoes-portal";
 
-export type FalhaRestricoesPortal = "indisponivel" | "sessao" | "semAcesso" | "mudou" | "invalida" | "leitura";
+export type FalhaRestricoesPortal = "indisponivel" | "sessao" | "semAcesso" | "mudou" | "invalida" | "leitura" | "incerto";
 
 export class ErroRestricoesPortal extends Error {
   constructor(readonly tipo: FalhaRestricoesPortal) {
@@ -60,3 +66,44 @@ export const obterResumoRestricoesPortal = (pacienteId: string, signal?: AbortSi
 
 export const listarPedidosRestricoesPortal = (pacienteId: string, signal?: AbortSignal) =>
   pedir<PedidosPortalTela>(`/${encodeURIComponent(pacienteId)}/pedidos`, "POST", signal);
+
+// ---------------------------------------------------------------------------------------------------------------
+// Escrita (P3-2). Falha de rede ou 5xx depois de enviar é "incerto": a ação pode ter sido gravada. A tela repete com a
+// MESMA chave de criação (o backend é idempotente por chave), então repetir não duplica.
+
+async function enviar<T>(caminho: string, corpo: unknown): Promise<T> {
+  let resposta: Response;
+  try {
+    resposta = await fetch(`${BASE}${caminho}`, {
+      method: "POST",
+      credentials: "same-origin",
+      cache: "no-store",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(corpo),
+    });
+  } catch {
+    throw new ErroRestricoesPortal("incerto");
+  }
+  if (!resposta.ok) {
+    const tipo = tipoDoStatus(resposta.status);
+    throw new ErroRestricoesPortal(tipo === "leitura" ? "incerto" : tipo);
+  }
+  try {
+    return (await resposta.json()) as T;
+  } catch {
+    throw new ErroRestricoesPortal("incerto");
+  }
+}
+
+export const declararRestricaoPortal = (
+  pacienteId: string,
+  entrada: { chaveCriacao: string; tipo: TipoDeclaracaoPortal; alimento: string },
+) => enviar<{ id: string; chaveSelo: string }>(`/${encodeURIComponent(pacienteId)}/declarar`, entrada);
+
+export const criarPedidoRestricaoPortal = (
+  pacienteId: string,
+  entrada: { chaveCriacao: string; tipo: "correcao" | "remocao"; restricaoId: string; texto: string },
+) => enviar<PedidoPortalTela>(`/${encodeURIComponent(pacienteId)}/pedidos/criar`, entrada);
+
+export const cancelarPedidoRestricaoPortal = (pacienteId: string, solicitacaoId: string) =>
+  enviar<PedidoPortalTela>(`/${encodeURIComponent(pacienteId)}/pedidos/${encodeURIComponent(solicitacaoId)}/cancelar`, {});

@@ -286,3 +286,24 @@ fazer as alterações. Efeito no desenho (ainda não implementado):
   clínica), sem depender de alguém lembrar de editar; a clínica pode também apagar ou corrigir o link dele.
 - **Autônomo:** é a própria clínica e o profissional ao mesmo tempo; configura um link só.
 - Mesmas regras de URL do desenho acima (só `https:`, formatos de WhatsApp, sem dado do paciente, validação no backend).
+
+## Execução da P3-2 (2026-11-18)
+
+- **#555 (P3-1) mergeada** em `e209570`. A branch da sessão foi reiniciada a partir da `main`.
+- **P3-2 (escrita do portal):**
+  - BFF `declarar`, `pedidos/criar` e `pedidos/[solicitacaoId]/cancelar`. O navegador manda só a escolha simples, e o BFF monta o conteúdo do contrato. Pelo portal não entram gravidade, observação, alvo de catálogo nem preferência.
+  - "Não sei dizer" grava `outra_restricao_clinica` (Q-G).
+  - A chave de criação é reutilizada ao repetir depois de um resultado incerto.
+  - Avisos de limite antes de enviar (50 declarações e 50 pedidos abertos).
+  - Cancelamento com confirmação.
+  - Link para "Mensagens" (NUX-20 a).
+  - O texto aprovado da abertura voltou: "Solicite uma correção…".
+  - A projeção passou a aceitar pedidos de `inclusao`, um achado BAIXA da revisão R4 da #555.
+- **Ordem decidida pelo proprietário em 2026-11-18:** a P3-0a fica como última fatia de backend da P3. Como a aba do profissional (P3-3 a P3-5) depende da listagem e da leitura da avaliação que vêm da P3-0a, a ordem viável é: P3-2 → P3-0b → P3-6 → P3-0a → P3-3 → P3-4 → P3-5 → P3-7. **Pendente de confirmação do proprietário.**
+- **Pendência para a ativação (achado MÉDIA da revisão R4 da #555):** a disponibilidade da web precisa considerar também a flag do tenant. Entra na P3-0a.
+- **Condição de ativação nova (NUX-26, UX B/C da P3-2):** não ligar a escrita do portal sem a tela do profissional que mostra as pendências (P3-0a + P3-3); senão o paciente informa uma alergia que ninguém vê.
+- **Decisões pendentes do proprietário (UX B/C da P3-2):** NUX-24 (guardar a marca "não sabia classificar"), NUX-25 (campo opcional de reação), NUX-27 (texto de urgência após informar alergia, conteúdo clínico).
+- **Revisão R4 cruzada da #558** (subagente `tenant-security-reviewer`, mesmo modelo): sem bloqueante.
+  - **Achado A, corrigido nesta PR:** depois de um resultado incerto, o conteúdo fica travado e a repetição usa a mesma chave. "Descartar e conferir a lista" recarrega a lista e gera chave nova. Um 409 ou um resultado incerto no cancelamento recarregam a lista.
+  - **Achado B, corrigido na #559:** o backend passou a recusar gravidade, observação e alvo de catálogo na declaração do paciente.
+- **NUX-27 incluído na #558:** aviso de urgência, rascunho pendente de validação clínica.
