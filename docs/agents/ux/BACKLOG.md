@@ -57,3 +57,4 @@ Plano das telas web de restrições (profissional, colaborador, portal e represe
 ## FOOD06 P3-1 — revisão B e C, 2026-11-17
 
 Leitura do portal de restrições. Corrigidos nesta PR: PUX-10/NUX-13 (abertura sem pedir ação inexistente; o texto aprovado volta na P3-2), PUX-11 (defeito real: setas do seletor perdiam o foco), PUX-12, PUX-15 e NUX-15. BACKLOG: item no pedido do portal (PUX-13/NUX-19, exige backend), legenda de selos (PUX-14/NUX-16, ATV-7), termo único e orientação no limite (PUX-16), efeito de "escolha" no plano (NUX-22). Decisão do proprietário: canal de contato no portal (NUX-20) e aviso de restrição inativada (NUX-21). [Relatórios e limites](reports/FOOD06-P3-1-BC-2026-11-17/consolidado.md).
+- 2026-11-18: NUX-14 (a), NUX-20 (a + link externo configurável pelo profissional, em fatia própria) e NUX-21 (a), decididos pelo proprietário; ver `tasks/food06-p3-plano.md`.

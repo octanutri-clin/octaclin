@@ -256,3 +256,19 @@ Desvios registrados na P3-1:
 - A chave da web fica em `lib/server/funcionalidades-web-bff.ts` (e não em `configuracao-acesso-bff.ts`), para não misturar opt-in de funcionalidade com a origem do backend. Continua lida só no servidor.
 - O BFF de disponibilidade exige sessão e não consulta o backend; o link em "Mais" só aparece com a área habilitada na web.
 - O convite Q11 é só texto (sem link para formulários), para não sugerir que respostas antigas viram restrição.
+
+## Decisões do proprietário sobre os achados B/C da P3-1 (2026-11-18)
+
+| ID | Decisão | Efeito |
+| --- | --- | --- |
+| NUX-14 | **(a)** manter "Outras condições" | Sem mudança de código nem de taxonomia; o rótulo do grupo entra no roteiro do teste de compreensão (ATV-7, P3-7) |
+| NUX-20 | **(a)** link para "Mensagens" do portal junto das frases "fale com quem faz seu acompanhamento", **mais** a possibilidade de o profissional configurar um texto com hiperlink ou um botão para link externo (ex.: chamada no WhatsApp) | O link para `/portal/mensagens` entra na P3-2 (só web). O link externo configurável é escopo novo: exige onde guardar a configuração, quem pode editar e validação do link; ver "Link de contato configurável" abaixo |
+| NUX-21 | **(a)** não avisar quando a equipe inativa uma restrição | Sem mudança; quando a inativação atende um pedido do paciente, ele já vê o resultado e a explicação. Entra no roteiro do ATV-7 |
+
+### Link de contato configurável (NUX-20, parte nova) — desenho proposto, não implementado
+
+- **Onde:** configuração do profissional responsável (o autônomo configura o seu; na clínica, o titular), lida pelo portal junto do resumo. Alternativa: configuração do tenant (Client). A escolha depende de quem o paciente deve contatar.
+- **O que guarda:** rótulo curto (até 60 caracteres, sem quebra) e URL. Só `https:` e, para WhatsApp, `https://wa.me/<número>` ou `https://api.whatsapp.com/send?phone=<número>`; sem `javascript:`, `data:`, credencial na URL nem redirecionadores. Validação no backend (fonte de verdade) e no BFF.
+- **Como aparece:** botão ou link com o rótulo e a indicação "abre fora do OctaClin", `target="_blank"` com `rel="noopener noreferrer"`, sem parâmetro que identifique o paciente ou a restrição na URL (nada clínico sai para o destino externo).
+- **Risco:** R3/R4 (configuração nova no backend e conteúdo exibido ao paciente; risco de phishing se a validação falhar). Precisa de rota de leitura e escrita, auditoria da alteração e testes negativos de URL.
+- **Fatia sugerida:** PR própria depois da P3-2 (backend + tela de configuração + exibição no portal), com etapa UX A curta. Até ela, o portal mostra só o link interno para "Mensagens".

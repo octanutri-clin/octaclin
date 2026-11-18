@@ -20,3 +20,9 @@ Modalidade: duas instâncias distintas do runtime com o papel fornecido como pro
 | PUX-16 (termos, limite) / NUX-22 | P3 | BACKLOG | Termo único e orientação no limite de 100; efeito de "escolha" no plano (depende da P4) | — |
 
 Leitor de tela real e teste com pessoas continuam SKIPPED (ATV-7). As etapas B/C da escrita do portal ficam para a P3-2.
+
+## Decisões do proprietário (2026-11-18), registro datado
+
+- NUX-14: **(a)** manter "Outras condições"; rever no teste de compreensão (ATV-7). ACEITA.
+- NUX-20: **(a)** link para "Mensagens" do portal (P3-2) **e** link externo configurável pelo profissional (ex.: WhatsApp), em fatia própria com validação de URL; ver `tasks/food06-p3-plano.md`. ACEITA com ampliação.
+- NUX-21: **(a)** não avisar a inativação feita pela equipe; rever no ATV-7. ACEITA.
