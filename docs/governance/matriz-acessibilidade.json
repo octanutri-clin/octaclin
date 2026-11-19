@@ -175,6 +175,16 @@
       "bloqueante": true,
       "cobertoPor": "web-suite-visual",
       "motivoDaCobertura": "smoke:visual executa todos os specs, incluindo este, nos dois projects."
+    },
+    {
+      "id": "web-food06-restricoes-equipe",
+      "comando": "test:restricoes:equipe",
+      "diretorio": "octaclin-web",
+      "descricao": "Telas de equipe de restrições (FOOD06 P3-6): delegação da carteira e quem acompanha pelo portal; confirmação, busca por e-mail, erros fixos, limites, reflow a 320 px e axe (WCAG 2.0 a 2.2 AA).",
+      "especificacao": "octaclin-web/tests/visual/food06-restricoes-equipe.spec.mjs",
+      "bloqueante": true,
+      "cobertoPor": "web-suite-visual",
+      "motivoDaCobertura": "smoke:visual executa todos os specs, incluindo este, nos dois projects."
     }
   ],
   "linhas": [
@@ -898,6 +908,51 @@
         ]
       },
       "risco": "Leitor de tela real e teste com pessoas não foram observados (ATV-7). BFF simulado: não prova autorização, idempotência real nem RLS."
+    },
+    {
+      "superficie": "delegação da carteira (atrás de flag desligada)",
+      "rota": "/conta/delegacao",
+      "rotas": [
+        "/conta/delegacao"
+      ],
+      "estado": "área desligada, lista com acesso, escolha de colaborador, confirmação de dar e de remover acesso, 409, quem não é titular e limite de 100",
+      "interacao": "seleção por teclado, diálogo de confirmação com foco não destrutivo, anúncio do resultado em região viva, reflow a 320 px e axe",
+      "plataforma": [
+        "desktop-chromium",
+        "mobile-chromium"
+      ],
+      "mecanismo": "automatizado",
+      "resultado": "PASS",
+      "evidencia": {
+        "gate": "web-food06-restricoes-equipe",
+        "blocos": [
+          "FOOD06 P3-6 — delegação da carteira"
+        ]
+      },
+      "risco": "Leitor de tela real e teste com pessoas não foram observados (ATV-7). BFF simulado: não prova autorização, carteira, cota de busca nem RLS (cobertos no backend P3-0b)."
+    },
+    {
+      "superficie": "quem acompanha pelo portal, na equipe do paciente (atrás de flag desligada)",
+      "rota": "/pacientes/[id]/representantes",
+      "rotas": [
+        "/pacientes/44444444-4444-4444-8444-444444444444/representantes"
+      ],
+      "estado": "lista com nome da ficha e e-mail mascarado, e-mail inválido, não encontrado, encontrado com verificação, 429, remoção, 403 e atalho no prontuário",
+      "interacao": "busca por Enter, foco no campo inválido com aria-invalid, anúncio em região viva, diálogo de remoção, reflow a 320 px e axe",
+      "plataforma": [
+        "desktop-chromium",
+        "mobile-chromium"
+      ],
+      "mecanismo": "automatizado",
+      "resultado": "PASS",
+      "evidencia": {
+        "gate": "web-food06-restricoes-equipe",
+        "blocos": [
+          "FOOD06 P3-6 — quem acompanha pelo portal",
+          "FOOD06 P3-6 — atalho no prontuário"
+        ]
+      },
+      "risco": "Leitor de tela real e teste com pessoas não foram observados (ATV-7). BFF simulado: não prova autorização, carteira, cota de busca nem RLS (cobertos no backend P3-0b)."
     }
   ]
 }

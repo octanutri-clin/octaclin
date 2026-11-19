@@ -158,7 +158,9 @@ test("erros do backend viram mensagens fixas; corpo do backend nunca é repassad
     [409, 409],
     [404, 503],
     [500, 503],
-    [429, 503],
+    // P3-6: o repasse comum deixa o 429 passar com mensagem fixa (cota da busca de representante); o portal o trata
+    // como falha genérica de leitura.
+    [429, 429],
   ] as const) {
     await comBackend(
       () => Response.json({ message: "CANARIO_PRIVADO", detalhe: "CANARIO_PRIVADO" }, { status }),

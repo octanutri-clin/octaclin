@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import type { Route } from 'next';
+import { LinkRepresentantesProntuario } from '@/components/equipe/link-representantes-prontuario';
 import { useRouter } from 'next/navigation';
 import { FormEvent, type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -341,7 +342,11 @@ function ProntuarioPacienteConteudo({ pacienteId }: { pacienteId: string }) {
   const [sessaoCarregada, setSessaoCarregada] = useState(false);
   const [deepLinkAplicado, setDeepLinkAplicado] = useState(false);
   const [saidaPendente, setSaidaPendente] = useState<
-    { tipo: 'voltar' } | { tipo: 'agenda'; consultaId?: string; financeiro?: boolean } | { tipo: 'aba'; id: AbaProntuario } | null
+    | { tipo: 'voltar' }
+    | { tipo: 'agenda'; consultaId?: string; financeiro?: boolean }
+    | { tipo: 'aba'; id: AbaProntuario }
+    | { tipo: 'representantes' }
+    | null
   >(null);
   const requisicaoHistorico = useRef<AbortController | null>(null);
   const responsavelSolicitadoId = useRef<string | null>(null);
@@ -878,6 +883,7 @@ function ProntuarioPacienteConteudo({ pacienteId }: { pacienteId: string }) {
   function concluirSaida(pendente: NonNullable<typeof saidaPendente>) {
     if (pendente.tipo === 'voltar') router.push('/pacientes');
     else if (pendente.tipo === 'agenda') router.push(destinoAgenda(pendente));
+    else if (pendente.tipo === 'representantes') router.push(`/pacientes/${encodeURIComponent(pacienteId)}/representantes` as Route);
     else aplicarAba(pendente.id);
   }
 
@@ -1224,6 +1230,16 @@ function ProntuarioPacienteConteudo({ pacienteId }: { pacienteId: string }) {
               />
             </div>
           ) : null}
+          {/* FOOD06 P3-6: só aparece com a área de restrições ligada na web e no tenant. */}
+          <LinkRepresentantesProntuario
+            pacienteId={pacienteId}
+            aoClicar={(evento) => {
+              if (!alteracoesNaoSalvas) return;
+              evento.preventDefault();
+              setSaidaPendente({ tipo: 'representantes' });
+              setErroSalvarPlanoAntesDaSaida(null);
+            }}
+          />
         </FaixaAcoes>
       </div>
 
