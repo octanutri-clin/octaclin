@@ -159,8 +159,9 @@ const NATUREZA_DECLARACAO: Readonly<Record<TipoDeclaracaoPortal, Record<string, 
   alergia: { natureza: "clinica", subtipoClinico: "alergia_alimentar" },
   intolerancia: { natureza: "clinica", subtipoClinico: "intolerancia_alimentar" },
   outra: { natureza: "clinica", subtipoClinico: "doenca_ou_condicao_com_restricao" },
-  // "Não sei dizer" (Q-G): a equipe classifica ao conferir.
-  nao_sei: { natureza: "clinica", subtipoClinico: "outra_restricao_clinica" },
+  // "Não sei dizer" (Q-G): a equipe classifica ao conferir. A marca fechada (NUX-24, backend #559) deixa a equipe ver
+  // "Tipo não informado pelo paciente"; o backend só a aceita em declaração do paciente.
+  nao_sei: { natureza: "clinica", subtipoClinico: "outra_restricao_clinica", classificacaoPeloPaciente: "nao_sabe" },
   escolha: { natureza: "escolha" },
 });
 
