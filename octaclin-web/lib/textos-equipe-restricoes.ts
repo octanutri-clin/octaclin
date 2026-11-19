@@ -28,7 +28,7 @@ export const TEXTOS_EQUIPE_RESTRICOES = Object.freeze({
 
   tituloRepresentantes: "Quem acompanha pelo portal",
   avisoRepresentantes:
-    "Pessoas com conta no portal que podem ver as restrições deste paciente e pedir correções em nome dele. Registre só depois de conferir a identidade da pessoa e o vínculo com o paciente.",
+    "Pessoas com conta no portal que podem ver as restrições alimentares deste paciente (como alergias e intolerâncias) e pedir correções em nome dele. Registre só depois de conferir a identidade da pessoa e o vínculo com o paciente, e avise o paciente e a pessoa quando registrar ou remover.",
   vazioRepresentantes: "Ninguém acompanha este paciente pelo portal, além da própria conta dele.",
   rotuloEmail: "E-mail da conta da pessoa",
   ajudaEmail: "Use o e-mail exato com que a pessoa entra no portal.",
@@ -36,15 +36,19 @@ export const TEXTOS_EQUIPE_RESTRICOES = Object.freeze({
   naoEncontrado:
     "Não encontramos uma conta que possa ser adicionada com este e-mail. Confira o endereço ou peça para a pessoa criar o acesso ao portal.",
   encontrado: (identificacao: string) => `Conta encontrada: ${identificacao}`,
+  voceBuscou: (email: string) => `Você buscou: ${email}. Confira com a pessoa antes de registrar.`,
+  escolhaVerificacao: "Escolha como você conferiu para continuar.",
+  pacienteAtual: (nome: string) => `Paciente: ${nome}`,
+  botaoRegistrarDe: (nome: string) => `Registrar como responsável de ${nome}`,
   rotuloVerificacao: "Como você conferiu a identidade e o vínculo?",
   botaoRegistrar: "Registrar como responsável",
   registrado: (identificacao: string) => `${identificacao} agora acompanha este paciente pelo portal.`,
   limiteRepresentantes: "Este paciente chegou ao limite de 100 pessoas que acompanham. Remova uma para adicionar outra.",
-  muitasBuscas: "Muitas buscas seguidas. Aguarde alguns minutos e tente de novo.",
+  muitasBuscas: "Muitas buscas seguidas. Aguarde cerca de 15 minutos e tente de novo; o e-mail digitado continua no campo.",
   botaoRevogarRepresentante: "Remover",
   confirmarRevogarRepresentanteTitulo: (identificacao: string) => `Remover ${identificacao}?`,
   confirmarRevogarRepresentanteTexto:
-    "A pessoa deixa de ver as informações deste paciente no portal. Pedidos já feitos continuam no histórico.",
+    "A pessoa deixa de ver as informações deste paciente no portal. Os pedidos que ela já fez continuam registrados para a equipe, que segue analisando os que estiverem em aberto; ela não os verá mais.",
   manterRepresentante: "Manter",
   revogadoRepresentante: (identificacao: string) => `${identificacao} não acompanha mais este paciente pelo portal.`,
   verificadoEm: (texto: string) => texto,

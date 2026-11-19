@@ -71,6 +71,8 @@ export async function prepararEquipe(page, cenario = {}) {
     if (caminho.endsWith('/conceder')) return responder(route, conceder);
     return responder(route, revogarDelegacao);
   });
+  await page.route((url) => url.pathname === `/api/pacientes/${PACIENTE}`, (route) => json(route, 200, { id: PACIENTE, tenantId: 'tenant-sintetico',
+    profissionalResponsavelId: 'profissional-sintetico', nome: 'Rafael Sintético' }));
   await page.route((url) => url.pathname.startsWith(`/api/pacientes/${PACIENTE}/representantes/`), async (route) => {
     const caminho = new URL(route.request().url()).pathname;
     pedidos.push({ caminho, url: route.request().url(), metodo: route.request().method(), corpo: route.request().postData() });

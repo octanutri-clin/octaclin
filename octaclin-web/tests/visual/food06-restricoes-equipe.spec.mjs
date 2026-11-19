@@ -120,6 +120,8 @@ test.describe('FOOD06 P3-6 — quem acompanha pelo portal', () => {
     await page.goto('/pacientes/44444444-4444-4444-8444-444444444444/representantes');
     const regiao = representantes(page);
     await expect(regiao.getByText('Helena Sintética')).toBeVisible();
+    // NUX-01 (etapa B): o nome do paciente aparece para não registrar no prontuário errado.
+    await expect(regiao.getByText('Paciente: Rafael Sintético')).toBeVisible();
     await expect(regiao.getByText('Conta p***@e***.test')).toBeVisible();
     await expect(regiao.getByText('Presencial em 10/11/2026')).toBeVisible();
     await expect(regiao.getByText('Procuração em 10/11/2026')).toBeVisible();
@@ -161,7 +163,7 @@ test.describe('FOOD06 P3-6 — quem acompanha pelo portal', () => {
     const busca = pedidos.find((p) => p.caminho.endsWith('/buscar'));
     expect(JSON.parse(busca.corpo)).toEqual({ email: 'Pessoa.Sintetica@Example.test' });
     expect(busca.url).not.toMatch(/example|@|pessoa/i);
-    await expect(regiao.getByRole('button', { name: 'Registrar como responsável' })).toHaveCount(0);
+    await expect(regiao.getByRole('button', { name: /Registrar como responsável/ })).toHaveCount(0);
   });
 
   test('encontrado: escolhe a verificação, registra com corpo exato, limpa o e-mail e anuncia', async ({ page }) => {
@@ -174,8 +176,11 @@ test.describe('FOOD06 P3-6 — quem acompanha pelo portal', () => {
     await campo.fill('nova.sintetica@example.test');
     await page.keyboard.press('Enter');
     await expect(regiao.getByRole('status').filter({ hasText: 'Conta encontrada: Conta n***@e***.test' })).toBeVisible();
-    const registrar = regiao.getByRole('button', { name: 'Registrar como responsável' });
+    // NUX-02/PUX-02: repete o e-mail que a própria equipe digitou; NUX-07: o motivo do botão desabilitado é anunciado.
+    await expect(regiao.getByText('Você buscou: nova.sintetica@example.test.', { exact: false })).toBeVisible();
+    const registrar = regiao.getByRole('button', { name: 'Registrar como responsável de Rafael Sintético' });
     await expect(registrar).toBeDisabled();
+    await expect(registrar).toHaveAccessibleDescription('Escolha como você conferiu para continuar.');
     await regiao.getByLabel('Como você conferiu a identidade e o vínculo?').selectOption('documento_apresentado');
     await registrar.click();
     await expect(regiao.getByRole('status').filter({ hasText: 'Conta n***@e***.test agora acompanha este paciente pelo portal.' })).toBeVisible();
@@ -192,7 +197,8 @@ test.describe('FOOD06 P3-6 — quem acompanha pelo portal', () => {
     const regiao = representantes(page);
     await regiao.getByLabel('E-mail da conta da pessoa').fill('x@example.test');
     await regiao.getByRole('button', { name: 'Buscar conta' }).click();
-    await expect(regiao.getByRole('status').filter({ hasText: 'Muitas buscas seguidas. Aguarde alguns minutos e tente de novo.' })).toBeVisible();
+    await expect(regiao.getByLabel('E-mail da conta da pessoa')).toHaveValue('x@example.test');
+    await expect(regiao.getByRole('status').filter({ hasText: 'Muitas buscas seguidas. Aguarde cerca de 15 minutos e tente de novo; o e-mail digitado continua no campo.' })).toBeVisible();
     await expect(regiao).not.toContainText('CANARIO');
   });
 
@@ -203,6 +209,8 @@ test.describe('FOOD06 P3-6 — quem acompanha pelo portal', () => {
     await regiao.getByRole('button', { name: 'Remover: Conta p***@e***.test' }).click();
     const modal = page.getByRole('dialog', { name: 'Remover Conta p***@e***.test?' });
     await expect(modal).toContainText('A pessoa deixa de ver as informações deste paciente no portal.');
+    // NUX-03: contas mascaradas parecidas se distinguem pela verificação e pela data na confirmação.
+    await expect(modal).toContainText('Procuração em 10/11/2026.');
     await modal.getByRole('button', { name: 'Remover' }).click();
     await expect(regiao.getByRole('status').filter({ hasText: 'Conta p***@e***.test não acompanha mais este paciente pelo portal.' })).toBeVisible();
     expect(pedidos.find((p) => p.caminho.endsWith(`/${VINCULO_B}/revogar`)).corpo).toBe('{}');

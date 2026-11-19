@@ -1,0 +1,21 @@
+{
+  "etapa": "B (P3-6)",
+  "base": "feee832",
+  "data": "2026-11-19",
+  "modalidade": "duas instâncias distintas do runtime desta sessão, com o papel fornecido como prompt; síntese editorial do coordenador",
+  "instancias": "IDs internos do runtime não copiados para o repositório; constam na trilha da sessão",
+  "entrada": "brief.md",
+  "papeis_toml_sha256": {
+    "octaclin-nutricionista-ux.toml": "6259b40a98e2c49053cbc6adbc0c59d0312b14e191b228ab73de2f2eac53af6d",
+    "octaclin-paciente-ux.toml": "a40b1ded5e47739a2710caa5ec9a9a7871b57be7efc11deefaae0515028ff7d7"
+  },
+  "ferramentas_do_revisor": [],
+  "ferramentas_observacao": "o runtime reportou 0 chamadas de ferramenta em cada instância",
+  "limitacoes": "sem leitor de tela real, sem pessoas, não independentes do coordenador; não é validação clínica, jurídica nem R4",
+  "sha256": {
+    "brief.md": "22c6bdc0b7899bae342d5f8806fac96f96adffb15abfe2a0b9798861b93a362e",
+    "nutricionista.md": "0e3b7c82383a3486df8c36dcf02a9ded63aa0488672e962ad7d28f3675eb835b",
+    "paciente.md": "7c96f89627ef392c2b58db27a7b9356c5fa384ac97116cc95c450db5414aa74a",
+    "consolidado.md": "37072b821253381f21183ae2057d6350c4463b45822576327bfd402dc60170ac"
+  }
+}

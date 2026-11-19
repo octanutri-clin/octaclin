@@ -25,6 +25,7 @@ import {
   type FalhaEquipe
 } from '@/lib/restricoes-equipe-api';
 import { obterSessao } from '@/lib/auth-api';
+import { obterPaciente } from '@/lib/cadastros-api';
 import { OPCOES_VERIFICACAO, TEXTOS_EQUIPE_RESTRICOES as T, rotuloVerificacao } from '@/lib/textos-equipe-restricoes';
 import { formatarDataEquipe, mensagemFalhaEquipe } from './estado-equipe';
 
@@ -38,7 +39,7 @@ type Busca =
   | { fase: 'livre' }
   | { fase: 'buscando' }
   | { fase: 'nao_encontrado' }
-  | { fase: 'encontrado'; usuarioId: string; identificacao: IdentificacaoTela }
+  | { fase: 'encontrado'; usuarioId: string; identificacao: IdentificacaoTela; buscado: string }
   | { fase: 'erro'; texto: string };
 
 /**
@@ -50,6 +51,8 @@ type Busca =
 export function RepresentantesPaciente({ pacienteId }: { pacienteId: string }) {
   // Só para mostrar o atalho da delegação; não é autorização (quem decide é o backend).
   const [titular, setTitular] = useState(false);
+  // NUX-01 (etapa B): o nome do paciente fica visível para não registrar alguém no prontuário errado.
+  const [nomePaciente, setNomePaciente] = useState('');
   const [estado, setEstado] = useState<Estado>({ fase: 'carregando' });
   const [email, setEmail] = useState('');
   const [emailInvalido, setEmailInvalido] = useState(false);
@@ -61,6 +64,7 @@ export function RepresentantesPaciente({ pacienteId }: { pacienteId: string }) {
   const idEmail = useId();
   const idAjuda = useId();
   const idVerificacao = useId();
+  const idMotivo = useId();
   const campoEmail = useRef<HTMLInputElement>(null);
   const titulo = useRef<HTMLHeadingElement>(null);
 
@@ -87,8 +91,9 @@ export function RepresentantesPaciente({ pacienteId }: { pacienteId: string }) {
   useEffect(() => {
     let ativo = true;
     void obterSessao().then((s) => { if (ativo) setTitular(s?.papel === 'Professional'); }).catch(() => undefined);
+    void obterPaciente(pacienteId).then((p) => { if (ativo && typeof p?.nome === 'string') setNomePaciente(p.nome); }).catch(() => undefined);
     return () => { ativo = false; };
-  }, []);
+  }, [pacienteId]);
 
   const limparBusca = () => {
     setEmail('');
@@ -107,7 +112,8 @@ export function RepresentantesPaciente({ pacienteId }: { pacienteId: string }) {
     setBusca({ fase: 'buscando' });
     try {
       const r = await buscarRepresentante(pacienteId, email);
-      setBusca(r.candidato ? { fase: 'encontrado', usuarioId: r.candidato.usuarioId, identificacao: r.candidato.identificacao } : { fase: 'nao_encontrado' });
+      // NUX-02/PUX-02: repete o que a própria equipe digitou (não vem do servidor) para pegar erro de digitação.
+      setBusca(r.candidato ? { fase: 'encontrado', usuarioId: r.candidato.usuarioId, identificacao: r.candidato.identificacao, buscado: email.trim() } : { fase: 'nao_encontrado' });
     } catch (falha) {
       setBusca({ fase: 'erro', texto: mensagemFalhaEquipe(falha instanceof ErroEquipe ? falha.tipo : 'leitura') });
     }
@@ -238,13 +244,15 @@ export function RepresentantesPaciente({ pacienteId }: { pacienteId: string }) {
                     void registrar();
                   }}
                 >
+                  <p className="break-all text-xs text-texto-suave">{T.voceBuscou(busca.buscado)}</p>
                   <Rotulo htmlFor={idVerificacao}>{T.rotuloVerificacao}</Rotulo>
                   <Selecao id={idVerificacao} value={verificacao} required onChange={(e) => setVerificacao(e.target.value as TipoVerificacao | '')}>
                     <option value="">Escolha uma opção</option>
                     {OPCOES_VERIFICACAO.map((o) => <option key={o.valor} value={o.valor}>{o.rotulo}</option>)}
                   </Selecao>
-                  <Botao type="submit" variante="primario" disabled={!verificacao || enviando}>
-                    {enviando ? 'Registrando' : T.botaoRegistrar}
+                  {!verificacao ? <p id={idMotivo} className="text-xs text-texto-suave">{T.escolhaVerificacao}</p> : null}
+                  <Botao type="submit" variante="primario" disabled={!verificacao || enviando} aria-describedby={!verificacao ? idMotivo : undefined}>
+                    {enviando ? 'Registrando' : nomePaciente ? T.botaoRegistrarDe(nomePaciente) : T.botaoRegistrar}
                   </Botao>
                 </form>
               ) : null}
@@ -262,7 +270,9 @@ export function RepresentantesPaciente({ pacienteId }: { pacienteId: string }) {
         <ModalConfirmacao
           aberto={revogando !== null}
           titulo={T.confirmarRevogarRepresentanteTitulo(revogando ? textoIdentificacao(revogando.identificacao) : '')}
-          mensagem={T.confirmarRevogarRepresentanteTexto}
+          mensagem={revogando
+            ? `${rotuloVerificacao(revogando.tipoVerificacao)} em ${formatarDataEquipe(revogando.verificadoEm)}. ${T.confirmarRevogarRepresentanteTexto}`
+            : T.confirmarRevogarRepresentanteTexto}
           rotuloConfirmar={T.botaoRevogarRepresentante}
           rotuloCancelar={T.manterRepresentante}
           confirmando={enviando}
@@ -277,6 +287,7 @@ export function RepresentantesPaciente({ pacienteId }: { pacienteId: string }) {
     <section aria-label={T.tituloRepresentantes} className="grid gap-4">
       <div>
         <h2 ref={titulo} tabIndex={-1} className="text-lg font-semibold text-tinta">{T.tituloRepresentantes}</h2>
+        {nomePaciente ? <p className="mt-1 break-words text-sm font-semibold text-tinta">{T.pacienteAtual(nomePaciente)}</p> : null}
         <p className="mt-1 text-sm text-texto-suave">{T.avisoRepresentantes}</p>
       </div>
       <div role="status" aria-live="polite" className={aviso ? 'rounded-md border border-linha px-3 py-2 text-sm text-tinta' : 'sr-only'}>
