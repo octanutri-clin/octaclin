@@ -28,6 +28,8 @@ import {
  */
 
 const BASE_DELEGACOES = "/profissional/delegacoes-carteira";
+/** Igual à guarda do backend (P3-0b): ler E gerenciar para mudar a delegação. */
+const GERENCIAR_DELEGACAO = ["pacientes.ler", "pacientes.gerenciar"] as const;
 const caminhoRepresentantes = (pacienteId: string, sufixo: string) =>
   `/pacientes/${encodeURIComponent(pacienteId)}/representantes/${sufixo}`;
 
@@ -35,18 +37,18 @@ export const tratarListarDelegacoes = (request: Request) =>
   repassarRestricoes(request, { caminho: `${BASE_DELEGACOES}/listar`, permissao: "pacientes.ler", montarCorpo: exigirCorpoVazio, projetar: projetarDelegacoes });
 
 export const tratarCandidatosDelegacao = (request: Request) =>
-  repassarRestricoes(request, { caminho: `${BASE_DELEGACOES}/candidatos/listar`, permissao: "pacientes.gerenciar", montarCorpo: exigirCorpoVazio,
+  repassarRestricoes(request, { caminho: `${BASE_DELEGACOES}/candidatos/listar`, permissao: GERENCIAR_DELEGACAO, montarCorpo: exigirCorpoVazio,
     projetar: projetarCandidatosDelegacao });
 
 export const tratarConcederDelegacao = (request: Request) =>
-  repassarRestricoes(request, { caminho: `${BASE_DELEGACOES}/conceder`, permissao: "pacientes.gerenciar", montarCorpo: montarConcessaoDelegacao,
+  repassarRestricoes(request, { caminho: `${BASE_DELEGACOES}/conceder`, permissao: GERENCIAR_DELEGACAO, montarCorpo: montarConcessaoDelegacao,
     projetar: projetarDelegacaoUnica });
 
 export async function tratarRevogarDelegacao(request: Request, delegacaoId: string): Promise<Response> {
   if (!restricoesClinicasHabilitadasNaWeb()) return erroRestricoes(404);
   if (!UUID_RESTRICOES.test(delegacaoId)) return erroRestricoes(400);
   const id = delegacaoId.toLowerCase();
-  return repassarRestricoes(request, { caminho: `${BASE_DELEGACOES}/${encodeURIComponent(id)}/revogar`, permissao: "pacientes.gerenciar",
+  return repassarRestricoes(request, { caminho: `${BASE_DELEGACOES}/${encodeURIComponent(id)}/revogar`, permissao: GERENCIAR_DELEGACAO,
     montarCorpo: exigirCorpoVazio, projetar: (v) => (projetarRevogacao(v, id, "revogada") ? { id, revogada: true } : null) });
 }
 

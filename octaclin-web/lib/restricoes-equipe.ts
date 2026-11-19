@@ -13,12 +13,13 @@ export type TipoVerificacao = (typeof TIPOS_VERIFICACAO)[number];
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?Z$/;
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL_BUSCA = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const objeto = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 const uuid = (v: unknown): v is string => typeof v === "string" && UUID.test(v);
 const data = (v: unknown): v is string => typeof v === "string" && ISO.test(v);
-const emailCompleto = (v: unknown): v is string => typeof v === "string" && v.length <= 254 && EMAIL.test(v);
+/** E-mail VINDO do backend: mesma regra do controlador (3..254 com "@"), para nunca esconder uma conta que ele aceitou (R4). */
+const emailCompleto = (v: unknown): v is string => typeof v === "string" && v.length >= 3 && v.length <= 254 && v.includes("@");
 const chavesExatas = (v: Record<string, unknown>, chaves: string[]) =>
   Object.keys(v).length === chaves.length && chaves.every((c) => Object.prototype.hasOwnProperty.call(v, c));
 
@@ -40,13 +41,18 @@ export function projetarDelegacaoUnica(v: unknown): DelegacaoTela | null {
 
 export function projetarDelegacoes(v: unknown): { itens: DelegacaoTela[] } | null {
   if (!objeto(v) || !Array.isArray(v.itens)) return null;
-  return { itens: v.itens.map(projetarDelegacaoUnica).filter((d): d is DelegacaoTela => d !== null) };
+  // Falha fechado: um item fora do formato derruba a lista (503), em vez de sumir uma delegação vigente da tela (R4).
+  const itens = v.itens.map(projetarDelegacaoUnica);
+  return itens.every((d): d is DelegacaoTela => d !== null) ? { itens } : null;
 }
 
 export function projetarCandidatosDelegacao(v: unknown): { itens: CandidatoDelegacaoTela[]; noLimite: boolean } | null {
   if (!objeto(v) || !Array.isArray(v.itens) || typeof v.noLimite !== "boolean") return null;
   const itens: CandidatoDelegacaoTela[] = [];
-  for (const c of v.itens) if (objeto(c) && uuid(c.usuarioId) && emailCompleto(c.email)) itens.push({ usuarioId: c.usuarioId, email: c.email });
+  for (const c of v.itens) {
+    if (!objeto(c) || !uuid(c.usuarioId) || !emailCompleto(c.email)) return null;
+    itens.push({ usuarioId: c.usuarioId, email: c.email });
+  }
   return { itens, noLimite: v.noLimite };
 }
 
@@ -74,7 +80,8 @@ export function projetarRepresentanteUnico(v: unknown): RepresentanteTela | null
 
 export function projetarRepresentantes(v: unknown): { itens: RepresentanteTela[] } | null {
   if (!objeto(v) || !Array.isArray(v.itens)) return null;
-  return { itens: v.itens.map(projetarRepresentanteUnico).filter((r): r is RepresentanteTela => r !== null) };
+  const itens = v.itens.map(projetarRepresentanteUnico);
+  return itens.every((r): r is RepresentanteTela => r !== null) ? { itens } : null;
 }
 
 export function projetarCandidatoRepresentante(v: unknown): { candidato: { usuarioId: string; identificacao: IdentificacaoTela } | null } | null {
@@ -90,7 +97,8 @@ export function projetarCandidatoRepresentante(v: unknown): { candidato: { usuar
 export function montarBuscaRepresentante(v: unknown): { email: string } | null {
   if (!objeto(v) || !chavesExatas(v, ["email"]) || typeof v.email !== "string") return null;
   const email = v.email.trim().toLowerCase();
-  return emailCompleto(email) && email.length >= 3 ? { email } : null;
+  // Entrada da busca: formato de e-mail usual (com ponto no domínio), como o backend valida a busca.
+  return email.length >= 3 && email.length <= 254 && EMAIL_BUSCA.test(email) ? { email } : null;
 }
 
 export function montarRegistroRepresentante(v: unknown): { representanteUsuarioId: string; tipoVerificacao: TipoVerificacao } | null {

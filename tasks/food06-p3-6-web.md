@@ -25,6 +25,15 @@ Plano: `tasks/food06-p3-plano.md` (§1 P3-6, Q-C). Depende do backend P3-0b (#56
   navegador; regressão dos specs do portal e do prontuário.
 - Matriz de acessibilidade: gate `web-food06-restricoes-equipe`.
 
+## Revisão R4 (`tenant-security-reviewer`, mesmo modelo, não independente)
+
+Sem ALTA. **MÉDIA corrigida**: a web validava o e-mail vindo do backend com uma regra mais estrita e descartava o item em silêncio
+(uma delegação vigente poderia sumir da tela). Agora usa a regra do backend (3..254 com "@") e qualquer item fora do formato derruba
+a lista inteira (503), em delegações, candidatos e representantes. **BAIXA corrigida**: mudar a delegação exige `pacientes.ler` e
+`pacientes.gerenciar` no BFF, como no backend. **BAIXA registrada**: o 429 agora chega ao portal (tratado como falha de leitura ou
+incerto, como o 503 antes). **BAIXA para o deploy**: a web com NUX-24 só pode ir a produção depois do backend da #559; antes disso,
+"Não sei dizer" receberia 400.
+
 ## Pendente de decisão
 
 NUX-08 (entrada da delegação) e se a delegação deve aparecer com o portal desligado. Ver o consolidado da etapa B.

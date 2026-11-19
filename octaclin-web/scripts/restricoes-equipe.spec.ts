@@ -20,15 +20,14 @@ const A = "11111111-1111-4111-8111-111111111111";
 const B = "22222222-2222-4222-8222-222222222222";
 const ISO = "2026-11-10T10:00:00.000Z";
 
-test("delegações: allowlist com e-mail completo; item inválido descartado; formato inesperado falha fechado", () => {
+test("delegações: allowlist com e-mail completo; item ou formato inesperado falha fechado", () => {
   const r = projetarDelegacoes({
     itens: [
       { id: A, colaboradorUsuarioId: B, colaboradorEmail: "carla@example.test", concedidaEm: ISO, interno: "CANARIO" },
-      { id: "x", colaboradorUsuarioId: B, colaboradorEmail: "x@example.test", concedidaEm: ISO },
-      { id: B, colaboradorUsuarioId: A, colaboradorEmail: "sem-arroba", concedidaEm: ISO },
     ],
   });
   assert.deepEqual(r, { itens: [{ id: A, colaboradorUsuarioId: B, email: "carla@example.test", concedidaEm: ISO }] });
+  assert.equal(projetarDelegacoes({ itens: [{ id: B, colaboradorUsuarioId: A, colaboradorEmail: "sem-arroba", concedidaEm: ISO }] }), null);
   assert.equal(projetarDelegacoes({ itens: {} }), null);
   assert.equal(projetarDelegacoes(null), null);
   assert.deepEqual(projetarDelegacaoUnica({ id: A, colaboradorUsuarioId: B, colaboradorEmail: "carla@example.test", concedidaEm: ISO, x: "CANARIO" }),
@@ -52,13 +51,11 @@ test("concessão: exatamente { colaboradorUsuarioId } com UUID", () => {
 const nome = { tipo: "nome_ficha", nome: "Helena Sintética" };
 const mascarado = { tipo: "email_mascarado", email: "h***@e***.test" };
 
-test("representantes: allowlist com identificação fechada; identificação desconhecida descarta o item", () => {
+test("representantes: allowlist com identificação fechada; identificação desconhecida derruba a lista", () => {
   const r = projetarRepresentantes({
     itens: [
       { id: A, representanteUsuarioId: B, tipoVerificacao: "presencial", verificadoEm: ISO, identificacao: { ...nome, interno: "CANARIO" }, revogadoPor: "CANARIO" },
       { id: B, representanteUsuarioId: A, tipoVerificacao: "procuracao", verificadoEm: ISO, identificacao: mascarado },
-      { id: B, representanteUsuarioId: A, tipoVerificacao: "procuracao", verificadoEm: ISO, identificacao: { tipo: "email", email: "CANARIO@example.test" } },
-      { id: B, representanteUsuarioId: A, tipoVerificacao: "CANARIO", verificadoEm: ISO, identificacao: mascarado },
     ],
   });
   assert.deepEqual(r, { itens: [
@@ -66,6 +63,8 @@ test("representantes: allowlist com identificação fechada; identificação des
     { id: B, representanteUsuarioId: A, tipoVerificacao: "procuracao", verificadoEm: ISO, identificacao: mascarado },
   ] });
   assert.ok(!JSON.stringify(r).includes("CANARIO"));
+  assert.equal(projetarRepresentantes({ itens: [{ id: B, representanteUsuarioId: A, tipoVerificacao: "procuracao", verificadoEm: ISO,
+    identificacao: { tipo: "email", email: "CANARIO@example.test" } }] }), null);
   assert.equal(projetarRepresentantes({}), null);
   assert.deepEqual(projetarRepresentanteUnico({ id: A, representanteUsuarioId: B, tipoVerificacao: "outro", verificadoEm: ISO, identificacao: mascarado }),
     { id: A, representanteUsuarioId: B, tipoVerificacao: "outro", verificadoEm: ISO, identificacao: mascarado });
@@ -103,4 +102,14 @@ test("textos: identificação legível, verificação traduzida, nenhum termo t�
     assert.doesNotMatch(t, proibido, t);
   // A delegação vale para todos os pacientes, inclusive futuros (decisão do plano §5).
   assert.match(TEXTOS_EQUIPE_RESTRICOES.avisoDelegacao, /inclusive os futuros/);
+});
+
+test("R4 (MÉDIA): e-mail com a mesma regra do backend; item inválido derruba a lista inteira (falha fechado)", () => {
+  // O backend aceita 3..254 com "@" (sem exigir ponto no domínio); a web não pode esconder uma delegação vigente.
+  assert.deepEqual(projetarDelegacoes({ itens: [{ id: A, colaboradorUsuarioId: B, colaboradorEmail: "x@localhost", concedidaEm: ISO }] }),
+    { itens: [{ id: A, colaboradorUsuarioId: B, email: "x@localhost", concedidaEm: ISO }] });
+  assert.equal(projetarDelegacoes({ itens: [{ id: A, colaboradorUsuarioId: B, colaboradorEmail: "x@localhost", concedidaEm: ISO }, { id: "x" }] }), null);
+  assert.equal(projetarCandidatosDelegacao({ itens: [{ usuarioId: "x", email: "a@b" }], noLimite: false }), null);
+  assert.deepEqual(projetarCandidatosDelegacao({ itens: [{ usuarioId: A, email: "a@b" }], noLimite: false }), { itens: [{ usuarioId: A, email: "a@b" }], noLimite: false });
+  assert.equal(projetarRepresentantes({ itens: [{ id: A }] }), null);
 });

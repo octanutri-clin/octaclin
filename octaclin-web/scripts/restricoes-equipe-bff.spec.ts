@@ -99,6 +99,10 @@ test("equipe: sem sessão 401, origem hostil 403, permissão grossa ausente 403,
   await comBackend(() => Response.json({}), async (chamadas) => {
     __clearCookies();
     assert.equal((await tratarListarDelegacoes(req())).status, 401);
+    await login("Professional", ["pacientes.gerenciar"]);
+    // R4 (BAIXA): espelha o backend, que exige pacientes.ler E pacientes.gerenciar para mudar a delegação.
+    assert.equal((await tratarCandidatosDelegacao(req())).status, 403);
+    assert.equal((await tratarConcederDelegacao(req({ colaboradorUsuarioId: A }))).status, 403);
     await login("Professional", ["pacientes.ler"]);
     // Mudar a delegação exige pacientes.gerenciar; ler não basta.
     assert.equal((await tratarCandidatosDelegacao(req())).status, 403);

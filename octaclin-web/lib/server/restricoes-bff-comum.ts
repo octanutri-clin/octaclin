@@ -73,7 +73,8 @@ export const exigirCorpoVazio = (valor: unknown): Record<string, never> | null =
 
 export interface RepasseRestricoes {
   caminho: string;
-  permissao: string;
+  /** Uma permissão ou todas as de uma lista (espelhando a guarda do backend). */
+  permissao: string | readonly string[];
   montarCorpo: (valor: unknown) => unknown | null;
   projetar: (valor: unknown) => unknown;
 }
@@ -82,7 +83,7 @@ export async function repassarRestricoes(request: Request, { caminho, permissao,
   if (!restricoesClinicasHabilitadasNaWeb()) return erroRestricoes(404);
   try {
     if (!origemMutacaoPermitida(request)) return erroRestricoes(403);
-    await exigirPermissaoBff(permissao);
+    for (const p of typeof permissao === "string" ? [permissao] : permissao) await exigirPermissaoBff(p);
     const corpo = montarCorpo(await lerJsonLimitado(request));
     if (corpo === null) return erroRestricoes(400);
     const resposta = await requisitarBackendAutenticado(caminho, {
