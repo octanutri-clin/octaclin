@@ -3275,7 +3275,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     const outro = await prepararDadosRepresentativos(tenant, `p30a-outro-${randomUUID()}`);
     await comoTenant(tenant);
     const colaboradorId = (await cliente.query<{ id: string }>(`insert into usuarios (tenant_id, email_hash, email_criptografado, senha_hash, role)
-      values ($1, $2, $3, 'prova-rls-senha', 'Collaborator') returning id`, [tenant, `prova-p30a-${randomUUID()}`, Buffer.from('usuario-sintetico')])).rows[0].id;
+      values ($1, $2, $3, 'prova-rls-senha', 'Collaborator') returning id`, [tenant, `prova-p30a-${randomUUID()}`, new CriptografiaDadosSensiveis().criptografar(`p30a-${randomUUID()}@example.test`)])).rows[0].id;
     const comoUsuario = (usuarioId: string, papel: UsuarioAutenticado['papel']): UsuarioAutenticado => ({ tenantId: tenant, usuarioId, papel, emailHash: '', permissoes: [] });
     const titular = comoUsuario(dados.usuarioId, 'Professional'), semConcessao = comoUsuario(outro.usuarioId, 'Professional');
     const colaborador = comoUsuario(colaboradorId, 'Collaborator');
@@ -3288,7 +3288,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     await comoTenant(tenant);
     await cliente.query(`insert into concessoes_permissao_usuario (tenant_id, usuario_id, permissao, concedida_por, motivo)
       values ($1, $2, 'restricoes.confirmar', $2, 'habilitacao_administrativa')`, [tenant, dados.usuarioId]);
-    await new ServicoDelegacoesCarteira(executorTenant).conceder(titular, colaboradorId);
+    await new ServicoDelegacoesCarteira(executorTenant, new CriptografiaDadosSensiveis()).conceder(titular, colaboradorId);
     const alergia = { schemaVersao: 1, natureza: 'clinica', subtipoClinico: 'alergia_alimentar', alvo: { tipo: 'nao_catalogado' }, alvoDeclarado: 'Amendoim sintético', observacao: 'Observação sintética da equipe' };
 
     const doTitular = await registro.registrar(titular, dados.pacienteId, { chaveCriacao: randomUUID(), conteudo: alergia }) as { id: string };
