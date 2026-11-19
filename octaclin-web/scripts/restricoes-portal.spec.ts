@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   ERROS_RESTRICOES,
+  TIPOS_DECLARACAO_PORTAL,
   TEXTOS_PORTAL_RESTRICOES,
   textoPedidoPortal,
   textoSeloPortal,
@@ -46,6 +47,7 @@ function todosOsTextos(ctx: ContextoPessoaPortal): string[] {
   for (const valor of Object.values(TEXTOS_PORTAL_RESTRICOES))
     textos.push(typeof valor === "function" ? (valor as (c: ContextoPessoaPortal, d: string) => string)(ctx, "12/09/2026") : valor);
   textos.push(...Object.values(ERROS_RESTRICOES));
+  for (const t of TIPOS_DECLARACAO_PORTAL) textos.push(t.rotulo, t.ajuda);
   return textos;
 }
 
@@ -85,8 +87,6 @@ test("textos decididos pelo proprietário (D7-a, Q11, Q-D1, Q-D2)", () => {
   assert.equal(p("restricoes.solicitacao.atendida"), "Sua informação foi atualizada");
   assert.equal(p("restricoes.solicitacao.parcial"), "Sua informação foi atualizada parcialmente");
   assert.equal(p("restricoes.solicitacao.recusada"), "Sua solicitação foi analisada e não houve alteração");
-  // P3-1: sem o botão de pedir correção, a abertura não pede essa ação (PUX-10); a P3-2 devolve o texto aprovado.
-  assert.doesNotMatch(TEXTOS_PORTAL_RESTRICOES.abertura(propria), /Solicite/);
   assert.match(TEXTOS_PORTAL_RESTRICOES.ultimaConfirmacao(propria, "12/09/2026"), /ainda não foram confirmados/);
 });
 
@@ -191,4 +191,96 @@ test("seletor do portal: só pacienteId, via e nome; corta e avisa acima de 101"
   assert.deepEqual(Object.keys(r!.itens[0]).sort(), ["nome", "pacienteId", "via"]);
   assert.ok(!JSON.stringify(r).includes("CANARIO"));
   assert.equal(projetarSeletorPortal({ itens: [{ pacienteId: UUID_A, via: "outra", nome: "x" }] })!.itens.length, 0);
+});
+
+// ---------------------------------------------------------------------------------------------------------------
+// P3-2: escrita do portal. O navegador manda só a escolha simples; o BFF monta o conteúdo do contrato.
+import {
+  montarDeclaracaoPortal,
+  montarPedidoPortal,
+  projetarDeclaracaoPortal,
+  projetarPedidoUnicoPortal,
+} from "../lib/restricoes-portal";
+
+const CHAVE = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+
+test("declaração: cada tipo vira o conteúdo do contrato, sem gravidade nem observação", () => {
+  const esperado: Record<string, Record<string, unknown>> = {
+    alergia: { natureza: "clinica", subtipoClinico: "alergia_alimentar" },
+    intolerancia: { natureza: "clinica", subtipoClinico: "intolerancia_alimentar" },
+    outra: { natureza: "clinica", subtipoClinico: "doenca_ou_condicao_com_restricao" },
+    nao_sei: { natureza: "clinica", subtipoClinico: "outra_restricao_clinica" },
+    escolha: { natureza: "escolha" },
+  };
+  for (const [tipo, parte] of Object.entries(esperado)) {
+    const r = montarDeclaracaoPortal({ chaveCriacao: CHAVE, tipo, alimento: "  Amendoim  " });
+    assert.deepEqual(r, {
+      chaveCriacao: CHAVE,
+      conteudo: { schemaVersao: 1, ...parte, alvo: { tipo: "nao_catalogado" }, alvoDeclarado: "Amendoim" },
+    }, tipo);
+  }
+});
+
+test("declaração: entrada fora do formato é recusada (null)", () => {
+  const base = { chaveCriacao: CHAVE, tipo: "alergia", alimento: "Amendoim" };
+  for (const ruim of [
+    { ...base, tipo: "preferencia" },
+    { ...base, chaveCriacao: "x" },
+    { ...base, alimento: "" },
+    { ...base, alimento: "   " },
+    { ...base, alimento: "a".repeat(201) },
+    { ...base, alimento: "linha\nquebrada" },
+    { ...base, gravidade: "leve" },
+    { ...base, observacao: "x" },
+    { ...base, tenantId: "x" },
+    null,
+    [],
+  ])
+    assert.equal(montarDeclaracaoPortal(ruim), null, JSON.stringify(ruim));
+});
+
+test("pedido: correção ou remoção com um item de texto; recusa o resto", () => {
+  const base = { chaveCriacao: CHAVE, tipo: "correcao", restricaoId: UUID_A, texto: "Não sou alérgica.\nFiz exame." };
+  assert.deepEqual(montarPedidoPortal(base), {
+    chaveCriacao: CHAVE,
+    tipo: "correcao",
+    restricaoId: UUID_A,
+    itens: [{ item: "descricao", texto: "Não sou alérgica.\nFiz exame." }],
+  });
+  assert.equal(montarPedidoPortal({ ...base, tipo: "remocao" })!.tipo, "remocao");
+  for (const ruim of [
+    { ...base, tipo: "inclusao" },
+    { ...base, restricaoId: "../x" },
+    { ...base, texto: "" },
+    { ...base, texto: "a".repeat(1001) },
+    { ...base, itens: [] },
+    { ...base, pacienteId: UUID_B },
+  ])
+    assert.equal(montarPedidoPortal(ruim), null, JSON.stringify(ruim));
+});
+
+test("respostas da escrita: declaração devolve só id e selo; pedido único passa pela mesma allowlist", () => {
+  assert.deepEqual(projetarDeclaracaoPortal({ id: UUID_A, selo: "restricoes.portal.informada_por_voce", revisao: 1, desfecho: "CANARIO" }), {
+    id: UUID_A,
+    chaveSelo: "restricoes.portal.informada_por_voce",
+  });
+  assert.equal(projetarDeclaracaoPortal({ id: "x" }), null);
+  const p = projetarPedidoUnicoPortal({ id: UUID_B, tipo: "correcao", chaveTexto: "restricoes.solicitacao.enviada", criadoEm: "2026-11-18T10:00:00.000Z", podeCancelar: true, justificativaInterna: "CANARIO" });
+  assert.deepEqual(p, { id: UUID_B, tipo: "correcao", chaveTexto: "restricoes.solicitacao.enviada", criadoEm: "2026-11-18T10:00:00.000Z", podeCancelar: true });
+  assert.equal(projetarPedidoUnicoPortal({ itens: [] }), null);
+});
+
+test("pedidos de inclusão não somem da lista (achado da revisão R4)", () => {
+  const r = projetarPedidosPortal({ itens: [{ id: UUID_A, tipo: "inclusao", chaveTexto: "restricoes.solicitacao.enviada", criadoEm: "2026-11-18T10:00:00.000Z", podeCancelar: false }], maisAntigos: false });
+  assert.equal(r!.itens.length, 1);
+  assert.match(textoPedidoPortal(r!.itens[0], propria).titulo, /inclusão/);
+});
+
+test("com o pedido disponível, a abertura volta ao texto aprovado (P3-2)", () => {
+  assert.match(TEXTOS_PORTAL_RESTRICOES.abertura(propria), /Solicite uma correção se alguma informação estiver desatualizada\./);
+});
+
+test("NUX-27: aviso de urgência com o 192 e o nome da pessoa para representante", () => {
+  assert.match(TEXTOS_PORTAL_RESTRICOES.urgencia(propria), /você tiver uma reação forte agora.*192 \(SAMU\)/);
+  assert.match(TEXTOS_PORTAL_RESTRICOES.urgencia(representada), /Ana Sintética tiver uma reação forte agora/);
 });

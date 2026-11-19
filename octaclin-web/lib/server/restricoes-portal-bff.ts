@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import {
+  montarDeclaracaoPortal,
+  montarPedidoPortal,
+  projetarDeclaracaoPortal,
+  projetarPedidoUnicoPortal,
   projetarPedidosPortal,
   projetarResumoPortal,
   projetarSeletorPortal,
@@ -15,7 +19,7 @@ import {
 import { origemMutacaoPermitida } from "./seguranca-bff";
 
 /**
- * BFF do portal de restrições (FOOD06 P3-1). Só leitura nesta fatia.
+ * BFF do portal de restrições (FOOD06 P3-1 leitura, P3-2 escrita).
  *
  * O BFF não decide autorização: exige sessão e a permissão grossa `portal.acessar`, valida a forma da entrada e
  * repassa. Quem prova tenant, conta própria ou vínculo de representação, sob lock, é o backend; o `pacienteId` da
@@ -25,7 +29,7 @@ import { origemMutacaoPermitida } from "./seguranca-bff";
 
 const CABECALHOS = { "Content-Type": "application/json", "Cache-Control": "private, no-store", Vary: "Cookie" };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const LIMITE_CORPO_ENTRADA = 1024;
+const LIMITE_CORPO_ENTRADA = 4096;
 const LIMITE_CORPO_RESPOSTA = 512 * 1024;
 
 const MENSAGENS: Readonly<Record<number, string>> = Object.freeze({
@@ -66,35 +70,40 @@ async function lerTextoLimitado(fonte: Request | Response, limite: number): Prom
   return new TextDecoder().decode(unido);
 }
 
-/** As rotas de leitura do portal aceitam exatamente `{}`: nada do navegador chega ao backend. */
-async function corpoVazio(request: Request): Promise<boolean> {
+/** Lê o corpo (limitado) como JSON; `undefined` quando não é JSON ou passa do limite. */
+async function lerJson(request: Request): Promise<unknown> {
   const bruto = await lerTextoLimitado(request, LIMITE_CORPO_ENTRADA);
-  if (bruto === null) return false;
+  if (bruto === null) return undefined;
   try {
-    const valor: unknown = JSON.parse(bruto);
-    return typeof valor === "object" && valor !== null && !Array.isArray(valor) && Object.keys(valor).length === 0;
+    return JSON.parse(bruto);
   } catch {
-    return false;
+    return undefined;
   }
 }
 
-async function repassarLeitura(
+/** As rotas de leitura e o cancelamento aceitam exatamente `{}`: nada do navegador chega ao backend. */
+const exigirVazio = (valor: unknown): Record<string, never> | null =>
+  typeof valor === "object" && valor !== null && !Array.isArray(valor) && Object.keys(valor).length === 0 ? {} : null;
+
+async function repassar(
   request: Request,
   caminho: string,
+  montarCorpo: (valor: unknown) => unknown | null,
   projetar: (valor: unknown) => unknown,
 ): Promise<Response> {
   if (!restricoesClinicasHabilitadasNaWeb()) return erro(404);
   try {
     if (!origemMutacaoPermitida(request)) return erro(403);
     await exigirPermissaoBff("portal.acessar");
-    if (!(await corpoVazio(request))) return erro(400);
+    const corpo = montarCorpo(await lerJson(request));
+    if (corpo === null) return erro(400);
     const resposta = await requisitarBackendAutenticado(caminho, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: "{}",
+      body: JSON.stringify(corpo),
       signal: request.signal,
     });
-    if (resposta.status !== 200) {
+    if (resposta.status !== 200 && resposta.status !== 201) {
       await resposta.body?.cancel();
       return erro([400, 401, 403, 409].includes(resposta.status) ? resposta.status : 503);
     }
@@ -119,19 +128,45 @@ const caminhoPaciente = (pacienteId: string, sufixo: string) =>
   `/portal/pacientes/${encodeURIComponent(pacienteId)}/restricoes/${sufixo}`;
 
 export function tratarSeletorRestricoesPortal(request: Request): Promise<Response> {
-  return repassarLeitura(request, "/portal/restricoes/pacientes/listar", projetarSeletorPortal);
+  return repassar(request, "/portal/restricoes/pacientes/listar", exigirVazio, projetarSeletorPortal);
 }
 
 export async function tratarResumoRestricoesPortal(request: Request, pacienteId: string): Promise<Response> {
   if (!restricoesClinicasHabilitadasNaWeb()) return erro(404);
   if (!UUID.test(pacienteId)) return erro(400);
-  return repassarLeitura(request, caminhoPaciente(pacienteId, "resumo"), projetarResumoPortal);
+  return repassar(request, caminhoPaciente(pacienteId, "resumo"), exigirVazio, projetarResumoPortal);
 }
 
 export async function tratarPedidosRestricoesPortal(request: Request, pacienteId: string): Promise<Response> {
   if (!restricoesClinicasHabilitadasNaWeb()) return erro(404);
   if (!UUID.test(pacienteId)) return erro(400);
-  return repassarLeitura(request, caminhoPaciente(pacienteId, "pedidos/listar"), projetarPedidosPortal);
+  return repassar(request, caminhoPaciente(pacienteId, "pedidos/listar"), exigirVazio, projetarPedidosPortal);
+}
+
+/** Declarar restrição nova (vira pendência `declaracao_paciente`). O BFF monta o conteúdo; ver `montarDeclaracaoPortal`. */
+export async function tratarDeclararRestricaoPortal(request: Request, pacienteId: string): Promise<Response> {
+  if (!restricoesClinicasHabilitadasNaWeb()) return erro(404);
+  if (!UUID.test(pacienteId)) return erro(400);
+  return repassar(request, caminhoPaciente(pacienteId, "declarar"), montarDeclaracaoPortal, projetarDeclaracaoPortal);
+}
+
+/** Pedir correção ou remoção de uma restrição que o portal mostra. O pedido nunca altera a restrição. */
+export async function tratarCriarPedidoPortal(request: Request, pacienteId: string): Promise<Response> {
+  if (!restricoesClinicasHabilitadasNaWeb()) return erro(404);
+  if (!UUID.test(pacienteId)) return erro(400);
+  return repassar(request, caminhoPaciente(pacienteId, "pedidos/criar"), montarPedidoPortal, projetarPedidoUnicoPortal);
+}
+
+/** Cancelar o próprio pedido aberto. Quem é o autor e se ainda está aberto, o backend decide sob lock. */
+export async function tratarCancelarPedidoPortal(request: Request, pacienteId: string, solicitacaoId: string): Promise<Response> {
+  if (!restricoesClinicasHabilitadasNaWeb()) return erro(404);
+  if (!UUID.test(pacienteId) || !UUID.test(solicitacaoId)) return erro(400);
+  return repassar(
+    request,
+    caminhoPaciente(pacienteId, `pedidos/${encodeURIComponent(solicitacaoId)}/cancelar`),
+    exigirVazio,
+    projetarPedidoUnicoPortal,
+  );
 }
 
 /** Diz à tela se a área existe nesta instalação da web. Exige sessão; não consulta o backend nem dado clínico. */

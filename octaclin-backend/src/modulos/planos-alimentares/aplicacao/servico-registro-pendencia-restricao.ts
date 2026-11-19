@@ -39,6 +39,12 @@ export class ServicoRegistroPendenciaRestricao {
       let conteudo: ReturnType<typeof validarConteudoRestricao>;
       try { conteudo = validarConteudoRestricao(entrada.conteudo); } catch { throw new BadRequestException('Solicitação inválida.'); }
       if (conteudo.natureza === 'preferencia') throw new BadRequestException('Preferência indisponível neste fluxo.');
+      // P3-0a (NUX-24): a marca "não sabia classificar" é do paciente; a equipe classifica, não marca.
+      if (conteudo.classificacaoPeloPaciente !== undefined && origem !== 'declaracao_paciente') throw new BadRequestException('Solicitação inválida.');
+      // P3-0a (revisão R4 da #558): pelo portal não entram gravidade, observação nem alvo de catálogo (Q-E, Q11). A regra vale
+      // no backend, e não só no BFF, porque o paciente pode chamar a API direto com o próprio token.
+      if (origem === 'declaracao_paciente' && (conteudo.gravidade !== undefined || conteudo.observacao !== undefined ||
+        conteudo.alvo.tipo !== 'nao_catalogado')) throw new BadRequestException('Solicitação inválida.');
       await g.query('select pg_advisory_xact_lock(hashtextextended($1, 0))', [`registro:${usuario.tenantId}:${usuario.usuarioId}:${chaveCriacao}`]);
       const repo = g.getRepository(RestricaoPacienteOrm);
       const historico = g.getRepository(RevisaoRestricaoPacienteOrm);

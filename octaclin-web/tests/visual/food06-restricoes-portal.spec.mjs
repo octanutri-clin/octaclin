@@ -40,9 +40,9 @@ test.describe('FOOD06 P3 — portal de restrições (leitura)', () => {
     const regiao = area(page);
     await expect(regiao.getByRole('heading', { name: 'Suas restrições alimentares' })).toBeVisible();
     await expect(regiao.getByRole('radio')).toHaveCount(0);
-    // PUX-10: enquanto não há botão de pedir correção (P3-2), a tela não pede uma ação que não oferece.
-    await expect(regiao.getByText('Se alguma informação estiver desatualizada, fale com quem faz seu acompanhamento.', { exact: false })).toBeVisible();
-    await expect(regiao.getByText(/Solicite/)).toHaveCount(0);
+    // P3-2: com o pedido disponível, volta o texto aprovado, e há caminho para falar com quem acompanha (NUX-20).
+    await expect(regiao.getByText('Solicite uma correção se alguma informação estiver desatualizada.', { exact: false })).toBeVisible();
+    await expect(regiao.getByRole('link', { name: 'Escrever para quem faz seu acompanhamento' })).toHaveAttribute('href', '/portal/mensagens');
     for (const grupo of ['Alergias', 'Intolerâncias', 'Outras condições', 'Alimentos que você evita por escolha'])
       await expect(regiao.getByRole('heading', { name: grupo })).toBeVisible();
     const alergias = regiao.getByRole('region', { name: 'Alergias' });

@@ -96,6 +96,33 @@ export function projetarConsulta(entrada: unknown): Record<string, unknown> {
   } catch { throw new InternalServerErrorException('Operação indisponível.'); }
 }
 
+/** FOOD06 P3-0a: allowlist da listagem; cada item passa pela mesma projeção da leitura individual, mais `criadoEm`. */
+export function projetarListagem(entrada: unknown): Record<string, unknown> {
+  const valor = entrada as { escopo?: unknown; itens?: unknown };
+  if (!valor || (valor.escopo !== 'completo' && valor.escopo !== 'autoria') || !Array.isArray(valor.itens)) throw new InternalServerErrorException('Operação indisponível.');
+  return { escopo: valor.escopo, itens: valor.itens.map(item => {
+    const criadoEm = (item as { criadoEm?: unknown })?.criadoEm;
+    if (!(criadoEm instanceof Date) || Number.isNaN(criadoEm.getTime())) throw new InternalServerErrorException('Operação indisponível.');
+    return { ...projetarConsulta(item), criadoEm: criadoEm.toISOString() };
+  }) };
+}
+
+/** FOOD06 P3-0a: allowlist da avaliação (sem quem confirmou). */
+function projetarAvaliacao(entrada: unknown): Record<string, unknown> {
+  const valor = (entrada as { avaliacao?: unknown })?.avaliacao;
+  if (valor === null) return { avaliacao: null };
+  const a = valor as Record<string, unknown>;
+  const data = (v: unknown) => v === null || (typeof v === 'string' && !Number.isNaN(Date.parse(v)));
+  if (!a || typeof a.id !== 'string' || !isUUID(a.id) || !Number.isSafeInteger(a.revisao) || Number(a.revisao) < 1 ||
+    !['nao_informado', 'sem_restricoes_confirmadas', 'restricoes_registradas'].includes(a.situacao as string) ||
+    !data(a.confirmadoEm) || !data(a.venceEm) || (a.situacao === 'nao_informado') !== (a.venceEm === null)) throw new InternalServerErrorException('Operação indisponível.');
+  return { avaliacao: { id: a.id, revisao: a.revisao, situacao: a.situacao, confirmadoEm: a.confirmadoEm, venceEm: a.venceEm } };
+}
+
+const exigirCorpoVazio = (dados: unknown) => {
+  if (!dados || typeof dados !== 'object' || Array.isArray(dados) || Reflect.ownKeys(dados).length !== 0) throw new HttpException('Solicitação inválida.', 400);
+};
+
 /** Sanitiza erros inclusive das guardas; não registra conteúdo nem causa. */
 @Catch()
 export class FiltroRestricoesClinicas implements ExceptionFilter {
@@ -151,6 +178,20 @@ export class ControladorRestricoesClinicas {
       ...(dados.justificativaInterna !== undefined ? { justificativaInterna: dados.justificativaInterna } : {}),
       alterados: dados.alterados, inalterados: dados.inalterados });
     return projetarAcao(valor, solicitacaoId, dados.revisao, 'estado', dados.estadoFinal);
+  }
+
+  @Post('listar') @HttpCode(200) @Permissoes('pacientes.ler') @Header('Cache-Control', 'private, no-store')
+  async listar(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('pacienteId', ParseUUIDPipe) pacienteId: string,
+    @Body() dados: unknown): Promise<unknown> {
+    exigirCorpoVazio(dados);
+    return projetarListagem(await this.leitura.listar(usuario, pacienteId));
+  }
+
+  @Post('avaliacao/consultar') @HttpCode(200) @Permissoes('pacientes.ler') @Header('Cache-Control', 'private, no-store')
+  async consultarAvaliacao(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('pacienteId', ParseUUIDPipe) pacienteId: string,
+    @Body() dados: unknown): Promise<unknown> {
+    exigirCorpoVazio(dados);
+    return projetarAvaliacao(await this.leitura.consultarAvaliacao(usuario, pacienteId));
   }
 
   @Post('avaliacao/inicial') @HttpCode(200) @Permissoes('pacientes.ler', 'pacientes.gerenciar') @Header('Cache-Control', 'private, no-store')

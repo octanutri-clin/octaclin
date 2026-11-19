@@ -147,7 +147,6 @@ export class ServicoReconfirmacaoRestricao {
         const atestadoEm = new Date();
         let venceEm: Date | null = null;
         if (!individual && (resultado === 'sem_alteracao' || resultado === 'sem_restricoes_declaradas')) {
-          if (resultado === 'sem_alteracao' && avaliacao.situacao === 'nao_informado') throw new ConflictException('Avaliação indisponível.');
           const restricoes = g.getRepository(RestricaoPacienteOrm);
           let confirmadas = 0;
           let deslocamento = 0;
@@ -169,13 +168,20 @@ export class ServicoReconfirmacaoRestricao {
           }
           if ((resultado === 'sem_restricoes_declaradas' && confirmadas > 0) ||
             (resultado === 'sem_alteracao' && avaliacao.situacao === 'sem_restricoes_confirmadas' && confirmadas > 0) ||
-            (resultado === 'sem_alteracao' && avaliacao.situacao === 'restricoes_registradas' && confirmadas === 0)) throw new ConflictException('Avaliação indisponível.');
+            (resultado === 'sem_alteracao' && avaliacao.situacao === 'restricoes_registradas' && confirmadas === 0) ||
+            // FOOD06 P3-0a (F3): de "não informada" só se reconfirma "sem alteração" quando há restrição confirmada; a ausência
+            // continua exigindo a declaração explícita (sem_restricoes_declaradas).
+            (resultado === 'sem_alteracao' && avaliacao.situacao === 'nao_informado' && confirmadas === 0)) throw new ConflictException('Avaliação indisponível.');
           const validade = registrarReconfirmacao({ agora: atestadoEm.toISOString(), pacienteId, avaliacaoId, revisaoAvaliacao,
             atestadoPor: usuario.usuarioId, meio: entrada.meio, atestacao: entrada.atestacao, resultado,
             ...(resultado === 'sem_restricoes_declaradas' ? { confirmacaoExplicitaAusencia: entrada.confirmacaoExplicitaAusencia } : {}) });
           if (!validade.venceEm) throw new ConflictException('Avaliação indisponível.');
           venceEm = new Date(validade.venceEm);
-          const situacao = resultado === 'sem_restricoes_declaradas' ? 'sem_restricoes_confirmadas' : avaliacao.situacao;
+          // FOOD06 P3-0a (F3): `restricoes_registradas` exige atestação (constraint da 1083: situação diferente de não informada
+          // tem confirmador, data e vencimento). Por isso nasce aqui, na reconfirmação global com meio e resultado, e nunca na
+          // confirmação de uma restrição isolada (Q10: a reconfirmação é atestação, não efeito colateral).
+          const situacao = resultado === 'sem_restricoes_declaradas' ? 'sem_restricoes_confirmadas'
+            : avaliacao.situacao === 'nao_informado' ? 'restricoes_registradas' : avaliacao.situacao;
           const alterada = await g.getRepository(AvaliacaoRestricoesPacienteOrm).update(
             { id: avaliacaoId, tenantId: usuario.tenantId, pacienteId, revisao: revisaoAvaliacao },
             { situacao, revisao: revisaoAvaliacao + 1, confirmadoPorUsuarioId: usuario.usuarioId,

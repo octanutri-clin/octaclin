@@ -48,7 +48,10 @@ export async function prepararPortalRestricoes(page, cenario = {}) {
     pessoas = [{ pacienteId: PROPRIA, via: 'propria', nome: 'Júlia Sintética' }],
     resumo = () => resumoComItens,
     pedidos = () => pedidosExemplo,
-    atrasoResumo = () => 0
+    atrasoResumo = () => 0,
+    declarar = () => ({ id: '99999999-0000-4000-8000-000000000001', selo: 'restricoes.portal.informada_por_voce' }),
+    criarPedido = (corpo) => ({ id: '99999999-0000-4000-8000-000000000002', tipo: corpo.tipo, chaveTexto: 'restricoes.solicitacao.enviada', criadoEm: '2026-11-18T10:00:00.000Z', podeCancelar: true }),
+    cancelar = (id) => ({ id, tipo: 'correcao', chaveTexto: 'restricoes.solicitacao.cancelada', criadoEm: '2026-11-10T10:00:00.000Z', podeCancelar: false })
   } = cenario;
   const pedidosAoBff = [];
   await page.context().addCookies([
@@ -65,6 +68,12 @@ export async function prepararPortalRestricoes(page, cenario = {}) {
     pedidosAoBff.push({ caminho, metodo: route.request().method(), corpo: route.request().postData() });
     if (caminho.endsWith('/disponibilidade')) return json(route, 200, { habilitada });
     if (caminho.endsWith('/restricoes/pacientes')) return json(route, 200, { itens: pessoas, noLimite: false });
+    const escrita = caminho.match(/restricoes\/([^/]+)\/(declarar|pedidos\/criar|pedidos\/([^/]+)\/cancelar)$/);
+    if (escrita) {
+      const corpo = JSON.parse(route.request().postData() ?? '{}');
+      const r = escrita[2] === 'declarar' ? declarar(corpo) : escrita[2] === 'pedidos/criar' ? criarPedido(corpo) : cancelar(escrita[3]);
+      return typeof r === 'number' ? json(route, r, { mensagem: 'CANARIO_PRIVADO' }) : json(route, 200, r);
+    }
     const [, id, recurso] = caminho.match(/restricoes\/([^/]+)\/(resumo|pedidos)$/) ?? [];
     if (recurso === 'resumo') {
       const atraso = atrasoResumo(id);
