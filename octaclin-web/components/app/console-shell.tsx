@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import type { Route } from 'next';
 import type { ReactNode } from 'react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   CalendarDays,
   CalendarPlus,
@@ -87,14 +87,15 @@ export function ConsoleShell({ titulo, subtitulo, acoes, children }: ConsoleShel
   }, []);
 
   // FOOD06 P3-6 (NUX-08, decisão de 2026-11-19): entrada da delegação no menu da conta, só para o titular e só com a área
-  // de restrições ligada na web e no tenant. É só navegação: a página e o backend continuam decidindo.
+  // de restrições ligada na web e no tenant. Pergunta só quando o menu abre (sem custo na carga das telas). É só
+  // navegação: a página e o backend continuam decidindo.
   const [delegacaoDisponivel, setDelegacaoDisponivel] = useState(false);
+  const perguntouDelegacao = useRef(false);
   const ehTitular = sessao?.papel === 'Professional';
-  useEffect(() => {
-    if (!ehTitular) return;
-    const controle = new AbortController();
-    void equipeRestricoesDisponivel(controle.signal).then((ok) => { if (!controle.signal.aborted) setDelegacaoDisponivel(ok); });
-    return () => controle.abort();
+  const aoAbrirMenuConta = useCallback(() => {
+    if (!ehTitular || perguntouDelegacao.current) return;
+    perguntouDelegacao.current = true;
+    void equipeRestricoesDisponivel().then(setDelegacaoDisponivel);
   }, [ehTitular]);
   const linksConta = ehTitular && delegacaoDisponivel
     ? [{ href: '/conta/delegacao', rotulo: TEXTOS_EQUIPE_RESTRICOES.tituloDelegacao, icone: <UsersRound size={16} /> }]
@@ -136,6 +137,7 @@ export function ConsoleShell({ titulo, subtitulo, acoes, children }: ConsoleShel
       } : undefined}
       navLabel="Módulos do console"
       linksConta={linksConta}
+      aoAbrirMenuConta={aoAbrirMenuConta}
       acoes={<>{atalhos}{acoes}</>}
       maxWidth="1500px"
     >

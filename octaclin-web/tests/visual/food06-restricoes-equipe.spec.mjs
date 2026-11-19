@@ -257,14 +257,25 @@ test.describe('FOOD06 P3-6 — entrada da delegação no menu da conta', () => {
   // Decisão do proprietário (2026-11-19, NUX-08): item no menu da conta, só para o titular e só com a área ligada.
   for (const [papel, disponivel, visivel] of [['Professional', true, true], ['Professional', false, false], ['Collaborator', true, false]]) {
     test(`${papel} com a área ${disponivel ? 'ligada' : 'desligada'}: item ${visivel ? 'aparece' : 'não aparece'}`, async ({ page }) => {
-      await prepararEquipe(page, { papel, disponivel });
+      const { pedidos } = await prepararEquipe(page, { papel, disponivel });
       await page.goto(`/pacientes/${PACIENTE}/representantes`);
       await expect(representantes(page).getByRole('heading', { name: 'Quem acompanha pelo portal' })).toBeVisible();
+      // A própria página pergunta a disponibilidade ao carregar; só conta depois disso.
+      if (disponivel) await expect(representantes(page).getByText('Helena Sintética')).toBeVisible();
+      else await expect(representantes(page).getByText('Esta área ainda não está disponível.')).toBeVisible();
+      const disponibilidade = () => pedidos.filter((p) => p.caminho.endsWith('/disponibilidade')).length;
+      const antes = disponibilidade();
       await page.getByRole('button', { name: /Abrir menu da conta/ }).click();
       await expect(page.getByRole('menuitem', { name: 'Sessões e segurança' })).toBeVisible();
       const item = page.getByRole('menuitem', { name: 'Colaboradores na sua carteira' });
+      // O menu só pergunta ao abrir, e só para o titular.
+      if (papel === 'Professional') await expect.poll(disponibilidade).toBeGreaterThan(antes);
       if (visivel) await expect(item).toHaveAttribute('href', '/conta/delegacao');
-      else await expect(item).toHaveCount(0);
+      else {
+        await page.waitForTimeout(300);
+        await expect(item).toHaveCount(0);
+        if (papel !== 'Professional') expect(disponibilidade()).toBe(antes);
+      }
     });
   }
 });

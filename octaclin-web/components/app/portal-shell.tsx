@@ -46,6 +46,8 @@ interface PortalShellProps {
   contextoUsuario?: ContextoUsuarioShell;
   /** Itens extras do menu da conta, depois de "Sessões e segurança" (ex.: delegação da carteira, FOOD06 P3-6). */
   linksConta?: Array<{ href: string; rotulo: string; icone: ReactNode }>;
+  /** Avisado quando o menu da conta abre (para carregar itens opcionais só sob demanda). */
+  aoAbrirMenuConta?: () => void;
   maxWidth?: string;
   children: ReactNode;
 }
@@ -64,6 +66,7 @@ export function PortalShell({
   acoes,
   contextoUsuario,
   linksConta = [],
+  aoAbrirMenuConta,
   maxWidth = '1180px',
   children
 }: PortalShellProps) {
@@ -104,6 +107,7 @@ export function PortalShell({
   const menuConta = contextoUsuario ? (
     <Menu
       className="w-72 p-3"
+      aoAbrir={aoAbrirMenuConta}
       gatilho={
         <button
           type="button"

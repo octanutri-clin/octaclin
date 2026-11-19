@@ -39,3 +39,6 @@ incerto, como o 503 antes). **BAIXA para o deploy**: a web com NUX-24 só pode i
 - **NUX-08**: entrada da delegação no menu da conta ("Colaboradores na sua carteira", depois de "Sessões e segurança"), só para o
   titular (`Professional`) e só com a área ligada na web e no tenant. O atalho na página de representantes continua.
 - **Delegação com o portal desligado**: segue a mesma flag (web e tenant). Sem mudança de código.
+- **Orçamento de performance do prontuário**: o teto da carga inicial sobe de 5 para 6 endpoints, com exceção explícita só para
+  `/api/restricoes/equipe/disponibilidade` (booleana, sem dado clínico; com a flag da web desligada a resposta sai da própria web).
+  O menu da conta só pergunta quando é aberto, sem custo nas outras telas. Teste: `console-regression.spec.mjs` (orçamento).
