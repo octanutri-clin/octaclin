@@ -34,6 +34,8 @@ a lista inteira (503), em delegações, candidatos e representantes. **BAIXA cor
 incerto, como o 503 antes). **BAIXA para o deploy**: a web com NUX-24 só pode ir a produção depois do backend da #559; antes disso,
 "Não sei dizer" receberia 400.
 
-## Pendente de decisão
+## Decisões do proprietário (2026-11-19)
 
-NUX-08 (entrada da delegação) e se a delegação deve aparecer com o portal desligado. Ver o consolidado da etapa B.
+- **NUX-08**: entrada da delegação no menu da conta ("Colaboradores na sua carteira", depois de "Sessões e segurança"), só para o
+  titular (`Professional`) e só com a área ligada na web e no tenant. O atalho na página de representantes continua.
+- **Delegação com o portal desligado**: segue a mesma flag (web e tenant). Sem mudança de código.

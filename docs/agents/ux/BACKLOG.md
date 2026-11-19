@@ -66,3 +66,4 @@ Escrita do portal. Corrigidos: PUX-17, 18, 20, 21, 22, NUX-28 e 29. Condição d
 ## FOOD06 P3-6 — revisão B, 2026-11-19
 
 Telas de equipe (delegação da carteira e quem acompanha pelo portal). Sem P0. Corrigidos: NUX-01 (P1, nome do paciente), NUX-02/PUX-02 (P1, conferir o e-mail digitado), NUX-03, NUX-05, NUX-07, PUX-01 (orientação, sem notificação), PUX-04 e PUX-05. Decisão do proprietário: NUX-08 (entrada da delegação) e se a delegação deve aparecer com o portal desligado. BACKLOG: NUX-04, 06, 09, 10, PUX-01 completo (notificação), PUX-03, PUX-06 e autor do registro de representante. [Relatórios e limites](reports/FOOD06-P3-6-B-2026-11-19/consolidado.md).
+- 2026-11-19: NUX-08 decidido pelo proprietário (item no menu da conta, só titular e com a área ligada) e a delegação segue a mesma flag do portal; ver `tasks/food06-p3-6-web.md`.

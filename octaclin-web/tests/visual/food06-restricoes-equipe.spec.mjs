@@ -252,3 +252,19 @@ test.describe('FOOD06 P3-6 — atalho no prontuário', () => {
     });
   }
 });
+
+test.describe('FOOD06 P3-6 — entrada da delegação no menu da conta', () => {
+  // Decisão do proprietário (2026-11-19, NUX-08): item no menu da conta, só para o titular e só com a área ligada.
+  for (const [papel, disponivel, visivel] of [['Professional', true, true], ['Professional', false, false], ['Collaborator', true, false]]) {
+    test(`${papel} com a área ${disponivel ? 'ligada' : 'desligada'}: item ${visivel ? 'aparece' : 'não aparece'}`, async ({ page }) => {
+      await prepararEquipe(page, { papel, disponivel });
+      await page.goto(`/pacientes/${PACIENTE}/representantes`);
+      await expect(representantes(page).getByRole('heading', { name: 'Quem acompanha pelo portal' })).toBeVisible();
+      await page.getByRole('button', { name: /Abrir menu da conta/ }).click();
+      await expect(page.getByRole('menuitem', { name: 'Sessões e segurança' })).toBeVisible();
+      const item = page.getByRole('menuitem', { name: 'Colaboradores na sua carteira' });
+      if (visivel) await expect(item).toHaveAttribute('href', '/conta/delegacao');
+      else await expect(item).toHaveCount(0);
+    });
+  }
+});
