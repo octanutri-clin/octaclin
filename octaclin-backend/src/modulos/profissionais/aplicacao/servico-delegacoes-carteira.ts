@@ -1,16 +1,21 @@
 import { BadRequestException, ConflictException, ForbiddenException, HttpException, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { isUUID } from 'class-validator';
-import { IsNull, type EntityManager } from 'typeorm';
+import { In, IsNull, type EntityManager } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { linhasDeUpdateReturning } from '../../../infraestrutura/banco-dados/linhas-update-returning';
 import { registrarAuditoriaNaTransacao } from '../../../infraestrutura/auditoria/servico-auditoria';
+import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import type { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { ProfissionalOrm } from '../infraestrutura/profissional.orm';
 import { DelegacaoCarteiraProfissionalOrm } from '../infraestrutura/delegacao-carteira-profissional.orm';
 
-export interface DelegacaoCarteiraResposta { id: string; colaboradorUsuarioId: string; concedidaEm: Date }
+export interface DelegacaoCarteiraResposta { id: string; colaboradorUsuarioId: string; colaboradorEmail: string; concedidaEm: Date }
+export interface CandidatoDelegacao { usuarioId: string; email: string }
+
+/** Teto da lista de candidatos (Collaborators ativos do tenant); acima disso a lista é cortada e avisa. */
+export const LIMITE_CANDIDATOS_DELEGACAO = 200;
 
 const negar = () => new ForbiddenException('Operação não autorizada.');
 /** Máximo de delegações vigentes por titular; `listar` devolve todas. */
@@ -72,7 +77,24 @@ export async function revogarDelegacoesPorAlteracaoAcesso(g: EntityManager, tena
  */
 @Injectable()
 export class ServicoDelegacoesCarteira {
-  constructor(private readonly executor: ExecutorTenant) {}
+  constructor(private readonly executor: ExecutorTenant, private readonly criptografia: CriptografiaDadosSensiveis) {}
+
+  /**
+   * P3-0b: e-mail completo das contas, aberto só no servidor e só para o titular (decisão do proprietário). Conta ausente
+   * ou cifra que não abre falha fechado com 500 genérico, sem eco.
+   */
+  private async emailsDasContas(g: EntityManager, tenantId: string, ids: string[]): Promise<Map<string, string>> {
+    const mapa = new Map<string, string>();
+    if (ids.length === 0) return mapa;
+    const contas = await g.getRepository(UsuarioOrm).find({ where: { tenantId, id: In([...new Set(ids)]) }, select: { id: true, emailCriptografado: true } });
+    for (const conta of contas) mapa.set(conta.id, this.abrirEmail(conta.emailCriptografado));
+    for (const id of ids) if (!mapa.has(id)) throw new InternalServerErrorException('Operação indisponível.');
+    return mapa;
+  }
+
+  private abrirEmail(cifrado: Buffer): string {
+    try { return this.criptografia.descriptografar(cifrado); } catch { throw new InternalServerErrorException('Operação indisponível.'); }
+  }
 
   private normalizar(u: UsuarioAutenticado): UsuarioAutenticado {
     if (!u || !isUUID(u.tenantId) || !isUUID(u.usuarioId)) throw new BadRequestException('Solicitação inválida.');
@@ -99,7 +121,30 @@ export class ServicoDelegacoesCarteira {
         const linhas = await g.getRepository(DelegacaoCarteiraProfissionalOrm).find({
           where: { tenantId: u.tenantId, profissionalId: profissional.id, revogadaEm: IsNull() },
           select: { id: true, colaboradorUsuarioId: true, concedidaEm: true }, order: { concedidaEm: 'DESC' }, take: LIMITE_DELEGACOES_VIGENTES });
-        return linhas.map(l => ({ id: l.id, colaboradorUsuarioId: l.colaboradorUsuarioId, concedidaEm: l.concedidaEm }));
+        const emails = await this.emailsDasContas(g, u.tenantId, linhas.map(l => l.colaboradorUsuarioId));
+        return linhas.map(l => ({ id: l.id, colaboradorUsuarioId: l.colaboradorUsuarioId, colaboradorEmail: emails.get(l.colaboradorUsuarioId)!, concedidaEm: l.concedidaEm }));
+      });
+    } catch (erro) { return falharDelegacao(erro); }
+  }
+
+  /**
+   * P3-0b: Collaborators ativos do tenant que o titular pode escolher, pelo e-mail completo. Só leitura (sem lock nos
+   * candidatos: `conceder` reconfere tudo sob lock). Auditada sem conteúdo.
+   */
+  async candidatos(usuario: UsuarioAutenticado): Promise<{ itens: CandidatoDelegacao[]; noLimite: boolean }> {
+    const u = this.normalizar(usuario);
+    try {
+      return await this.executor.executar(u.tenantId, async g => {
+        await exigirReadCommitted(g);
+        const { profissional } = await this.titular(g, u);
+        const contas = await g.getRepository(UsuarioOrm).find({ where: { tenantId: u.tenantId, role: 'Collaborator', ativo: true },
+          select: { id: true, emailCriptografado: true }, order: { id: 'ASC' }, take: LIMITE_CANDIDATOS_DELEGACAO + 1 });
+        const noLimite = contas.length > LIMITE_CANDIDATOS_DELEGACAO;
+        const itens = contas.slice(0, LIMITE_CANDIDATOS_DELEGACAO).map(c => ({ usuarioId: c.id, email: this.abrirEmail(c.emailCriptografado) }))
+          .sort((a, b) => a.email.localeCompare(b.email));
+        await registrarAuditoriaNaTransacao(g, { tenantId: u.tenantId, usuarioId: u.usuarioId, acao: 'carteira.delegacao.candidatos.listar',
+          recursoTipo: 'profissional', recursoId: profissional.id, metadados: {} });
+        return { itens, noLimite };
       });
     } catch (erro) { return falharDelegacao(erro); }
   }
@@ -117,7 +162,8 @@ export class ServicoDelegacoesCarteira {
         const repo = g.getRepository(DelegacaoCarteiraProfissionalOrm);
         const existente = await repo.findOne({ where: { tenantId: u.tenantId, profissionalId: profissional.id, colaboradorUsuarioId: colaborador, revogadaEm: IsNull() },
           select: { id: true, colaboradorUsuarioId: true, concedidaEm: true }, lock: { mode: 'pessimistic_read' } });
-        if (existente) return { id: existente.id, colaboradorUsuarioId: existente.colaboradorUsuarioId, concedidaEm: existente.concedidaEm };
+        const [colaboradorEmail] = [...(await this.emailsDasContas(g, u.tenantId, [colaborador])).values()];
+        if (existente) return { id: existente.id, colaboradorUsuarioId: existente.colaboradorUsuarioId, colaboradorEmail, concedidaEm: existente.concedidaEm };
         // Limite de vigentes por titular (a lista devolve até 100 e nunca corta sem aviso). Serializa por titular.
         await g.query('select pg_advisory_xact_lock(hashtextextended($1, 0))', [`delegacoes:${u.tenantId}:${profissional.id}`]);
         const vigentes: Array<{ total: number }> = await g.query(`select count(*)::int as total from delegacoes_carteira_profissional
@@ -129,7 +175,7 @@ export class ServicoDelegacoesCarteira {
         if (linhas.length !== 1) throw new InternalServerErrorException('Operação indisponível.');
         await registrarAuditoriaNaTransacao(g, { tenantId: u.tenantId, usuarioId: u.usuarioId, acao: 'carteira.delegacao.conceder',
           recursoTipo: 'delegacao_carteira_profissional', recursoId: linhas[0].id, metadados: {} });
-        return { id: linhas[0].id, colaboradorUsuarioId: colaborador, concedidaEm: linhas[0].concedida_em };
+        return { id: linhas[0].id, colaboradorUsuarioId: colaborador, colaboradorEmail, concedidaEm: linhas[0].concedida_em };
       });
     } catch (erro) { return falharDelegacao(erro); }
   }

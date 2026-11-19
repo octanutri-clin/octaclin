@@ -17,8 +17,23 @@ function projetarDelegacao(valor: unknown): Record<string, unknown> {
   if (!valor || typeof valor !== 'object' || Array.isArray(valor)) throw new InternalServerErrorException('Operação indisponível.');
   const r = valor as Record<string, unknown>;
   if (typeof r.id !== 'string' || !isUUID(r.id) || typeof r.colaboradorUsuarioId !== 'string' || !isUUID(r.colaboradorUsuarioId) ||
-    !(r.concedidaEm instanceof Date) || !Number.isFinite(r.concedidaEm.getTime())) throw new InternalServerErrorException('Operação indisponível.');
-  return { id: r.id, colaboradorUsuarioId: r.colaboradorUsuarioId, concedidaEm: r.concedidaEm.toISOString() };
+    !emailValido(r.colaboradorEmail) || !(r.concedidaEm instanceof Date) || !Number.isFinite(r.concedidaEm.getTime())) {
+    throw new InternalServerErrorException('Operação indisponível.');
+  }
+  return { id: r.id, colaboradorUsuarioId: r.colaboradorUsuarioId, colaboradorEmail: r.colaboradorEmail, concedidaEm: r.concedidaEm.toISOString() };
+}
+
+const emailValido = (v: unknown): v is string => typeof v === 'string' && v.length >= 3 && v.length <= 254 && v.includes('@');
+
+function projetarCandidatos(valor: unknown): Record<string, unknown> {
+  if (!valor || typeof valor !== 'object' || Array.isArray(valor)) throw new InternalServerErrorException('Operação indisponível.');
+  const r = valor as Record<string, unknown>;
+  if (!Array.isArray(r.itens) || typeof r.noLimite !== 'boolean') throw new InternalServerErrorException('Operação indisponível.');
+  return { itens: r.itens.map(item => {
+    const c = (item ?? {}) as Record<string, unknown>;
+    if (typeof c.usuarioId !== 'string' || !isUUID(c.usuarioId) || !emailValido(c.email)) throw new InternalServerErrorException('Operação indisponível.');
+    return { usuarioId: c.usuarioId, email: c.email };
+  }), noLimite: r.noLimite };
 }
 
 /**
@@ -40,6 +55,13 @@ export class ControladorDelegacoesCarteira {
     const lista = await this.delegacoes.listar(usuario);
     if (!Array.isArray(lista)) throw new InternalServerErrorException('Operação indisponível.');
     return { itens: lista.map(projetarDelegacao) };
+  }
+
+  /** P3-0b: Collaborators ativos do tenant que o titular pode escolher, pelo e-mail completo (decisão do proprietário). */
+  @Post('candidatos/listar') @HttpCode(200) @Permissoes('pacientes.ler', 'pacientes.gerenciar') @Header('Cache-Control', 'private, no-store')
+  async candidatos(@UsuarioAtual() usuario: UsuarioAutenticado, @Body() dados: unknown): Promise<unknown> {
+    if (!dados || typeof dados !== 'object' || Array.isArray(dados) || Reflect.ownKeys(dados).length !== 0) throw new HttpException('Solicitação inválida.', 400);
+    return projetarCandidatos(await this.delegacoes.candidatos(usuario));
   }
 
   @Post('conceder') @HttpCode(200) @Permissoes('pacientes.ler', 'pacientes.gerenciar') @Header('Cache-Control', 'private, no-store')

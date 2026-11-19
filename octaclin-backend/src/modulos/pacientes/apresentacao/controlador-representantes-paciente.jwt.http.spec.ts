@@ -31,9 +31,12 @@ const representante = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
 const vinculo = 'ffffffff-ffff-4fff-8fff-ffffffffffff';
 const CHAVES = ['APP_AMBIENTE', 'JWT_SEGREDO', 'JWT_REFRESH_SEGREDO', 'JWT_EMISSOR', 'JWT_AUDIENCIA'] as const;
 
+const IDENT = { tipo: 'nome_ficha', nome: 'Helena Sintética' };
 const vinculos = {
-  listar: jest.fn(async (): Promise<unknown> => [{ id: vinculo, representanteUsuarioId: representante, tipoVerificacao: 'presencial', verificadoEm: new Date(0), revogadoPor: 'CANARIO_INTERNO' }]),
-  registrar: jest.fn(async (): Promise<unknown> => ({ id: vinculo, representanteUsuarioId: representante, tipoVerificacao: 'presencial', verificadoEm: new Date(0) })),
+  listar: jest.fn(async (): Promise<unknown> => [{ id: vinculo, representanteUsuarioId: representante, tipoVerificacao: 'presencial', verificadoEm: new Date(0),
+    identificacao: { ...IDENT, interno: 'CANARIO_INTERNO' }, revogadoPor: 'CANARIO_INTERNO' }]),
+  registrar: jest.fn(async (): Promise<unknown> => ({ id: vinculo, representanteUsuarioId: representante, tipoVerificacao: 'presencial', verificadoEm: new Date(0), identificacao: IDENT })),
+  buscarCandidato: jest.fn(async (): Promise<unknown> => ({ candidato: { usuarioId: representante, identificacao: { tipo: 'email_mascarado', email: 'h***@e***.test' }, role: 'CANARIO_INTERNO' } })),
   revogar: jest.fn(async (): Promise<unknown> => ({ id: vinculo, revogado: true }))
 };
 const portal = { listarPacientes: jest.fn(async (): Promise<unknown> => [{ pacienteId: paciente, via: 'representante', nome: 'Nome sintético', interno: 'CANARIO_INTERNO' }]) };
@@ -51,7 +54,7 @@ describe('rotas de representantes e do seletor do portal com guardas reais (P2d-
   const post = async (caminho: string, papel: PapelUsuario | undefined, body: unknown = {}, extra: Record<string, unknown> = {}) =>
     fetch(`${url}/${caminho}`, { method: 'POST', headers: { 'content-type': 'application/json',
       ...(papel ? { authorization: `Bearer ${await token(papel, extra)}` } : {}) }, body: JSON.stringify(body) });
-  const servicos = () => [vinculos.listar, vinculos.registrar, vinculos.revogar, portal.listarPacientes];
+  const servicos = () => [vinculos.listar, vinculos.registrar, vinculos.revogar, vinculos.buscarCandidato, portal.listarPacientes];
 
   beforeAll(async () => {
     process.env.APP_AMBIENTE = 'producao'; process.env.JWT_SEGREDO = 'a'.repeat(48); process.env.JWT_REFRESH_SEGREDO = 'b'.repeat(48);
@@ -79,7 +82,7 @@ describe('rotas de representantes e do seletor do portal com guardas reais (P2d-
   it.each(['Professional', 'Collaborator'] as const)('%s administra representantes; resposta só com a allowlist', async papel => {
     const l = await post(`pacientes/${paciente}/representantes/listar`, papel, {});
     expect(l.status).toBe(200); expect(l.headers.get('cache-control')).toBe('private, no-store');
-    expect(await l.json()).toEqual({ itens: [{ id: vinculo, representanteUsuarioId: representante, tipoVerificacao: 'presencial', verificadoEm: new Date(0).toISOString() }] });
+    expect(await l.json()).toEqual({ itens: [{ id: vinculo, representanteUsuarioId: representante, tipoVerificacao: 'presencial', verificadoEm: new Date(0).toISOString(), identificacao: IDENT }] });
     const r = await post(`pacientes/${paciente}/representantes/registrar`, papel, { representanteUsuarioId: representante, tipoVerificacao: 'presencial' });
     expect(r.status).toBe(200);
     expect(vinculos.registrar).toHaveBeenCalledWith(expect.objectContaining({ tenantId: tenant, usuarioId: usuario, papel }), paciente, representante, 'presencial');
@@ -123,5 +126,48 @@ describe('rotas de representantes e do seletor do portal com guardas reais (P2d-
     for (const s of servicos()) expect(s).not.toHaveBeenCalled();
     flagLigada = true;
     expect((await post('portal/restricoes/pacientes/listar', undefined, {})).status).toBe(401);
+  });
+
+  // E-mail sintético usado como canário: não pode aparecer em log, URL nem resposta.
+  const EMAIL = 'canario.busca@example.test';
+  it.each(['Professional', 'Collaborator'] as const)('P3-0b: %s busca por e-mail exato no corpo; resposta só com a allowlist', async papel => {
+    const r = await post(`pacientes/${paciente}/representantes/candidato/buscar`, papel, { email: EMAIL });
+    expect(r.status).toBe(200); expect(r.headers.get('cache-control')).toBe('private, no-store');
+    expect(await r.json()).toEqual({ candidato: { usuarioId: representante, identificacao: { tipo: 'email_mascarado', email: 'h***@e***.test' } } });
+    expect(vinculos.buscarCandidato).toHaveBeenCalledWith(expect.objectContaining({ tenantId: tenant, usuarioId: usuario, papel }), paciente, EMAIL);
+    expect(inspect(logs, { depth: 10 })).not.toContain(EMAIL);
+  });
+  it('P3-0b: não encontrado/não elegível volta { candidato: null }', async () => {
+    vinculos.buscarCandidato.mockResolvedValueOnce({ candidato: null });
+    const r = await post(`pacientes/${paciente}/representantes/candidato/buscar`, 'Professional', { email: EMAIL });
+    expect(r.status).toBe(200); expect(await r.json()).toEqual({ candidato: null });
+  });
+  it('P3-0b: cota esgotada responde 429 com mensagem fixa, sem eco', async () => {
+    const { HttpException } = await import('@nestjs/common');
+    vinculos.buscarCandidato.mockRejectedValueOnce(new HttpException(`CANARIO_COTA ${EMAIL}`, 429));
+    const r = await post(`pacientes/${paciente}/representantes/candidato/buscar`, 'Professional', { email: EMAIL });
+    expect(r.status).toBe(429); expect(r.headers.get('cache-control')).toBe('private, no-store');
+    const texto = await r.text();
+    expect(texto).not.toMatch(/CANARIO_|example/); expect(JSON.parse(texto)).toEqual({ statusCode: 429, message: 'Muitas tentativas. Tente novamente em alguns minutos.' });
+    expect(inspect(logs, { depth: 10 })).not.toContain(EMAIL);
+  });
+  it('P3-0b: corpo fora do contrato, papel errado ou flag desligada não chegam ao serviço', async () => {
+    for (const body of [{}, { email: EMAIL, tenantId: tenant }, { email: 42 }, { email: `${'a'.repeat(250)}@example.test` }]) {
+      const r = await post(`pacientes/${paciente}/representantes/candidato/buscar`, 'Professional', body);
+      expect(r.status).toBe(400); expect(await r.text()).not.toMatch(/example|CANARIO_/);
+    }
+    for (const papel of ['Patient', 'Client', 'SuperAdmin'] as const)
+      expect((await post(`pacientes/${paciente}/representantes/candidato/buscar`, papel, { email: EMAIL })).status).toBe(403);
+    flagLigada = false;
+    expect((await post(`pacientes/${paciente}/representantes/candidato/buscar`, 'Professional', { email: EMAIL })).status).toBe(403);
+    expect(vinculos.buscarCandidato).not.toHaveBeenCalled();
+    expect(inspect(logs, { depth: 10 })).not.toContain(EMAIL);
+  });
+  it('P3-0b: identificação fora do formato falha fechado (500), sem eco', async () => {
+    vinculos.buscarCandidato.mockResolvedValueOnce({ candidato: { usuarioId: representante, identificacao: { tipo: 'email', email: EMAIL } } });
+    const r = await post(`pacientes/${paciente}/representantes/candidato/buscar`, 'Professional', { email: EMAIL });
+    expect(r.status).toBe(500); expect(await r.text()).not.toContain(EMAIL);
+    vinculos.listar.mockResolvedValueOnce([{ id: vinculo, representanteUsuarioId: representante, tipoVerificacao: 'presencial', verificadoEm: new Date(0) }]);
+    expect((await post(`pacientes/${paciente}/representantes/listar`, 'Professional', {})).status).toBe(500);
   });
 });

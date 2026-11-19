@@ -45,8 +45,9 @@ const registrar = jest.fn(async (): Promise<unknown> => ({ id: restricao, revisa
 const consultarAutoria = jest.fn(async (): Promise<unknown> => ({ id: restricao, revisao: 1, origem: 'colaborador', estado: 'ativa', confirmacao: 'pendente', conteudo, autor: 'CANARIO_INTERNO' }));
 const confirmar = jest.fn(async (): Promise<unknown> => ({ id: restricao, revisao: 2, confirmacao: 'confirmada' }));
 const delegacoes = {
-  listar: jest.fn(async (): Promise<unknown> => [{ id: delegacao, colaboradorUsuarioId: colaborador, concedidaEm: new Date(0), interno: 'CANARIO_INTERNO' }]),
-  conceder: jest.fn(async (): Promise<unknown> => ({ id: delegacao, colaboradorUsuarioId: colaborador, concedidaEm: new Date(0) })),
+  listar: jest.fn(async (): Promise<unknown> => [{ id: delegacao, colaboradorUsuarioId: colaborador, colaboradorEmail: 'carla@example.test', concedidaEm: new Date(0), interno: 'CANARIO_INTERNO' }]),
+  conceder: jest.fn(async (): Promise<unknown> => ({ id: delegacao, colaboradorUsuarioId: colaborador, colaboradorEmail: 'carla@example.test', concedidaEm: new Date(0) })),
+  candidatos: jest.fn(async (): Promise<unknown> => ({ itens: [{ usuarioId: colaborador, email: 'carla@example.test', role: 'CANARIO_INTERNO' }], noLimite: false, total: 'CANARIO_INTERNO' })),
   revogar: jest.fn(async (): Promise<unknown> => ({ id: delegacao, revogada: true }))
 };
 const sessoes = { estaAtiva: jest.fn(async () => true) };
@@ -65,7 +66,7 @@ describe('rotas do colaborador delegado e da delegação com guardas reais (P2d-
   const post = async (caminho: string, papel: PapelUsuario | undefined, body: unknown = {}, extra: Record<string, unknown> = {}) =>
     fetch(`${url}/${caminho}`, { method: 'POST', headers: { 'content-type': 'application/json',
       ...(papel ? { authorization: `Bearer ${await token(papel, extra)}` } : {}) }, body: JSON.stringify(body) });
-  const servicos = () => [registrar, consultarAutoria, confirmar, delegacoes.listar, delegacoes.conceder, delegacoes.revogar];
+  const servicos = () => [registrar, consultarAutoria, confirmar, delegacoes.listar, delegacoes.conceder, delegacoes.revogar, delegacoes.candidatos];
 
   beforeAll(async () => {
     process.env.APP_AMBIENTE = 'producao';
@@ -115,7 +116,7 @@ describe('rotas do colaborador delegado e da delegação com guardas reais (P2d-
     for (const [caminho, body] of [[`pacientes/${paciente}/restricoes/${restricao}/confirmar`, { revisao: 1 }],
       [`pacientes/${paciente}/restricoes/registrar`, { chaveCriacao: randomUUID(), conteudo }],
       ['profissional/delegacoes-carteira/listar', {}], ['profissional/delegacoes-carteira/conceder', { colaboradorUsuarioId: colaborador }],
-      [`profissional/delegacoes-carteira/${delegacao}/revogar`, {}]] as const) {
+      [`profissional/delegacoes-carteira/${delegacao}/revogar`, {}], ['profissional/delegacoes-carteira/candidatos/listar', {}]] as const) {
       const r = await post(caminho, 'Collaborator', body);
       expect(r.status).toBe(403);
     }
@@ -143,7 +144,7 @@ describe('rotas do colaborador delegado e da delegação com guardas reais (P2d-
   it('Professional administra a delegação; projeção sem campos internos; payload extra recusado', async () => {
     const l = await post('profissional/delegacoes-carteira/listar', 'Professional', {});
     expect(l.status).toBe(200);
-    expect(await l.json()).toEqual({ itens: [{ id: delegacao, colaboradorUsuarioId: colaborador, concedidaEm: new Date(0).toISOString() }] });
+    expect(await l.json()).toEqual({ itens: [{ id: delegacao, colaboradorUsuarioId: colaborador, colaboradorEmail: 'carla@example.test', concedidaEm: new Date(0).toISOString() }] });
     const c = await post('profissional/delegacoes-carteira/conceder', 'Professional', { colaboradorUsuarioId: colaborador });
     expect(c.status).toBe(200); expect(delegacoes.conceder).toHaveBeenCalledWith(expect.objectContaining({ usuarioId: usuario, papel: 'Professional' }), colaborador);
     const v = await post(`profissional/delegacoes-carteira/${delegacao}/revogar`, 'Professional', {});
@@ -151,7 +152,7 @@ describe('rotas do colaborador delegado e da delegação com guardas reais (P2d-
     for (const [caminho, body] of [['profissional/delegacoes-carteira/listar', { tenantId: tenant }],
       ['profissional/delegacoes-carteira/conceder', { colaboradorUsuarioId: colaborador, profissionalId: randomUUID() }],
       ['profissional/delegacoes-carteira/conceder', { colaboradorUsuarioId: 'CANARIO_ID' }],
-      [`profissional/delegacoes-carteira/${delegacao}/revogar`, { motivo: 'x' }]] as const) {
+      [`profissional/delegacoes-carteira/${delegacao}/revogar`, { motivo: 'x' }], ['profissional/delegacoes-carteira/candidatos/listar', { papel: 'Collaborator' }]] as const) {
       const r = await post(caminho, 'Professional', body);
       expect(r.status).toBe(400); expect(await r.text()).not.toMatch(/CANARIO_/);
     }
@@ -160,5 +161,25 @@ describe('rotas do colaborador delegado e da delegação com guardas reais (P2d-
   it.each(['Collaborator', 'Patient', 'Client', 'SuperAdmin'] as const)('%s não administra delegação (403)', async papel => {
     const r = await post('profissional/delegacoes-carteira/conceder', papel, { colaboradorUsuarioId: colaborador });
     expect(r.status).toBe(403); expect(delegacoes.conceder).not.toHaveBeenCalled();
+  });
+
+  it('P3-0b: candidatos só para o titular com pacientes.gerenciar; resposta só com usuarioId, e-mail e noLimite', async () => {
+    const r = await post('profissional/delegacoes-carteira/candidatos/listar', 'Professional', {});
+    expect(r.status).toBe(200); expect(r.headers.get('cache-control')).toBe('private, no-store');
+    expect(await r.json()).toEqual({ itens: [{ usuarioId: colaborador, email: 'carla@example.test' }], noLimite: false });
+    expect(delegacoes.candidatos).toHaveBeenCalledWith(expect.objectContaining({ usuarioId: usuario, tenantId: tenant, papel: 'Professional' }));
+    delegacoes.candidatos.mockClear();
+    const semGerenciar = await post('profissional/delegacoes-carteira/candidatos/listar', 'Professional', {}, { permissoes: ['pacientes.ler'] });
+    expect(semGerenciar.status).toBe(403); expect(delegacoes.candidatos).not.toHaveBeenCalled();
+    for (const papel of ['Patient', 'Client', 'SuperAdmin'] as const) expect((await post('profissional/delegacoes-carteira/candidatos/listar', papel, {})).status).toBe(403);
+    expect(delegacoes.candidatos).not.toHaveBeenCalled();
+  });
+
+  it('P3-0b: resposta de serviço fora do formato falha fechado (500 genérico)', async () => {
+    delegacoes.candidatos.mockResolvedValueOnce({ itens: [{ usuarioId: 'CANARIO_ID', email: 'x' }], noLimite: false });
+    const r = await post('profissional/delegacoes-carteira/candidatos/listar', 'Professional', {});
+    expect(r.status).toBe(500); expect(await r.text()).not.toMatch(/CANARIO_/);
+    delegacoes.listar.mockResolvedValueOnce([{ id: delegacao, colaboradorUsuarioId: colaborador, concedidaEm: new Date(0) }]);
+    expect((await post('profissional/delegacoes-carteira/listar', 'Professional', {})).status).toBe(500);
   });
 });
