@@ -83,7 +83,10 @@ os do momento da consulta, provados sob lock.
   paciente do tenant. **Sem prova de tempo constante.**
 - **Risco residual (revisão R4, MÉDIA):** uma resposta não nula confirma, dentro do tenant, que aquele e-mail é de uma
   conta Patient ativa, mesmo quando a ficha é de outra carteira. Só o e-mail mascarado e o id voltam. O risco é mitigado
-  pelas duas cotas e pela autorização da equipe. **Precisa de aceite do proprietário.**
+  pelas duas cotas e pela autorização da equipe. **Aceito pelo proprietário em 2026-11-19 (opção A).** A alternativa de responder "não encontrado" para conta com
+  ficha em outra carteira foi recusada, porque impediria registrar como representante alguém que é paciente de outro
+  profissional da mesma clínica. Vai para o BACKLOG um alerta de varredura: muitas buscas sem resultado vindas da mesma
+  conta, com a auditoria registrando apenas se a busca achou ou não, nunca o e-mail.
 - **Filtro 429 global:** a passagem do 429 vale para todos os controladores que usam `FiltroRestricoesClinicas`. A
   mensagem é fixa e sem eco. Hoje só a busca de representante gera 429.
 - **Corte dos candidatos:** acima de 200, o corte é por id da conta e só depois a lista é ordenada por e-mail. O e-mail é
