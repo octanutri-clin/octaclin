@@ -13,7 +13,8 @@ import { origemMutacaoPermitida } from "./seguranca-bff";
  */
 export const CABECALHOS_RESTRICOES = { "Content-Type": "application/json", "Cache-Control": "private, no-store", Vary: "Cookie" };
 export const UUID_RESTRICOES = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const LIMITE_CORPO_ENTRADA = 4096;
+// 16 KiB: cabe uma justificativa de 4000 caracteres acentuados (UTF-8 multibyte) com folga (revisão R4 da P3-3).
+const LIMITE_CORPO_ENTRADA = 16 * 1024;
 const LIMITE_CORPO_RESPOSTA = 512 * 1024;
 
 const MENSAGENS: Readonly<Record<number, string>> = Object.freeze({

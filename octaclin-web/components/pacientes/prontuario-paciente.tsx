@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import type { Route } from 'next';
-import { LinkRepresentantesProntuario } from '@/components/equipe/link-representantes-prontuario';
+import { LinkRepresentantesProntuario, useAreaRestricoesDisponivel } from '@/components/equipe/link-representantes-prontuario';
+import { AbaRestricoes } from '@/components/pacientes/aba-restricoes';
 import { useRouter } from 'next/navigation';
 import { FormEvent, type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -827,9 +828,11 @@ function ProntuarioPacienteConteudo({ pacienteId }: { pacienteId: string }) {
     || envioMaterialNaoSalvo
     || anexoNaoSalvo
     || planoAlimentarNaoSalvo;
+  // FOOD06 P3-3: a mesma pergunta de disponibilidade alimenta o atalho de representantes e a aba "Restrições".
+  const areaRestricoesDisponivel = useAreaRestricoesDisponivel();
   const abasDisponiveis = useMemo(
-    () => abasProntuario.filter((aba) => !aba.permissao || permissoes.includes(aba.permissao)),
-    [permissoes]
+    () => abasProntuario.filter((aba) => (!aba.permissao || permissoes.includes(aba.permissao)) && (!aba.areaRestricoes || areaRestricoesDisponivel)),
+    [permissoes, areaRestricoesDisponivel]
   );
   const areasDisponiveis = useMemo(
     () => areasProntuario.filter((area) => !area.permissao || permissoes.includes(area.permissao)),
@@ -1233,6 +1236,7 @@ function ProntuarioPacienteConteudo({ pacienteId }: { pacienteId: string }) {
           {/* FOOD06 P3-6: só aparece com a área de restrições ligada na web e no tenant. */}
           <LinkRepresentantesProntuario
             pacienteId={pacienteId}
+            disponivel={areaRestricoesDisponivel}
             aoClicar={(evento) => {
               if (!alteracoesNaoSalvas) return;
               evento.preventDefault();
@@ -1679,6 +1683,9 @@ function ProntuarioPacienteConteudo({ pacienteId }: { pacienteId: string }) {
         />
       ) : null}
 
+      {abaAtiva === 'restricoes' && areaRestricoesDisponivel ? (
+        <AbaRestricoes key={pacienteId} pacienteId={pacienteId} papel={papel ?? undefined} podeGerenciar={permissoes.includes('pacientes.gerenciar')} />
+      ) : null}
       {abaAtiva === 'condutas_terapeuticas' ? <AbaCondutasTerapeuticas pacienteId={pacienteId} podeGerenciar={permissoes.includes('pacientes.gerenciar')} /> : null}
 
       {abaAtiva === 'materiais' ? !materiaisCarregados ? (
