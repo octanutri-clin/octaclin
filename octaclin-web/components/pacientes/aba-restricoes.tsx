@@ -251,7 +251,7 @@ export function AbaRestricoes({ pacienteId, papel, podeGerenciar }: { pacienteId
         {completo ? <BlocoAvaliacao avaliacao={estado.avaliacao} pendentes={s.pendentes.length} podeIniciar={decide} enviando={enviando} aoIniciar={() => void iniciarAvaliacao()} /> : (
           <p className="text-sm text-texto-suave">{colaborador ? T.vazioAutoria : T.avisoAutoria}</p>
         )}
-        {estado.itens.length === 0 ? (
+        {s.pendentes.length + s.confirmadas.length + s.emReavaliacao.length + s.recolhidas.length === 0 ? (
           <p className="text-sm text-tinta">{completo ? T.vazioCompleto : T.vazioAutoria}</p>
         ) : (
           <div className="grid gap-4">

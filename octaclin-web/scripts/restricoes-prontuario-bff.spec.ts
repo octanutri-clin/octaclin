@@ -147,3 +147,17 @@ test("aba: resposta projetada (observação passa para a equipe; campos internos
     assert.equal((await tratarConfirmarRestricao(req({ revisao: 2 }), PACIENTE, R)).status, 503);
   });
 });
+
+test("R4 (BAIXA): justificativa de 4000 caracteres acentuados passa; duas decisões simultâneas conferem cada uma a sua revisão", async () => {
+  await comBackend((c) => {
+    const corpo = JSON.parse(String(c.init!.body));
+    return Response.json({ id: R, revisao: corpo.revisao + 1, confirmacao: c.url.endsWith("/confirmar") ? "confirmada" : "rejeitada" });
+  }, async () => {
+    await login();
+    const r = await tratarRejeitarRestricao(req({ revisao: 2, justificativa: "ç".repeat(4000) }), PACIENTE, R);
+    assert.equal(r.status, 200);
+    const [a, b] = await Promise.all([tratarConfirmarRestricao(req({ revisao: 2 }), PACIENTE, R), tratarConfirmarRestricao(req({ revisao: 5 }), PACIENTE, R)]);
+    assert.deepEqual([a.status, b.status], [200, 200]);
+    assert.deepEqual([(await a.json()).revisao, (await b.json()).revisao], [3, 6]);
+  });
+});

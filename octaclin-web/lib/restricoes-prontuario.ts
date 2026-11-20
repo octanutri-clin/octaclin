@@ -11,7 +11,8 @@ const TEXTO_CURTO = /^[^\p{C}]{1,200}$/u;
 const TEXTO_LONGO = /^[^\p{C}]{0,1000}$/u;
 const TEXTO_PROTEGIDO = /^(?:[^\p{C}]|[\n\t])+$/u;
 
-const NATUREZAS = ["clinica", "escolha"] as const;
+// `preferencia` existe no domínio do backend mas não entra neste fluxo (Q8): é aceita na projeção e nunca mostrada.
+const NATUREZAS = ["clinica", "escolha", "preferencia"] as const;
 const SUBTIPOS = ["alergia_alimentar", "intolerancia_alimentar", "doenca_ou_condicao_com_restricao", "outra_restricao_clinica"] as const;
 const ALVOS = ["alergeno", "constituinte", "grupo", "alimento", "categoria_escolha", "nao_catalogado"] as const;
 const GRAVIDADES = ["leve", "moderada", "grave", "nao_informada"] as const;
@@ -56,6 +57,11 @@ function projetarConteudo(v: unknown): ConteudoProntuario | null {
   if (v.alvoDeclarado !== undefined) { if (typeof v.alvoDeclarado !== "string" || !TEXTO_CURTO.test(v.alvoDeclarado)) return null; c.alvoDeclarado = v.alvoDeclarado; }
   if (v.gravidade !== undefined) { if (!em(GRAVIDADES, v.gravidade)) return null; c.gravidade = v.gravidade; }
   if (v.observacao !== undefined) { if (typeof v.observacao !== "string" || !TEXTO_LONGO.test(v.observacao)) return null; c.observacao = v.observacao; }
+  // Mesmas combinações do domínio (`validarConteudoRestricao`): falha fechado em qualquer divergência.
+  const naoCatalogado = c.alvo.tipo === "nao_catalogado";
+  if (naoCatalogado === (c.alvo.id !== undefined) || naoCatalogado !== (c.alvoDeclarado !== undefined)) return null;
+  if (c.natureza !== "clinica" && c.gravidade !== undefined) return null;
+  if (c.alvo.tipo === "categoria_escolha" && c.natureza !== "escolha") return null;
   if (v.classificacaoPeloPaciente !== undefined) {
     if (v.classificacaoPeloPaciente !== "nao_sabe" || c.subtipoClinico !== "outra_restricao_clinica") return null;
     c.classificacaoPeloPaciente = "nao_sabe";
@@ -78,6 +84,7 @@ export function projetarListaProntuario(v: unknown): ListaProntuario | null {
 
 export function separarRestricoesProntuario(itens: RestricaoProntuario[]) {
   const recolhida = (i: RestricaoProntuario) => i.estado === "inativa" || i.confirmacao === "rejeitada";
+  itens = itens.filter((i) => i.conteudo.natureza !== "preferencia");
   return {
     pendentes: itens.filter((i) => !recolhida(i) && i.estado === "ativa" && i.confirmacao === "pendente"),
     confirmadas: itens.filter((i) => !recolhida(i) && i.estado === "ativa" && i.confirmacao === "confirmada"),

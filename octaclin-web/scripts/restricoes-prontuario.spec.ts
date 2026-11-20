@@ -127,3 +127,17 @@ test("textos: rótulos humanos para cada valor, sem termo técnico; desconhecido
   const todos = Object.values(T).map((v) => (typeof v === "function" ? (v as (a: string, b?: string) => string)("x", "y") : v));
   for (const t of todos) assert.doesNotMatch(t, /uuid|tenant|revis[aã]o \d|409|403|nao_catalogado|declaracao_paciente|seguro|liberad/i, t);
 });
+
+test("R4 (BAIXA): conteúdo espelha as invariantes do backend; preferência é aceita mas nunca mostrada", () => {
+  const base = item().conteudo;
+  for (const ruim of [
+    { ...base, alvoDeclarado: undefined },                                   // não catalogado sem texto
+    { ...base, alvo: { tipo: "alergeno", id: "alergeno.x" } },              // catalogado com texto declarado
+    { natureza: "escolha", alvo: { tipo: "nao_catalogado" }, alvoDeclarado: "x", gravidade: "leve" }, // gravidade em escolha
+    { natureza: "clinica", subtipoClinico: "alergia_alimentar", alvo: { tipo: "categoria_escolha", id: "c.x" } }, // categoria fora de escolha
+  ]) assert.equal(projetarListaProntuario({ escopo: "completo", itens: [item({ conteudo: ruim })] }), null, JSON.stringify(ruim));
+  const pref = projetarListaProntuario({ escopo: "completo", itens: [item({ conteudo: { natureza: "preferencia", alvo: { tipo: "alimento", id: "a.x" } } })] });
+  assert.ok(pref, "preferência não derruba a lista");
+  const s = separarRestricoesProntuario(pref!.itens);
+  assert.equal([...s.pendentes, ...s.confirmadas, ...s.emReavaliacao, ...s.recolhidas].length, 0);
+});

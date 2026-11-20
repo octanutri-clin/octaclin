@@ -51,3 +51,12 @@
 - **P3-4:** reavaliar, inativar em dois passos, "corrigir registro" (NUX-01) e reconfirmação de 180 dias.
 - **P3-5:** solicitações do paciente.
 - **Catálogo de alimentos:** sem catálogo, o alimento continua como texto livre.
+
+## Revisão R4 (`tenant-security-reviewer`, mesmo modelo, não independente)
+
+- **Resultado:** nenhum achado ALTA nem MÉDIA. Os quatro achados BAIXA foram corrigidos, com teste:
+  1. **Preferência na lista:** uma preferência gravada derrubaria a lista inteira. Agora a projeção aceita e a tela nunca a mostra.
+  2. **Limite de tamanho do corpo:** o limite de 4096 bytes recusava uma justificativa de 4000 caracteres acentuados. O repasse comum passou a aceitar 16 KiB.
+  3. **Projeção do conteúdo:** agora espelha as combinações do domínio (não catalogado ⇔ texto declarado, gravidade só em clínica, categoria só em escolha).
+  4. **Concorrência:** um teste novo cobre duas decisões simultâneas, cada uma conferindo a própria revisão.
+- **Regressão local:** o teste "reordena refeições pela alça de teclado" (`console-regression`) falha também na `main` sem estas mudanças. A falha é do ambiente local (Chromium pré-instalado com arraste por teclado), não desta fatia. O CI é a prova.
