@@ -103,6 +103,12 @@ export const TEXTOS_PORTAL_RESTRICOES = Object.freeze({
     ctx.representante
       ? `Nenhuma restrição registrada até agora para ${ctx.nome}. Isso não quer dizer que não existam restrições. Se houver alguma alergia ou restrição, fale com ${QUEM_ACOMPANHA}.`
       : `Nenhuma restrição registrada até agora. Isso não quer dizer que você não tenha restrições. Se tiver alguma alergia ou restrição, fale com ${QUEM_ACOMPANHA}.`,
+  // PUX-03 (decisão do proprietário de 2026-11-20): nenhum texto do portal pode sugerir que o plano já foi ajustado.
+  // Texto clínico: entra em `docs/clinico/validacao-textos-restricoes.json` e só vale para ativação depois de aprovado.
+  planoNaoMuda: (ctx: ContextoPessoaPortal) =>
+    ctx.representante
+      ? `Registrar uma restrição aqui não muda o plano alimentar de ${ctx.nome} automaticamente. Se algo mudou, fale com quem faz o acompanhamento.`
+      : `Registrar uma restrição aqui não muda seu plano alimentar automaticamente. Se algo mudou, fale com ${QUEM_ACOMPANHA}.`,
   conviteQuestionario: `Respondeu um questionário há algum tempo? Se algo mudou, conte para ${QUEM_ACOMPANHA}. As respostas antigas não viram restrição automaticamente.`,
   // NUX-15: a data é da conferência geral; não pode sugerir que itens pendentes já foram confirmados.
   ultimaConfirmacao: (_ctx: ContextoPessoaPortal, data: string) =>

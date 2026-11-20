@@ -1,0 +1,36 @@
+{
+  "descricao": "Registro de validação clínica dos textos do portal de restrições (ATV-1 do contrato v3). Cada texto tem o hash das variantes exatas; mudar o texto exige nova aprovação. Ver docs/clinico/README-validacao-textos.md.",
+  "versao": 1,
+  "textos": [
+    {
+      "id": "portal.urgencia",
+      "sha256": "4c084f4f69c7a4f0baf5ad44f8333f4d1f6472b6676566cba4271f2dd4ff3a70",
+      "status": "aprovado",
+      "aprovacao": {
+        "papel": "responsável clínico",
+        "data": "2026-11-20",
+        "versao": "ca3f089f"
+      }
+    },
+    {
+      "id": "portal.informarSucesso",
+      "sha256": "d480fc0e726104d7fde0793acb50bcb2a490c9dd70950237f0ae7d25003cb98e",
+      "status": "aprovado",
+      "aprovacao": {
+        "papel": "responsável clínico",
+        "data": "2026-11-20",
+        "versao": "ca3f089f"
+      }
+    },
+    {
+      "id": "portal.planoNaoMuda",
+      "sha256": "ea121ed0ac91a68c9483e2381ee65f41d4a5ca92df1918856721244c7c816a5a",
+      "status": "aprovado",
+      "aprovacao": {
+        "papel": "responsável clínico",
+        "data": "2026-11-20",
+        "versao": "ca3f089f"
+      }
+    }
+  ]
+}

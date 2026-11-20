@@ -191,6 +191,7 @@ function ResumoPessoa({ pessoa }: { pessoa: PessoaSeletorPortal }) {
         ) : (
           <>
             <p className="text-tinta">{T.abertura(ctx)}</p>
+            <p role="note" className="rounded-md border border-linha bg-superficie-hover p-3 text-sm text-tinta">{T.planoNaoMuda(ctx)}</p>
             <Link href="/portal/mensagens" className="w-fit text-sm font-medium text-primaria-forte underline underline-offset-2">{T.linkMensagens}</Link>
             {pedidosAbertos(estado.pedidos) >= LIMITE_ABERTOS ? (
               <p className="rounded-md border border-linha p-3 text-sm text-tinta">
