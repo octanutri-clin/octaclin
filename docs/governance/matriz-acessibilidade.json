@@ -190,7 +190,7 @@
       "id": "web-food06-restricoes-prontuario",
       "comando": "test:restricoes:prontuario",
       "diretorio": "octaclin-web",
-      "descricao": "Aba Restrições do prontuário (FOOD06 P3-3): lista por grupos, confirmar, rejeitar com justificativa, registrar, conferência geral, visão do colaborador, reflow a 320 px e axe (WCAG 2.0 a 2.2 AA).",
+      "descricao": "Aba Restrições do prontuário (FOOD06 P3-3 e P3-4a): lista por grupos, confirmar, rejeitar com justificativa, registrar, conferência geral, reavaliar, inativar em dois passos, corrigir registro, visão do colaborador, reflow a 320 px e axe (WCAG 2.0 a 2.2 AA).",
       "especificacao": "octaclin-web/tests/visual/food06-restricoes-prontuario.spec.mjs",
       "bloqueante": true,
       "cobertoPor": "web-suite-visual",

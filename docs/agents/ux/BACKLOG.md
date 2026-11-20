@@ -71,3 +71,7 @@ Telas de equipe (delegação da carteira e quem acompanha pelo portal). Sem P0. 
 ## FOOD06 P3-3 — revisão B, 2026-11-20
 
 Aba "Restrições" do prontuário. Sem P0. Corrigidos: NUX-01 (P1, tipo "não sei dizer" não afirmado como fato), NUX-03 (P1, pendentes na conferência geral), NUX-07 (P1, justificativa preservada no 409), NUX-02, NUX-05, NUX-08 (já atendido) e PUX-01 na parte da equipe. Decisão do proprietário: PUX-01/05 no portal (sinal neutro quando a informação é rejeitada) e PUX-03 (texto clínico: registrar não altera o plano). BACKLOG: NUX-04, 06, 07 (separar causas do 409), 09, 10, 11, PUX-02 e PUX-04. [Relatórios e limites](reports/FOOD06-P3-3-B-2026-11-20/consolidado.md).
+
+## FOOD06 P3-4a — revisão B, 2026-11-20
+
+Reavaliar, inativar em dois passos e "Corrigir registro". Sem P0 nem P1. Corrigidos: NUX-01 (anterior identificada no passo 3), NUX-02 (parada no passo 3), NUX-04, NUX-05 (parte: como concluir), NUX-06, NUX-07 (parte), NUX-09/PUX-01 (o paciente deixa de ver no portal, sem aviso automático); NUX-03 já atendido. PUX-02 e PUX-04 não se aplicam (verificado na projeção do portal). BACKLOG: NUX-05 (vínculo da correção e causas do 409, exigem backend), NUX-07 (contador), NUX-08 (leitor de tela, ATV-7), PUX-03 (alimento duas vezes no portal enquanto a correção está parada), PUX-05 (para a P3-5) e "substituir" atômico no backend. [Relatórios e limites](reports/FOOD06-P3-4a-B-2026-11-20/consolidado.md).

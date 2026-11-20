@@ -35,7 +35,9 @@ export async function prepararAbaRestricoes(page, cenario = {}) {
     iniciar = () => ({ id: '55555555-5555-4555-8555-555555555555', revisao: 1, situacao: 'nao_informado' }),
     registrar = () => ({ id: '66666666-6666-4666-8666-666666666666', revisao: 1, estado: 'ativa', confirmacao: 'pendente' }),
     confirmar = (corpo, id) => ({ id, revisao: corpo.revisao + 1, confirmacao: 'confirmada' }),
-    rejeitar = (corpo, id) => ({ id, revisao: corpo.revisao + 1, confirmacao: 'rejeitada' })
+    rejeitar = (corpo, id) => ({ id, revisao: corpo.revisao + 1, confirmacao: 'rejeitada' }),
+    inativar = (corpo, id) => ({ id, revisao: corpo.revisao + 1, estado: 'inativa' }),
+    reavaliar = (corpo, id) => ({ id, revisao: corpo.revisao + 1, estado: corpo.destino })
   } = cenario;
   await prepararConsole(page);
   if (papel !== 'Professional') {
@@ -53,7 +55,8 @@ export async function prepararAbaRestricoes(page, cenario = {}) {
     pedidos.push({ caminho, corpo });
     const id = caminho.match(/restricoes\/([0-9a-f-]{36})\//)?.[1];
     const gerar = caminho.endsWith('/listar') ? lista : caminho.endsWith('/avaliacao') ? avaliacao : caminho.endsWith('/avaliacao/iniciar') ? iniciar
-      : caminho.endsWith('/registrar') ? registrar : caminho.endsWith('/confirmar') ? confirmar : rejeitar;
+      : caminho.endsWith('/registrar') ? registrar : caminho.endsWith('/confirmar') ? confirmar : caminho.endsWith('/inativar') ? inativar
+      : caminho.endsWith('/reavaliar') ? reavaliar : rejeitar;
     const r = gerar(corpo, id);
     return typeof r === 'number' ? json(route, r, { mensagem: 'CANARIO_PRIVADO' }) : json(route, 200, r);
   });
