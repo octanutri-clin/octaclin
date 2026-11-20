@@ -35,7 +35,12 @@
     {
       "id": "portal.seloRevisada",
       "sha256": "cb2822e8863836e4e38341db80ac0e673c2441d24de49a2b024a4b1de26d2944",
-      "status": "pendente"
+      "status": "aprovado",
+      "aprovacao": {
+        "papel": "responsável clínico",
+        "data": "2026-11-20",
+        "versao": "d6ea88a1"
+      }
     }
   ]
 }
