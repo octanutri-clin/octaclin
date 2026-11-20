@@ -29,7 +29,10 @@ Contrato: `tasks/food06-m11-restricoes-contrato-v3.md`.
 3. Para pedir mudança: altere o texto no código, rode o teste, copie o hash novo e mantenha `pendente`.
 4. O registro não leva nome, CRN, e-mail nem outro dado pessoal. A identidade de quem aprovou fica no histórico da PR.
 
-## Textos pendentes (cópia de conferência, 2026-11-20)
+## Textos validados (cópia de conferência)
+
+Aprovados pelo responsável clínico em 2026-11-20 sobre a versão `ca3f089f`, sem mudanças. O ATV-7 (compreensão com
+pessoas) continua pendente para estes mesmos textos.
 
 `{nome}` é o nome da pessoa acompanhada, mostrado ao responsável.
 
