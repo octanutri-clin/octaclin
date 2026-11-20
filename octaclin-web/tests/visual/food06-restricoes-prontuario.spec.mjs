@@ -77,8 +77,8 @@ test.describe('FOOD06 P3-3 — aba Restrições no prontuário', () => {
     const { pedidos } = await prepararAbaRestricoes(page);
     await abrirAba(page);
     const regiao = aba(page);
-    await regiao.getByRole('button', { name: 'Rejeitar: outra restrição clínica: Leite' }).click();
-    const dialogo = page.getByRole('dialog', { name: 'Rejeitar outra restrição clínica: Leite?' });
+    await regiao.getByRole('button', { name: 'Rejeitar: restrição de tipo não informado: Leite' }).click();
+    const dialogo = page.getByRole('dialog', { name: 'Rejeitar restrição de tipo não informado: Leite?' });
     await dialogo.getByRole('button', { name: 'Rejeitar registro' }).click();
     const campo = dialogo.getByLabel('Justificativa (só a equipe vê)');
     await expect(campo).toHaveAttribute('aria-invalid', 'true');
@@ -98,10 +98,10 @@ test.describe('FOOD06 P3-3 — aba Restrições no prontuário', () => {
     const regiao = aba(page);
     const registrar = regiao.getByRole('button', { name: 'Registrar para conferência' });
     await registrar.click();
-    await expect(regiao.getByLabel('Tipo')).toBeFocused();
-    await regiao.getByLabel('Tipo').selectOption('escolha');
+    await expect(regiao.getByLabel('Tipo', { exact: true })).toBeFocused();
+    await regiao.getByLabel('Tipo', { exact: true }).selectOption('escolha');
     await expect(regiao.getByLabel('Gravidade')).toHaveCount(0);
-    await regiao.getByLabel('Tipo').selectOption('intolerancia');
+    await regiao.getByLabel('Tipo', { exact: true }).selectOption('intolerancia');
     await expect(regiao.getByLabel('Gravidade')).toHaveValue('nao_informada');
     await registrar.click();
     await expect(regiao.getByLabel('Alimento ou item')).toBeFocused();
@@ -123,7 +123,7 @@ test.describe('FOOD06 P3-3 — aba Restrições no prontuário', () => {
     const { pedidos } = await prepararAbaRestricoes(page, { registrar: () => (++tentativa === 1 ? 503 : { id: '66666666-6666-4666-8666-666666666666', revisao: 1, estado: 'ativa', confirmacao: 'pendente' }) });
     await abrirAba(page);
     const regiao = aba(page);
-    await regiao.getByLabel('Tipo').selectOption('alergia');
+    await regiao.getByLabel('Tipo', { exact: true }).selectOption('alergia');
     await regiao.getByLabel('Alimento ou item').fill('Camarão');
     await regiao.getByRole('button', { name: 'Registrar para conferência' }).click();
     await expect(regiao.getByRole('alert').filter({ hasText: 'Não conseguimos confirmar se a ação foi concluída.' })).toBeVisible();
@@ -174,7 +174,7 @@ test.describe('FOOD06 P3-3 — aba Restrições no prontuário', () => {
     await expect(regiao.getByRole('button', { name: /^Confirmar|^Rejeitar|Iniciar conferência/ })).toHaveCount(0);
     expect(pedidos.some((p) => p.caminho.endsWith('/avaliacao'))).toBe(false);
     expect(pedidos.find((p) => p.caminho.endsWith('/listar')).caminho).toBe(`/api/colaborador/pacientes/${PACIENTE}/restricoes/listar`);
-    await regiao.getByLabel('Tipo').selectOption('alergia');
+    await regiao.getByLabel('Tipo', { exact: true }).selectOption('alergia');
     await regiao.getByLabel('Alimento ou item').fill('Castanha');
     await regiao.getByRole('button', { name: 'Registrar para conferência' }).click();
     await expect(regiao.getByRole('status').filter({ hasText: 'Castanha foi registrado para conferência.' })).toBeVisible();
@@ -198,5 +198,61 @@ test.describe('FOOD06 P3-3 — aba Restrições no prontuário', () => {
     await expect(aba(page).getByText('Amendoim')).toBeVisible();
     const medidas = await page.evaluate(() => ({ doc: document.documentElement.scrollWidth, vp: document.documentElement.clientWidth }));
     expect(medidas.doc).toBeLessThanOrEqual(medidas.vp + 1);
+  });
+
+  // Etapa B (2026-11-20): ajustes da revisão de UX.
+  test('UX B: item "Não sei dizer" não usa o rótulo do tipo como fato; diálogo repete gravidade, origem e observação', async ({ page }) => {
+    await prepararAbaRestricoes(page);
+    await abrirAba(page);
+    const regiao = aba(page);
+    // NUX-01: o cartão e o diálogo não afirmam "Outra restrição clínica" quando o paciente não soube dizer.
+    const leite = regiao.getByRole('listitem').filter({ hasText: 'Leite' });
+    await expect(leite.getByText('Tipo não informado pelo paciente')).toBeVisible();
+    await expect(leite.getByText('Outra restrição clínica')).toHaveCount(0);
+    await regiao.getByRole('button', { name: 'Confirmar: restrição de tipo não informado: Leite' }).click();
+    const dialogoLeite = page.getByRole('dialog', { name: 'Confirmar restrição de tipo não informado: Leite?' });
+    await expect(dialogoLeite).toContainText('O tipo e a gravidade continuam não informados');
+    await dialogoLeite.getByRole('button', { name: 'Voltar' }).click();
+    // NUX-02: gravidade, origem e observação no diálogo.
+    await regiao.getByRole('button', { name: 'Confirmar: alergia alimentar: Amendoim' }).click();
+    const dialogo = page.getByRole('dialog', { name: 'Confirmar alergia alimentar: Amendoim?' });
+    await expect(dialogo).toContainText('Gravidade: Grave');
+    await expect(dialogo).toContainText('Registrada por colaborador');
+    await expect(dialogo).toContainText('Reação relatada na infância (sintético)');
+  });
+
+  test('UX B: conferência geral mostra pendentes; atalho para o formulário; rejeição orienta avisar o paciente', async ({ page }) => {
+    await prepararAbaRestricoes(page, { avaliacao: () => ({ avaliacao: { id: '55555555-5555-4555-8555-555555555555', revisao: 2,
+      situacao: 'restricoes_registradas', confirmadoEm: '2026-11-10T10:00:00.000Z', venceEm: '2027-05-09T10:00:00.000Z' } }) });
+    await abrirAba(page);
+    const regiao = aba(page);
+    // NUX-03: "conferidas" nunca aparece sozinho quando há pendentes.
+    await expect(regiao.getByRole('region', { name: 'Conferência geral das restrições' }).getByText('2 registros ainda aguardam conferência.')).toBeVisible();
+    // NUX-05: atalho no topo leva o foco ao formulário.
+    await regiao.getByRole('link', { name: 'Ir para registrar restrição' }).click();
+    await expect(regiao.getByLabel('Tipo', { exact: true })).toBeFocused();
+    // PUX-01: a rejeição avisa que o paciente não é notificado.
+    await regiao.getByRole('button', { name: 'Rejeitar: alergia alimentar: Amendoim' }).click();
+    await expect(page.getByRole('dialog')).toContainText('O paciente não é avisado automaticamente');
+  });
+
+  test('UX B: 409 ao rejeitar não perde a justificativa; o diálogo continua aberto com a versão atual', async ({ page }) => {
+    let tentativa = 0;
+    const { pedidos } = await prepararAbaRestricoes(page, {
+      lista: () => (tentativa === 0 ? listaExemplo() : { ...listaExemplo(), itens: listaExemplo().itens.map((i) => (i.id === R_PENDENTE ? { ...i, revisao: 3 } : i)) }),
+      rejeitar: (corpo, id) => (++tentativa === 1 ? 409 : { id, revisao: corpo.revisao + 1, confirmacao: 'rejeitada' })
+    });
+    await abrirAba(page);
+    const regiao = aba(page);
+    await regiao.getByRole('button', { name: 'Rejeitar: alergia alimentar: Amendoim' }).click();
+    const dialogo = page.getByRole('dialog');
+    await dialogo.getByLabel('Justificativa (só a equipe vê)').fill('Texto longo sintético que não pode se perder.');
+    await dialogo.getByRole('button', { name: 'Rejeitar registro' }).click();
+    await expect(dialogo.getByRole('alert')).toContainText('Esta informação mudou');
+    await expect(dialogo.getByLabel('Justificativa (só a equipe vê)')).toHaveValue('Texto longo sintético que não pode se perder.');
+    await dialogo.getByRole('button', { name: 'Rejeitar registro' }).click();
+    await expect(regiao.getByRole('status').filter({ hasText: 'foi rejeitada.' })).toBeVisible();
+    const envios = pedidos.filter((p) => p.caminho.endsWith(`/${R_PENDENTE}/rejeitar`)).map((p) => p.corpo.revisao);
+    expect(envios).toEqual([2, 3]);
   });
 });

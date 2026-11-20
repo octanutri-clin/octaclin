@@ -35,6 +35,10 @@ export const TEXTOS_RESTRICOES_PRONTUARIO = Object.freeze({
   botaoRejeitar: "Rejeitar",
   confirmarTitulo: (descricao: string) => `Confirmar ${descricao}?`,
   confirmarTexto: "A restrição passa a valer como confirmada no acompanhamento deste paciente.",
+  confirmarNaoSabe: "O tipo e a gravidade continuam não informados; a correção do registro chega em uma próxima versão.",
+  descricaoNaoSabe: "restrição de tipo não informado",
+  linkRegistrar: "Ir para registrar restrição",
+  avisoRejeicaoPaciente: "O paciente não é avisado automaticamente, e a informação deixa de aparecer no portal dele. Combine como avisá-lo.",
   confirmado: (descricao: string) => `${descricao} foi confirmada.`,
   rejeitarTitulo: (descricao: string) => `Rejeitar ${descricao}?`,
   rotuloJustificativa: "Justificativa (só a equipe vê)",
@@ -46,7 +50,8 @@ export const TEXTOS_RESTRICOES_PRONTUARIO = Object.freeze({
   // Avaliação
   tituloAvaliacao: "Conferência geral das restrições",
   avaliacaoAusente: "A conferência geral das restrições deste paciente ainda não foi iniciada.",
-  ajudaIniciarAvaliacao: "Iniciar cria o registro que permite reconfirmar as restrições com o paciente depois.",
+  ajudaIniciarAvaliacao: "Iniciar não confere nenhuma restrição: só abre o registro usado para reconfirmar as restrições com o paciente.",
+  pendentesNaConferencia: (n: number) => (n === 1 ? "1 registro ainda aguarda conferência." : `${n} registros ainda aguardam conferência.`),
   botaoIniciarAvaliacao: "Iniciar conferência",
   avaliacaoIniciada: "Conferência iniciada.",
   // Estados

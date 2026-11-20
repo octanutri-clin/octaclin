@@ -50,8 +50,19 @@ function mensagem(tipo: FalhaProntuario): string {
   }
 }
 
-const tipoDe = (i: RestricaoProntuario) => rotuloTipoRestricao(i.conteudo.natureza, i.conteudo.subtipoClinico);
-const descricao = (i: RestricaoProntuario) => descricaoRestricao(i, tipoDe(i));
+// NUX-01 (etapa B): com "Não sei dizer", o rótulo do tipo não é afirmado como fato em lugar nenhum.
+const naoSabe = (i: RestricaoProntuario) => i.conteudo.classificacaoPeloPaciente === 'nao_sabe';
+const tipoDe = (i: RestricaoProntuario) => (naoSabe(i) ? T.tipoNaoInformado : rotuloTipoRestricao(i.conteudo.natureza, i.conteudo.subtipoClinico));
+const descricao = (i: RestricaoProntuario) => descricaoRestricao(i, naoSabe(i) ? T.descricaoNaoSabe : tipoDe(i));
+/** NUX-02: o diálogo de confirmar repete o que importa para decidir. */
+function detalhesConfirmacao(i: RestricaoProntuario): string {
+  const partes: string[] = [T.confirmarTexto];
+  if (naoSabe(i)) partes.push(T.confirmarNaoSabe);
+  else if (i.conteudo.natureza === 'clinica') partes.push(`Gravidade: ${rotuloGravidade(i.conteudo.gravidade)}.`);
+  partes.push(`${rotuloOrigem(i.origem)}.`);
+  if (i.conteudo.observacao) partes.push(`${T.observacao}: ${i.conteudo.observacao}`);
+  return partes.join(' ');
+}
 const novaChave = () => crypto.randomUUID();
 
 /**
@@ -69,12 +80,14 @@ export function AbaRestricoes({ pacienteId, papel, podeGerenciar }: { pacienteId
   const [rejeitando, setRejeitando] = useState<RestricaoProntuario | null>(null);
   const [justificativa, setJustificativa] = useState('');
   const [erroJustificativa, setErroJustificativa] = useState(false);
+  const [erroDialogo, setErroDialogo] = useState('');
+  const idTipoRegistro = useId();
   const [enviando, setEnviando] = useState(false);
   const titulo = useRef<HTMLHeadingElement>(null);
   const idJustificativa = useId();
   const idAjudaJustificativa = useId();
 
-  const carregar = useCallback(async (signal?: AbortSignal, inicial = false) => {
+  const carregar = useCallback(async (signal?: AbortSignal, inicial = false): Promise<RestricaoProntuario[] | null> => {
     if (!inicial) setEstado({ fase: 'carregando' });
     try {
       const lista = await listarRestricoesProntuario(pacienteId, colaborador, signal);
@@ -83,16 +96,18 @@ export function AbaRestricoes({ pacienteId, papel, podeGerenciar }: { pacienteId
         try {
           avaliacao = (await consultarAvaliacaoProntuario(pacienteId, signal)).avaliacao;
         } catch (falha) {
-          if (signal?.aborted) return;
+          if (signal?.aborted) return null;
           if (!(falha instanceof ErroRestricoesProntuario)) throw falha;
           avaliacao = 'indisponivel';
         }
       }
-      if (signal?.aborted) return;
+      if (signal?.aborted) return null;
       setEstado({ fase: 'pronto', escopo: lista.escopo, itens: lista.itens, avaliacao });
+      return lista.itens;
     } catch (falha) {
-      if (signal?.aborted) return;
+      if (signal?.aborted) return null;
       setEstado({ fase: 'falha', tipo: falha instanceof ErroRestricoesProntuario ? falha.tipo : 'leitura' });
+      return null;
     }
   }, [pacienteId, colaborador]);
 
@@ -134,16 +149,26 @@ export function AbaRestricoes({ pacienteId, papel, podeGerenciar }: { pacienteId
     }
     const alvo = rejeitando;
     setEnviando(true);
+    setErroDialogo('');
     try {
       await rejeitarRestricaoProntuario(pacienteId, alvo.id, alvo.revisao, justificativa);
       setRejeitando(null);
       setJustificativa('');
       await depoisDaEscrita(T.rejeitado(descricao(alvo)));
     } catch (falha) {
-      // Em 409 ou incerto o texto digitado fica no estado só enquanto o diálogo está aberto; ao fechar, é descartado.
-      setRejeitando(null);
-      setJustificativa('');
-      await depoisDaEscrita(falhaDeEscrita(falha));
+      // NUX-07 (etapa B): em 409 ou incerto, recarrega e, se o item ainda estiver para conferir, mantém o diálogo aberto
+      // com a versão atual e o texto digitado (só em memória). Se mudou de situação, fecha e anuncia.
+      const texto = falhaDeEscrita(falha);
+      const itens = await carregar();
+      const atual = itens?.find((x) => x.id === alvo.id && x.estado === 'ativa' && x.confirmacao === 'pendente');
+      if (atual) {
+        setRejeitando(atual);
+        setErroDialogo(texto);
+      } else {
+        setRejeitando(null);
+        setJustificativa('');
+        setAviso(texto);
+      }
     } finally {
       setEnviando(false);
       titulo.current?.focus();
@@ -170,9 +195,8 @@ export function AbaRestricoes({ pacienteId, papel, podeGerenciar }: { pacienteId
         </p>
         <p className="text-sm text-tinta">
           {tipoDe(i)}
-          {i.conteudo.natureza === 'clinica' ? ` · Gravidade: ${rotuloGravidade(i.conteudo.gravidade)}` : ''}
+          {i.conteudo.natureza === 'clinica' && !naoSabe(i) ? ` · Gravidade: ${rotuloGravidade(i.conteudo.gravidade)}` : ''}
         </p>
-        {i.conteudo.classificacaoPeloPaciente === 'nao_sabe' ? <p className="text-sm font-medium text-tinta">{T.tipoNaoInformado}</p> : null}
         <p className="text-xs text-texto-suave">
           {rotuloEstadoRestricao(i.estado, i.confirmacao)} · {rotuloOrigem(i.origem)} · {T.registradaEm(formatarDataProntuario(i.criadoEm))}
         </p>
@@ -186,7 +210,7 @@ export function AbaRestricoes({ pacienteId, papel, podeGerenciar }: { pacienteId
             {T.botaoConfirmar}
           </Botao>
           <Botao type="button" tamanho="sm" variante="secundario" aria-label={`${T.botaoRejeitar}: ${descricao(i)}`}
-            onClick={() => { setJustificativa(''); setErroJustificativa(false); setRejeitando(i); }}>
+            onClick={() => { setJustificativa(''); setErroJustificativa(false); setErroDialogo(''); setRejeitando(i); }}>
             {T.botaoRejeitar}
           </Botao>
         </div>
@@ -216,7 +240,15 @@ export function AbaRestricoes({ pacienteId, papel, podeGerenciar }: { pacienteId
     const s = separarRestricoesProntuario(estado.itens);
     return (
       <div className="grid gap-5">
-        {completo ? <BlocoAvaliacao avaliacao={estado.avaliacao} podeIniciar={decide} enviando={enviando} aoIniciar={() => void iniciarAvaliacao()} /> : (
+        {podeRegistrar ? (
+          <p className="text-sm">
+            <a href={`#${idTipoRegistro}`} className="font-medium text-primaria-forte underline underline-offset-2"
+              onClick={(e) => { e.preventDefault(); const alvo = document.getElementById(idTipoRegistro); alvo?.scrollIntoView({ block: 'center' }); alvo?.focus(); }}>
+              {T.linkRegistrar}
+            </a>
+          </p>
+        ) : null}
+        {completo ? <BlocoAvaliacao avaliacao={estado.avaliacao} pendentes={s.pendentes.length} podeIniciar={decide} enviando={enviando} aoIniciar={() => void iniciarAvaliacao()} /> : (
           <p className="text-sm text-texto-suave">{colaborador ? T.vazioAutoria : T.avisoAutoria}</p>
         )}
         {estado.itens.length === 0 ? (
@@ -234,7 +266,7 @@ export function AbaRestricoes({ pacienteId, papel, podeGerenciar }: { pacienteId
             ) : null}
           </div>
         )}
-        {podeRegistrar ? <FormularioRegistro pacienteId={pacienteId} colaborador={colaborador} aoConcluir={(texto) => void depoisDaEscrita(texto)} /> : null}
+        {podeRegistrar ? <FormularioRegistro idTipo={idTipoRegistro} pacienteId={pacienteId} colaborador={colaborador} aoConcluir={(texto) => void depoisDaEscrita(texto)} /> : null}
       </div>
     );
   };
@@ -250,7 +282,7 @@ export function AbaRestricoes({ pacienteId, papel, podeGerenciar }: { pacienteId
       <ModalConfirmacao
         aberto={confirmando !== null}
         titulo={confirmando ? T.confirmarTitulo(descricao(confirmando)) : ''}
-        mensagem={T.confirmarTexto}
+        mensagem={confirmando ? detalhesConfirmacao(confirmando) : T.confirmarTexto}
         rotuloConfirmar={T.botaoConfirmar}
         rotuloCancelar={T.manter}
         confirmando={enviando}
@@ -260,6 +292,8 @@ export function AbaRestricoes({ pacienteId, papel, podeGerenciar }: { pacienteId
       <Modal aberto={rejeitando !== null} aoFechar={() => { if (!enviando) { setRejeitando(null); setJustificativa(''); } }}
         titulo={rejeitando ? T.rejeitarTitulo(descricao(rejeitando)) : ''}>
         <form className="grid gap-2" noValidate onSubmit={(e) => { e.preventDefault(); void rejeitar(); }}>
+          <p className="text-sm text-texto-suave">{T.avisoRejeicaoPaciente}</p>
+          {erroDialogo ? <p role="alert" className="rounded-md border border-linha px-3 py-2 text-sm text-tinta">{erroDialogo}</p> : null}
           <Rotulo htmlFor={idJustificativa}>{T.rotuloJustificativa}</Rotulo>
           <AreaTexto id={idJustificativa} value={justificativa} maxLength={4000} rows={4} aria-describedby={idAjudaJustificativa}
             aria-invalid={erroJustificativa || undefined}
@@ -275,13 +309,15 @@ export function AbaRestricoes({ pacienteId, papel, podeGerenciar }: { pacienteId
   );
 }
 
-function BlocoAvaliacao({ avaliacao, podeIniciar, enviando, aoIniciar }: {
-  avaliacao: AvaliacaoProntuario | null | 'indisponivel'; podeIniciar: boolean; enviando: boolean; aoIniciar: () => void;
+function BlocoAvaliacao({ avaliacao, pendentes, podeIniciar, enviando, aoIniciar }: {
+  avaliacao: AvaliacaoProntuario | null | 'indisponivel'; pendentes: number; podeIniciar: boolean; enviando: boolean; aoIniciar: () => void;
 }) {
   if (avaliacao === 'indisponivel') return null;
   return (
     <section aria-labelledby="restricoes-avaliacao" className="grid gap-2 rounded-md border border-linha p-3">
       <h3 id="restricoes-avaliacao" className="text-sm font-semibold text-tinta">{T.tituloAvaliacao}</h3>
+      {/* NUX-03 (etapa B): "conferidas" nunca aparece sozinho quando há registros esperando conferência. */}
+      {pendentes > 0 ? <p className="text-sm font-medium text-tinta">{T.pendentesNaConferencia(pendentes)}</p> : null}
       {avaliacao ? <p className="text-sm text-tinta">{textoSituacaoAvaliacao(avaliacao)}</p> : (
         <>
           <p className="text-sm text-tinta">{T.avaliacaoAusente}</p>
@@ -301,7 +337,7 @@ function BlocoAvaliacao({ avaliacao, podeIniciar, enviando, aoIniciar }: {
  * Registro para conferência. A chave de criação nasce com o formulário e só muda depois de um envio confirmado: repetir
  * depois de um resultado incerto não duplica (o backend é idempotente por chave).
  */
-function FormularioRegistro({ pacienteId, colaborador, aoConcluir }: { pacienteId: string; colaborador: boolean; aoConcluir: (texto: string) => void }) {
+function FormularioRegistro({ idTipo, pacienteId, colaborador, aoConcluir }: { idTipo: string; pacienteId: string; colaborador: boolean; aoConcluir: (texto: string) => void }) {
   const [chave, setChave] = useState(novaChave);
   const [tipo, setTipo] = useState('');
   const [alimento, setAlimento] = useState('');
@@ -311,7 +347,7 @@ function FormularioRegistro({ pacienteId, colaborador, aoConcluir }: { pacienteI
   const [erros, setErros] = useState<{ tipo?: boolean; alimento?: boolean }>({});
   const [enviando, setEnviando] = useState(false);
   const [falha, setFalha] = useState('');
-  const ids = { tipo: useId(), alimento: useId(), ajudaAlimento: useId(), gravidade: useId(), observacao: useId(), ajudaObservacao: useId() };
+  const ids = { tipo: idTipo, alimento: useId(), ajudaAlimento: useId(), gravidade: useId(), observacao: useId(), ajudaObservacao: useId() };
   const campoTipo = useRef<HTMLSelectElement>(null);
   const campoAlimento = useRef<HTMLInputElement>(null);
   const clinico = tipo !== '' && tipo !== 'escolha';
