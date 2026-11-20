@@ -28,6 +28,12 @@ const SELOS: Readonly<Record<string, (ctx: ContextoPessoaPortal) => string>> = O
   "restricoes.portal.registrada": (ctx) => `Restrição registrada ${deQuem(ctx)}`,
   "restricoes.portal.informada_por_voce": () => "Informação enviada pelo portal; ainda será conferida",
   "restricoes.portal.anotada_pela_equipe": () => `Anotado por ${QUEM_ACOMPANHA}; ainda será conferido`,
+  // PUX-01/05 (decisão do proprietário de 2026-11-20): informação rejeitada fica visível por 30 dias, sem motivo interno.
+  // Texto clínico: no registro de validação (`docs/clinico/validacao-textos-restricoes.json`).
+  "restricoes.portal.revisada": (ctx) =>
+    ctx.representante
+      ? `Revisada por quem faz o acompanhamento de ${ctx.nome}. Se tiver dúvida, converse na próxima consulta.`
+      : `Revisada por ${QUEM_ACOMPANHA}. Se tiver dúvida, converse na próxima consulta.`,
 });
 
 const SELO_NEUTRO = "Informação em conferência";

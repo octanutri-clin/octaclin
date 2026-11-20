@@ -174,4 +174,21 @@ test.describe('FOOD06 P3 — portal de restrições (leitura)', () => {
     await page.goto('/portal/mais');
     await expect(page.getByRole('link', { name: 'Restrições alimentares' })).toBeVisible();
   });
+
+  test('PUX-01/05: item revisado aparece com selo neutro e sem o botão de pedir correção', async ({ page }) => {
+    await prepararPortalRestricoes(page, {
+      resumo: () => ({ itens: [
+        { id: '44444444-4444-4444-8444-444444444444', grupo: 'outras', alimento: 'Leite', chaveSelo: 'restricoes.portal.revisada' },
+        { id: '55555555-5555-4555-8555-555555555555', grupo: 'alergias', alimento: 'Amendoim', chaveSelo: 'restricoes.portal.registrada' }
+      ] }),
+      pedidos: () => ({ itens: [], maisAntigos: false })
+    });
+    await page.goto('/portal/restricoes');
+    const regiao = area(page);
+    const leite = regiao.getByRole('listitem').filter({ hasText: 'Leite' });
+    await expect(leite.getByText('Revisada por quem faz seu acompanhamento. Se tiver dúvida, converse na próxima consulta.')).toBeVisible();
+    await expect(leite.getByRole('button')).toHaveCount(0);
+    await expect(regiao.getByRole('listitem').filter({ hasText: 'Amendoim' }).getByRole('button', { name: /Pedir correção ou remoção/ })).toBeVisible();
+    await semViolacoes(page);
+  });
 });

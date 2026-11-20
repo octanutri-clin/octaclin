@@ -114,12 +114,25 @@ export class ServicoPortalRestricoes {
         where: { tenantId: u.tenantId, pacienteId: paciente, estado: In(['ativa', 'em_reavaliacao']), confirmacao: In(['pendente', 'confirmada']) },
         select: { id: true, origem: true, estado: true, confirmacao: true, revisao: true, conteudoCriptografado: true },
         order: { id: 'ASC' }, take: LIMITE_RESTRICOES + 1 });
-      if (linhas.length > LIMITE_RESTRICOES) throw new ConflictException('Operação indisponível.');
+      // PUX-01/05: rejeitadas cuja revisão de rejeição tem até 30 dias, pelo relógio do banco (o histórico é append-only).
+      const rejeitadas: Array<{ id: string; origem: string; estado: string; confirmacao: string; revisao: number; conteudo_criptografado: Buffer }> =
+        await g.query(`select r.id, r.origem, r.estado, r.confirmacao, r.revisao, r.conteudo_criptografado
+          from restricoes_pacientes r
+          where r.tenant_id = $1 and r.paciente_id = $2 and r.confirmacao = 'rejeitada' and r.estado <> 'inativa'
+            and exists (select 1 from restricoes_pacientes_revisoes v
+              where v.tenant_id = r.tenant_id and v.paciente_id = r.paciente_id and v.restricao_id = r.id
+                and v.evento = 'rejeicao' and v.criado_em >= clock_timestamp() - interval '30 days')
+          order by r.id limit $3`, [u.tenantId, paciente, LIMITE_RESTRICOES + 1]);
+      if (linhas.length + rejeitadas.length > LIMITE_RESTRICOES) throw new ConflictException('Operação indisponível.');
       const avaliacao = await g.getRepository(AvaliacaoRestricoesPacienteOrm).findOne({ where: { tenantId: u.tenantId, pacienteId: paciente },
         select: { id: true, situacao: true, confirmadoEm: true } });
-      const resumo = projetarResumoPortal(linhas.map(l => ({ id: l.id, origem: l.origem, estado: l.estado, confirmacao: l.confirmacao,
-        conteudo: decifrarConteudoRestricao(this.cripto, l.conteudoCriptografado, { tenantId: u.tenantId, pacienteId: paciente, restricaoId: l.id,
-          revisao: l.revisao, finalidade: 'restricao' }) })), avaliacao?.situacao === 'sem_restricoes_confirmadas' || avaliacao?.situacao === 'restricoes_registradas'
+      const decifrar = (id: string, revisao: number, cifra: Buffer) => decifrarConteudoRestricao(this.cripto, cifra,
+        { tenantId: u.tenantId, pacienteId: paciente, restricaoId: id, revisao, finalidade: 'restricao' });
+      const resumo = projetarResumoPortal([
+        ...linhas.map(l => ({ id: l.id, origem: l.origem, estado: l.estado, confirmacao: l.confirmacao, conteudo: decifrar(l.id, l.revisao, l.conteudoCriptografado) })),
+        ...rejeitadas.map(l => ({ id: l.id, origem: l.origem, estado: l.estado, confirmacao: l.confirmacao, rejeitadaRecente: true,
+          conteudo: decifrar(l.id, l.revisao, l.conteudo_criptografado) }))
+      ], avaliacao?.situacao === 'sem_restricoes_confirmadas' || avaliacao?.situacao === 'restricoes_registradas'
         ? { confirmadoEm: avaliacao.confirmadoEm ?? null } : null);
       await registrarAuditoriaNaTransacao(g, { tenantId: u.tenantId, usuarioId: u.usuarioId, acao: 'portal.restricoes.resumo',
         recursoTipo: 'paciente', recursoId: paciente, metadados: {} });

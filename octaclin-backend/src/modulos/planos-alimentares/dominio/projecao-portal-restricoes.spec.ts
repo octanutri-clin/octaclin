@@ -45,6 +45,21 @@ describe('resumo de restrições do portal (Q11, P2d-3b)', () => {
     expect(() => projetarResumoPortal(entradas as never, null)).toThrow('Projeção indisponível.');
   });
   it('as chaves de selo são fechadas', () => {
-    expect(CHAVES_SELO_PORTAL_RESTRICAO).toEqual(['restricoes.portal.registrada', 'restricoes.portal.informada_por_voce', 'restricoes.portal.anotada_pela_equipe']);
+    expect(CHAVES_SELO_PORTAL_RESTRICAO).toEqual(['restricoes.portal.registrada', 'restricoes.portal.informada_por_voce',
+      'restricoes.portal.anotada_pela_equipe', 'restricoes.portal.revisada']);
+  });
+  // PUX-01/05 (decisão do proprietário de 2026-11-20): rejeitada aparece por 30 dias com selo neutro; nada interno.
+  it('rejeitada recente aparece com o selo "revisada" e os mesmos campos; sem a marca de recente, continua fora', () => {
+    const r = projetarResumoPortal([
+      linha(1, { confirmacao: 'rejeitada', origem: 'declaracao_paciente', rejeitadaRecente: true }),
+      linha(2, { confirmacao: 'rejeitada', origem: 'colaborador' }),
+      linha(3, { confirmacao: 'rejeitada', estado: 'inativa', rejeitadaRecente: true })
+    ], null);
+    expect(r.restricoes.map(x => [x.id, x.selo])).toEqual([[id(1), 'restricoes.portal.revisada']]);
+    expect(JSON.stringify(r)).not.toMatch(/CANARIO_|observacao|justificativa/);
+  });
+  it('a marca de recente só vale para rejeitada (não muda o selo de confirmada ou pendente)', () => {
+    const r = projetarResumoPortal([linha(1, { rejeitadaRecente: true }), linha(2, { confirmacao: 'pendente', rejeitadaRecente: true })], null);
+    expect(r.restricoes.map(x => x.selo)).toEqual(['restricoes.portal.registrada', 'restricoes.portal.anotada_pela_equipe']);
   });
 });

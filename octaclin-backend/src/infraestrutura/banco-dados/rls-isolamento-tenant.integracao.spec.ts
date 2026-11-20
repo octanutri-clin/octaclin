@@ -3267,6 +3267,67 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     expect((await cliente.query('select id from restricoes_pacientes where id=$1', [declarada.id])).rows).toEqual([]);
   }, 120_000);
 
+  it('PUX-01/05: resumo do portal mostra rejeitada há até 30 dias com selo neutro e esconde a mais antiga, sob RLS reais', async () => {
+    if (!cliente || !executorTenant) throw new Error('ExecutorTenant da prova RLS nao foi inicializado.');
+    const tenant = randomUUID();
+    await cliente.query('insert into tenants (id, nome, slug) values ($1, $2, $3)', [tenant, 'Prova PUX-01 sintetica', `prova-pux01-${tenant}`]);
+    const dados = await prepararDadosRepresentativos(tenant, `pux01-${randomUUID()}`);
+    const crypto = new CriptografiaDadosSensiveis();
+    await comoTenant(tenant);
+    const contaPacienteId = (await cliente.query<{ id: string }>(`insert into usuarios (tenant_id, email_hash, email_criptografado, senha_hash, role)
+      values ($1, $2, $3, 'prova-rls-senha', 'Patient') returning id`, [tenant, `prova-pux01-${randomUUID()}`,
+      crypto.criptografar(`pux01-${randomUUID()}@example.test`)])).rows[0].id;
+    await cliente.query('update pacientes set usuario_id=$2 where id=$1', [dados.pacienteId, contaPacienteId]);
+    const declaracao = (alimento: string) => ({ schemaVersao: 1, natureza: 'clinica', subtipoClinico: 'outra_restricao_clinica',
+      alvo: { tipo: 'nao_catalogado' }, alvoDeclarado: alimento });
+    // Insere uma restrição já rejeitada (revisão 2) com o histórico de criação e de rejeição; a data da rejeição é a do
+    // histórico (append-only: só inserção, nunca alteração).
+    const rejeitada = async (alimento: string, rejeitadaHa: string) => {
+      const restricaoId = randomUUID();
+      const vinculo = (revisao: number) => ({ tenantId: tenant, pacienteId: dados.pacienteId, restricaoId, revisao });
+      await cliente!.query(`insert into restricoes_pacientes
+        (id, tenant_id, paciente_id, autor_usuario_id, chave_criacao, origem, confirmacao, revisao, conteudo_criptografado)
+        values ($1,$2,$3,$4,$5,'declaracao_paciente','rejeitada',2,$6)`, [restricaoId, tenant, dados.pacienteId, contaPacienteId, randomUUID(),
+        cifrarConteudoRestricao(crypto, declaracao(alimento), { ...vinculo(2), finalidade: 'restricao' })]);
+      for (const [numero, evento, autor] of [[1, 'criacao', contaPacienteId], [2, 'rejeicao', dados.usuarioId]] as const) {
+        await cliente!.query(`insert into restricoes_pacientes_revisoes
+          (tenant_id,paciente_id,restricao_id,numero,evento,autor_usuario_id,conteudo_criptografado,criado_em)
+          values ($1,$2,$3,$4,$5,$6,$7, now() - $8::interval)`, [tenant, dados.pacienteId, restricaoId, numero, evento, autor,
+          cifrarConteudoRestricao(crypto, declaracao(alimento), { ...vinculo(numero), finalidade: 'revisao_restricao' }), rejeitadaHa]);
+      }
+      return restricaoId;
+    };
+    const recente = await rejeitada('Leite sintético', '2 days');
+    const antiga = await rejeitada('Ovo sintético', '31 days');
+    // Outro paciente do MESMO tenant com rejeitada recente: nunca aparece no resumo do primeiro (filtro por paciente).
+    const outro = await prepararDadosRepresentativos(tenant, `pux01-outro-${randomUUID()}`);
+    const restricaoOutro = randomUUID();
+    await comoTenant(tenant);
+    await cliente.query(`insert into restricoes_pacientes
+      (id, tenant_id, paciente_id, autor_usuario_id, chave_criacao, origem, confirmacao, revisao, conteudo_criptografado)
+      values ($1,$2,$3,$4,$5,'profissional','rejeitada',2,$6)`, [restricaoOutro, tenant, outro.pacienteId, outro.usuarioId, randomUUID(),
+      cifrarConteudoRestricao(crypto, declaracao('Camarão sintético'), { tenantId: tenant, pacienteId: outro.pacienteId, restricaoId: restricaoOutro, revisao: 2, finalidade: 'restricao' })]);
+    for (const [numero, evento] of [[1, 'criacao'], [2, 'rejeicao']] as const) {
+      await cliente.query(`insert into restricoes_pacientes_revisoes
+        (tenant_id,paciente_id,restricao_id,numero,evento,autor_usuario_id,conteudo_criptografado)
+        values ($1,$2,$3,$4,$5,$6,$7)`, [tenant, outro.pacienteId, restricaoOutro, numero, evento, outro.usuarioId,
+        cifrarConteudoRestricao(crypto, declaracao('Camarão sintético'), { tenantId: tenant, pacienteId: outro.pacienteId, restricaoId: restricaoOutro, revisao: numero, finalidade: 'revisao_restricao' })]);
+    }
+    const portal = new ServicoPortalRestricoes(executorTenant, crypto);
+    const conta: UsuarioAutenticado = { tenantId: tenant, usuarioId: contaPacienteId, papel: 'Patient', emailHash: '', permissoes: [] };
+    const resumo = await portal.resumo(conta, dados.pacienteId);
+    expect(resumo.restricoes.map(r => [r.id, r.selo, r.alvoDeclarado])).toEqual([[recente, 'restricoes.portal.revisada', 'Leite sintético']]);
+    expect(resumo.restricoes.some(r => r.id === antiga || r.id === restricaoOutro)).toBe(false);
+    // O item revisado chega ao portal, mas pedido sobre ele é recusado no backend (403) sem gravar.
+    await expect(portal.criarPedido(conta, dados.pacienteId, { chaveCriacao: randomUUID(), tipo: 'correcao', restricaoId: recente,
+      itens: [{ item: 'descricao', texto: 'Pedido sintético' }] })).rejects.toMatchObject({ status: 403 });
+    await comoTenant(tenant);
+    expect((await cliente.query('select id from solicitacoes_restricoes_pacientes where restricao_id=$1', [recente])).rows).toEqual([]);
+    expect(JSON.stringify(resumo)).not.toMatch(/justificativa|observacao|gravidade/);
+    // Outro tenant com o mesmo paciente: negado (o tenant vem do token; RLS esconde o paciente).
+    await expect(portal.resumo({ ...conta, tenantId: tenantB }, dados.pacienteId)).rejects.toMatchObject({ status: 403 });
+  }, 120_000);
+
   it('P3-0a: listagem da equipe (completa ou por autoria), leitura da avaliação e sem alteração a partir de não informada, sob RLS e locks reais', async () => {
     if (!cliente || !executorTenant) throw new Error('ExecutorTenant da prova RLS nao foi inicializado.');
     const tenant = randomUUID();

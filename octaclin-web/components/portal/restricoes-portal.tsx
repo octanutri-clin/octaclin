@@ -229,7 +229,10 @@ function ListaRestricoes({ itens, ctx, pacienteId, pedidosNoLimite, aoAlterar }:
                 <li key={item.id} className="rounded-md border border-linha p-3">
                   <p className="font-medium text-tinta">{item.alimento || T.alimentoSemTexto}</p>
                   <p className="text-sm text-texto-suave">{textoSeloPortal(item.chaveSelo, ctx)}</p>
-                  <FormularioPedido pacienteId={pacienteId} restricaoId={item.id} alimento={item.alimento || T.alimentoSemTexto} ctx={ctx} noLimite={pedidosNoLimite} aoEnviar={aoAlterar} />
+                  {/* Item revisado (rejeitado há até 30 dias): o backend não aceita pedido sobre ele; a conversa é com quem acompanha. */}
+                  {item.chaveSelo !== 'restricoes.portal.revisada' ? (
+                    <FormularioPedido pacienteId={pacienteId} restricaoId={item.id} alimento={item.alimento || T.alimentoSemTexto} ctx={ctx} noLimite={pedidosNoLimite} aoEnviar={aoAlterar} />
+                  ) : null}
                 </li>
               ))}
             </ul>

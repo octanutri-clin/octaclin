@@ -5,12 +5,15 @@ import { validarConteudoRestricao } from './conteudo-restricao';
  * Aparecem: restrições confirmadas e ativas (ou em reavaliação), declarações do próprio paciente aguardando conferência e
  * registros da equipe aguardando conferência. Campos: natureza, subtipo, alvo, alvo declarado e gravidade, mais um selo
  * por chave de texto (os textos são da P3). Nunca: observação (pode conter anotação da equipe), justificativa, motivo,
- * autor, origem, estado, revisão ou código interno. Rejeitadas, inativas e preferências ficam fora.
+ * autor, origem, estado, revisão ou código interno. Inativas e preferências ficam fora; rejeitadas só entram por 30 dias
+ * depois da rejeição, com o selo neutro "revisada" (PUX-01/05).
  */
 const SELO_REGISTRADA = 'restricoes.portal.registrada';
 const SELO_INFORMADA = 'restricoes.portal.informada_por_voce';
 const SELO_EQUIPE = 'restricoes.portal.anotada_pela_equipe';
-export const CHAVES_SELO_PORTAL_RESTRICAO: readonly string[] = Object.freeze([SELO_REGISTRADA, SELO_INFORMADA, SELO_EQUIPE]);
+/** PUX-01/05 (decisão do proprietário de 2026-11-20): rejeitada há até 30 dias aparece com selo neutro, sem motivo interno. */
+const SELO_REVISADA = 'restricoes.portal.revisada';
+export const CHAVES_SELO_PORTAL_RESTRICAO: readonly string[] = Object.freeze([SELO_REGISTRADA, SELO_INFORMADA, SELO_EQUIPE, SELO_REVISADA]);
 
 export interface RestricaoPortal {
   id: string; selo: string; natureza: string; subtipoClinico?: string;
@@ -25,7 +28,7 @@ const CONFIRMACOES = ['pendente', 'confirmada', 'rejeitada'];
 function indisponivel(): never { throw new Error('Projeção indisponível.'); }
 
 export function projetarResumoPortal(
-  linhas: ReadonlyArray<{ id: unknown; origem: unknown; estado: unknown; confirmacao: unknown; conteudo: unknown }>,
+  linhas: ReadonlyArray<{ id: unknown; origem: unknown; estado: unknown; confirmacao: unknown; conteudo: unknown; rejeitadaRecente?: boolean }>,
   avaliacao: { confirmadoEm?: Date | null } | null
 ): ResumoPortal {
   if (!Array.isArray(linhas)) return indisponivel();
@@ -35,8 +38,10 @@ export function projetarResumoPortal(
       !ESTADOS.includes(l.estado as string) || !CONFIRMACOES.includes(l.confirmacao as string)) return indisponivel();
     let conteudo: ReturnType<typeof validarConteudoRestricao>;
     try { conteudo = validarConteudoRestricao(l.conteudo); } catch { return indisponivel(); }
-    if (l.estado === 'inativa' || l.confirmacao === 'rejeitada' || conteudo.natureza === 'preferencia') continue;
-    const selo = l.confirmacao === 'confirmada' ? SELO_REGISTRADA : l.origem === 'declaracao_paciente' ? SELO_INFORMADA : SELO_EQUIPE;
+    // Rejeitada só entra quando o serviço provou que a rejeição tem até 30 dias (`rejeitadaRecente`); inativa nunca.
+    const revisada = l.confirmacao === 'rejeitada' && l.rejeitadaRecente === true;
+    if (l.estado === 'inativa' || (l.confirmacao === 'rejeitada' && !revisada) || conteudo.natureza === 'preferencia') continue;
+    const selo = revisada ? SELO_REVISADA : l.confirmacao === 'confirmada' ? SELO_REGISTRADA : l.origem === 'declaracao_paciente' ? SELO_INFORMADA : SELO_EQUIPE;
     restricoes.push({
       id: l.id, selo, natureza: conteudo.natureza,
       ...(conteudo.subtipoClinico ? { subtipoClinico: conteudo.subtipoClinico } : {}),

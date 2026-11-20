@@ -49,3 +49,9 @@ pessoas) continua pendente para estes mesmos textos.
 - **Mensagem depois de informar:** "Em caso de dúvida ou sintomas, fale com quem faz seu acompanhamento" é suficiente, ou sintomas
   devem levar ao aviso de urgência?
 - **Plano não muda:** o texto deixa claro que nada muda no plano até a equipe agir, sem gerar alarme?
+
+## Textos pendentes (cópia de conferência)
+
+| Id | Finalidade | Conta própria | Responsável |
+| --- | --- | --- | --- |
+| `portal.seloRevisada` | Informação rejeitada, visível por 30 dias (PUX-01/05, 2026-11-20) | "Revisada por quem faz seu acompanhamento. Se tiver dúvida, converse na próxima consulta." | "Revisada por quem faz o acompanhamento de {nome}. Se tiver dúvida, converse na próxima consulta." |
