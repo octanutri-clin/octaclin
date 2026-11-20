@@ -67,3 +67,7 @@ Escrita do portal. Corrigidos: PUX-17, 18, 20, 21, 22, NUX-28 e 29. Condição d
 
 Telas de equipe (delegação da carteira e quem acompanha pelo portal). Sem P0. Corrigidos: NUX-01 (P1, nome do paciente), NUX-02/PUX-02 (P1, conferir o e-mail digitado), NUX-03, NUX-05, NUX-07, PUX-01 (orientação, sem notificação), PUX-04 e PUX-05. Decisão do proprietário: NUX-08 (entrada da delegação) e se a delegação deve aparecer com o portal desligado. BACKLOG: NUX-04, 06, 09, 10, PUX-01 completo (notificação), PUX-03, PUX-06 e autor do registro de representante. [Relatórios e limites](reports/FOOD06-P3-6-B-2026-11-19/consolidado.md).
 - 2026-11-19: NUX-08 decidido pelo proprietário (item no menu da conta, só titular e com a área ligada) e a delegação segue a mesma flag do portal; ver `tasks/food06-p3-6-web.md`.
+
+## FOOD06 P3-3 — revisão B, 2026-11-20
+
+Aba "Restrições" do prontuário. Sem P0. Corrigidos: NUX-01 (P1, tipo "não sei dizer" não afirmado como fato), NUX-03 (P1, pendentes na conferência geral), NUX-07 (P1, justificativa preservada no 409), NUX-02, NUX-05, NUX-08 (já atendido) e PUX-01 na parte da equipe. Decisão do proprietário: PUX-01/05 no portal (sinal neutro quando a informação é rejeitada) e PUX-03 (texto clínico: registrar não altera o plano). BACKLOG: NUX-04, 06, 07 (separar causas do 409), 09, 10, 11, PUX-02 e PUX-04. [Relatórios e limites](reports/FOOD06-P3-3-B-2026-11-20/consolidado.md).

@@ -185,6 +185,16 @@
       "bloqueante": true,
       "cobertoPor": "web-suite-visual",
       "motivoDaCobertura": "smoke:visual executa todos os specs, incluindo este, nos dois projects."
+    },
+    {
+      "id": "web-food06-restricoes-prontuario",
+      "comando": "test:restricoes:prontuario",
+      "diretorio": "octaclin-web",
+      "descricao": "Aba Restrições do prontuário (FOOD06 P3-3): lista por grupos, confirmar, rejeitar com justificativa, registrar, conferência geral, visão do colaborador, reflow a 320 px e axe (WCAG 2.0 a 2.2 AA).",
+      "especificacao": "octaclin-web/tests/visual/food06-restricoes-prontuario.spec.mjs",
+      "bloqueante": true,
+      "cobertoPor": "web-suite-visual",
+      "motivoDaCobertura": "smoke:visual executa todos os specs, incluindo este, nos dois projects."
     }
   ],
   "linhas": [
@@ -953,6 +963,28 @@
         ]
       },
       "risco": "Leitor de tela real e teste com pessoas não foram observados (ATV-7). BFF simulado: não prova autorização, carteira, cota de busca nem RLS (cobertos no backend P3-0b)."
+    },
+    {
+      "superficie": "aba Restrições do prontuário (atrás de flag desligada)",
+      "rota": "/pacientes/[id] (área Plano, aba Restrições)",
+      "rotas": [
+        "/pacientes/paciente-pa06-sintetico"
+      ],
+      "estado": "área desligada, grupos com pendentes, confirmadas e recolhidas, marca do paciente, confirmar, rejeitar sem e com justificativa, registrar com erros, resultado incerto, 409, conferência geral, colaborador e profissional sem permissão clínica",
+      "interacao": "abas por teclado, foco no primeiro campo inválido, diálogos de confirmação e rejeição, anúncio em região viva, reflow a 320 px e axe",
+      "plataforma": [
+        "desktop-chromium",
+        "mobile-chromium"
+      ],
+      "mecanismo": "automatizado",
+      "resultado": "PASS",
+      "evidencia": {
+        "gate": "web-food06-restricoes-prontuario",
+        "blocos": [
+          "FOOD06 P3-3 — aba Restrições no prontuário"
+        ]
+      },
+      "risco": "Leitor de tela real e teste com pessoas não foram observados (ATV-7). BFF simulado: não prova carteira, concessão clínica, CAS real nem RLS (cobertos no backend P2/P3-0a)."
     }
   ]
 }

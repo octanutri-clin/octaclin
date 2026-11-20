@@ -13,16 +13,19 @@ export type AbaProntuario =
   | 'materiais'
   | 'anexos'
   | 'historico'
-  | 'financeiro';
+  | 'financeiro'
+  | 'restricoes';
 
 export type AreaProntuario = 'resumo' | 'atendimentos' | 'avaliacoes' | 'plano' | 'documentos' | 'financeiro';
 
-export const abasProntuario: Array<{ id: AbaProntuario; rotulo: string; permissao?: string }> = [
+/** `areaRestricoes`: a aba só aparece com a área de restrições ligada na web e no tenant (FOOD06 P3-3). */
+export const abasProntuario: Array<{ id: AbaProntuario; rotulo: string; permissao?: string; areaRestricoes?: boolean }> = [
   { id: 'resumo', rotulo: 'Resumo' },
   { id: 'evolucoes', rotulo: 'Evoluções' },
   { id: 'acompanhamento', rotulo: 'Acompanhamento' },
   { id: 'plano_alimentar', rotulo: 'Plano alimentar', permissao: 'planos_alimentares.ler' },
   { id: 'condutas_terapeuticas', rotulo: 'Condutas terapêuticas' },
+  { id: 'restricoes', rotulo: 'Restrições', permissao: 'pacientes.ler', areaRestricoes: true },
   { id: 'antropometria', rotulo: 'Antropometria' },
   { id: 'exames_laboratoriais', rotulo: 'Exames laboratoriais' },
   { id: 'evolucao_fotografica', rotulo: 'Evolução fotográfica' },
@@ -60,6 +63,7 @@ export const areaPorAba: Record<AbaProntuario, AreaProntuario> = {
   acompanhamento: 'plano',
   plano_alimentar: 'plano',
   condutas_terapeuticas: 'plano',
+  restricoes: 'plano',
   materiais: 'plano',
   documentos: 'documentos',
   anexos: 'documentos',
