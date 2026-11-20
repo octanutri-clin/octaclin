@@ -285,3 +285,10 @@ test("NUX-27: aviso de urgência com o 192 e o nome da pessoa para representante
   assert.match(TEXTOS_PORTAL_RESTRICOES.urgencia(propria), /você tiver uma reação forte agora.*192 \(SAMU\)/);
   assert.match(TEXTOS_PORTAL_RESTRICOES.urgencia(representada), /Ana Sintética tiver uma reação forte agora/);
 });
+
+test("PUX-03 (decisão de 2026-11-20): registrar uma restrição não muda o plano automaticamente, com variante do responsável", () => {
+  assert.equal(TEXTOS_PORTAL_RESTRICOES.planoNaoMuda(propria),
+    "Registrar uma restrição aqui não muda seu plano alimentar automaticamente. Se algo mudou, fale com quem faz seu acompanhamento.");
+  assert.equal(TEXTOS_PORTAL_RESTRICOES.planoNaoMuda(representada),
+    "Registrar uma restrição aqui não muda o plano alimentar de Ana Sintética automaticamente. Se algo mudou, fale com quem faz o acompanhamento.");
+});

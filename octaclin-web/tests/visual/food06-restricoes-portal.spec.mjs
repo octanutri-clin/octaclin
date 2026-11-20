@@ -40,6 +40,8 @@ test.describe('FOOD06 P3 — portal de restrições (leitura)', () => {
     const regiao = area(page);
     await expect(regiao.getByRole('heading', { name: 'Suas restrições alimentares' })).toBeVisible();
     await expect(regiao.getByRole('radio')).toHaveCount(0);
+    // PUX-03: o portal nunca sugere que o plano já foi ajustado.
+    await expect(regiao.getByText('Registrar uma restrição aqui não muda seu plano alimentar automaticamente.', { exact: false })).toBeVisible();
     // P3-2: com o pedido disponível, volta o texto aprovado, e há caminho para falar com quem acompanha (NUX-20).
     await expect(regiao.getByText('Solicite uma correção se alguma informação estiver desatualizada.', { exact: false })).toBeVisible();
     await expect(regiao.getByRole('link', { name: 'Escrever para quem faz seu acompanhamento' })).toHaveAttribute('href', '/portal/mensagens');

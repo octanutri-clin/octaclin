@@ -8,11 +8,12 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const temp = mkdtempSync(join(tmpdir(), "octaclin-restricoes-bff-"));
-const specs = ["scripts/restricoes-portal.spec.ts", "scripts/restricoes-bff.spec.ts", "scripts/restricoes-equipe.spec.ts", "scripts/restricoes-equipe-bff.spec.ts"];
+const specs = ["scripts/restricoes-portal.spec.ts", "scripts/validacao-textos-clinicos.spec.ts", "scripts/restricoes-bff.spec.ts", "scripts/restricoes-equipe.spec.ts", "scripts/restricoes-equipe-bff.spec.ts"];
 const files = [
   ...specs,
   "lib/textos-restricoes.ts",
   "lib/restricoes-portal.ts",
+  "lib/textos-validacao-clinica.ts",
   "lib/restricoes-equipe.ts",
   "lib/textos-equipe-restricoes.ts",
   "lib/server/restricoes-portal-bff.ts",
@@ -63,6 +64,8 @@ try {
   const alias = join(temp, "node_modules/@/lib");
   mkdirSync(dirname(alias), { recursive: true });
   cpSync(join(temp, "lib"), alias, { recursive: true });
+  // Registro de validação clínica dos textos (ATV-1), lido pelo spec a partir da pasta temporária.
+  cpSync(join(root, "..", "docs", "clinico", "validacao-textos-restricoes.json"), join(temp, "validacao-textos-restricoes.json"));
   run(["--test", ...specs.map((s) => join(temp, s.replace(/\.ts$/, ".js")))], temp);
 } finally {
   rmSync(temp, { recursive: true, force: true });
