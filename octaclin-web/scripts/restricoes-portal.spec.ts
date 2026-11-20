@@ -292,3 +292,13 @@ test("PUX-03 (decisão de 2026-11-20): registrar uma restrição não muda o pla
   assert.equal(TEXTOS_PORTAL_RESTRICOES.planoNaoMuda(representada),
     "Registrar uma restrição aqui não muda o plano alimentar de Ana Sintética automaticamente. Se algo mudou, fale com quem faz o acompanhamento.");
 });
+
+test("PUX-01/05: selo neutro de informação revisada, com variante do responsável, sem motivo nem termo interno", () => {
+  assert.equal(textoSeloPortal("restricoes.portal.revisada", propria),
+    "Revisada por quem faz seu acompanhamento. Se tiver dúvida, converse na próxima consulta.");
+  assert.equal(textoSeloPortal("restricoes.portal.revisada", representada),
+    "Revisada por quem faz o acompanhamento de Ana Sintética. Se tiver dúvida, converse na próxima consulta.");
+  assert.ok((CHAVES_SELO_PORTAL as readonly string[]).includes("restricoes.portal.revisada"));
+  const r = projetarResumoPortal({ restricoes: [itemBackend({ selo: "restricoes.portal.revisada" })] });
+  assert.equal(r!.itens[0].chaveSelo, "restricoes.portal.revisada");
+});

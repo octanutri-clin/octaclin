@@ -12,6 +12,7 @@ export const CHAVES_SELO_PORTAL = Object.freeze([
   "restricoes.portal.registrada",
   "restricoes.portal.informada_por_voce",
   "restricoes.portal.anotada_pela_equipe",
+  "restricoes.portal.revisada",
 ] as const);
 
 export const CHAVES_SOLICITACAO_PORTAL = Object.freeze([

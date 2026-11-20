@@ -158,6 +158,26 @@ describe('portal do paciente: pedidos (P2d-3b)', () => {
     await expect(c.s.criarPedido(ator as never, paciente, { chaveCriacao: chave, tipo: 'correcao', restricaoId: restricao, itens })).rejects.toMatchObject({ status: 409 });
     expect(inseriu(c)).toBe(false);
   });
+  it('PUX-01/05: resumo inclui rejeitadas há até 30 dias (pela revisão de rejeição e o relógio do banco) com o selo neutro', async () => {
+    const c = preparar();
+    c.query.mockImplementation(async (sql: string) => sql === 'show transaction_isolation' ? [{ transaction_isolation: 'read committed' }]
+      : sql.includes("evento = 'rejeicao'") ? [{ id: restricao, origem: 'declaracao_paciente', estado: 'ativa', confirmacao: 'rejeitada', revisao: 2,
+        conteudo_criptografado: Buffer.from('x') }] : []);
+    const r = await c.s.resumo(ator as never, paciente);
+    expect(r.restricoes.map(x => [x.id, x.selo])).toEqual([[restricao, 'restricoes.portal.revisada']]);
+    const [sql, params] = c.query.mock.calls.find(([q]) => String(q).includes("evento = 'rejeicao'"))!;
+    expect(sql).toMatch(/r\.confirmacao = 'rejeitada'/);
+    expect(sql).toMatch(/clock_timestamp\(\) - interval '30 days'/);
+    expect(sql).toMatch(/r\.tenant_id = \$1 and r\.paciente_id = \$2/);
+    expect(params).toEqual([tenant, paciente, 201]);
+    expect(decifrarConteudoRestricao).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.objectContaining({ restricaoId: restricao, revisao: 2, finalidade: 'restricao' }));
+  });
+  it('teto do resumo conta as rejeitadas recentes junto (falha fechado acima de 200)', async () => {
+    const c = preparar(); c.restricoes.find.mockResolvedValueOnce(Array.from({ length: 150 }, () => ({})));
+    c.query.mockImplementation(async (sql: string) => sql === 'show transaction_isolation' ? [{ transaction_isolation: 'read committed' }]
+      : sql.includes("evento = 'rejeicao'") ? Array.from({ length: 51 }, () => ({})) : []);
+    await expect(c.s.resumo(ator as never, paciente)).rejects.toMatchObject({ status: 409 });
+  });
   it('resumo acima do limite falha fechado em vez de cortar', async () => {
     const c = preparar(); c.restricoes.find.mockResolvedValueOnce(Array.from({ length: 201 }, () => ({})));
     await expect(c.s.resumo(ator as never, paciente)).rejects.toMatchObject({ status: 409 });
