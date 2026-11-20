@@ -3299,11 +3299,30 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     };
     const recente = await rejeitada('Leite sintético', '2 days');
     const antiga = await rejeitada('Ovo sintético', '31 days');
+    // Outro paciente do MESMO tenant com rejeitada recente: nunca aparece no resumo do primeiro (filtro por paciente).
+    const outro = await prepararDadosRepresentativos(tenant, `pux01-outro-${randomUUID()}`);
+    const restricaoOutro = randomUUID();
+    await comoTenant(tenant);
+    await cliente.query(`insert into restricoes_pacientes
+      (id, tenant_id, paciente_id, autor_usuario_id, chave_criacao, origem, confirmacao, revisao, conteudo_criptografado)
+      values ($1,$2,$3,$4,$5,'profissional','rejeitada',2,$6)`, [restricaoOutro, tenant, outro.pacienteId, outro.usuarioId, randomUUID(),
+      cifrarConteudoRestricao(crypto, declaracao('Camarão sintético'), { tenantId: tenant, pacienteId: outro.pacienteId, restricaoId: restricaoOutro, revisao: 2, finalidade: 'restricao' })]);
+    for (const [numero, evento] of [[1, 'criacao'], [2, 'rejeicao']] as const) {
+      await cliente.query(`insert into restricoes_pacientes_revisoes
+        (tenant_id,paciente_id,restricao_id,numero,evento,autor_usuario_id,conteudo_criptografado)
+        values ($1,$2,$3,$4,$5,$6,$7)`, [tenant, outro.pacienteId, restricaoOutro, numero, evento, outro.usuarioId,
+        cifrarConteudoRestricao(crypto, declaracao('Camarão sintético'), { tenantId: tenant, pacienteId: outro.pacienteId, restricaoId: restricaoOutro, revisao: numero, finalidade: 'revisao_restricao' })]);
+    }
     const portal = new ServicoPortalRestricoes(executorTenant, crypto);
     const conta: UsuarioAutenticado = { tenantId: tenant, usuarioId: contaPacienteId, papel: 'Patient', emailHash: '', permissoes: [] };
     const resumo = await portal.resumo(conta, dados.pacienteId);
     expect(resumo.restricoes.map(r => [r.id, r.selo, r.alvoDeclarado])).toEqual([[recente, 'restricoes.portal.revisada', 'Leite sintético']]);
-    expect(resumo.restricoes.some(r => r.id === antiga)).toBe(false);
+    expect(resumo.restricoes.some(r => r.id === antiga || r.id === restricaoOutro)).toBe(false);
+    // O item revisado chega ao portal, mas pedido sobre ele é recusado no backend (403) sem gravar.
+    await expect(portal.criarPedido(conta, dados.pacienteId, { chaveCriacao: randomUUID(), tipo: 'correcao', restricaoId: recente,
+      itens: [{ item: 'descricao', texto: 'Pedido sintético' }] })).rejects.toMatchObject({ status: 403 });
+    await comoTenant(tenant);
+    expect((await cliente.query('select id from solicitacoes_restricoes_pacientes where restricao_id=$1', [recente])).rows).toEqual([]);
     expect(JSON.stringify(resumo)).not.toMatch(/justificativa|observacao|gravidade/);
     // Outro tenant com o mesmo paciente: negado (o tenant vem do token; RLS esconde o paciente).
     await expect(portal.resumo({ ...conta, tenantId: tenantB }, dados.pacienteId)).rejects.toMatchObject({ status: 403 });

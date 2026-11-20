@@ -1,3 +1,4 @@
+import { In } from 'typeorm';
 import { ForbiddenException } from '@nestjs/common';
 import { inspect } from 'node:util';
 import { autorizarPacientePortal } from './autorizacao-paciente-portal';
@@ -60,6 +61,9 @@ describe('portal do paciente: pedidos (P2d-3b)', () => {
     expect(jest.mocked(autorizarPacientePortal).mock.invocationCallOrder[0]).toBeLessThan(c.solicitacoes.findOne.mock.invocationCallOrder[0]);
     expect(c.query.mock.calls.find(([sql]) => sql.includes('pg_advisory_xact_lock'))?.[1]).toEqual([`solicitacao:${tenant}:${conta}:${chave}`]);
     expect(c.restricoes.findOne).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ id: restricao, tenantId: tenant, pacienteId: paciente }) }));
+    // PUX-01/05 (R4): o item revisado (rejeitado) chega ao portal, então o filtro que recusa pedido sobre ele é fixado aqui.
+    expect(c.restricoes.findOne).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({
+      estado: In(['ativa', 'em_reavaliacao']), confirmacao: In(['pendente', 'confirmada']) }) }));
     expect(cifrarCampo).toHaveBeenCalledWith(expect.anything(), 'solicitacoes_restricoes_pacientes.conteudo_criptografado', { itens },
       expect.objectContaining({ tenantId: tenant, pacienteId: paciente, revisao: 1 }));
     expect(registrarAuditoriaNaTransacao).toHaveBeenCalledWith(c.g, expect.objectContaining({ acao: 'restricoes.solicitacao_criar', metadados: {} }));
