@@ -2877,7 +2877,12 @@ test.describe('prontuario do paciente', () => {
     // (ver o teste seguinte) e nao devem aparecer aqui. Subir esse numero
     // exige decisao deliberada, e nao regressao silenciosa de uma cascata
     // nova na tela mais visitada do prontuario.
-    expect(caminhos.size).toBeLessThanOrEqual(5);
+    // Decisão do proprietário (2026-11-19, FOOD06 P3-6): a única exceção ao teto de 5 é a verificação de disponibilidade
+    // da área de restrições (booleana, sem dado clínico; com a flag da web desligada a resposta sai da própria web, sem
+    // backend), que decide se o atalho "Quem acompanha pelo portal" aparece. Nada além dela pode passar do teto.
+    const DISPONIBILIDADE_RESTRICOES = '/api/restricoes/equipe/disponibilidade';
+    expect([...caminhos].filter((caminho) => caminho !== DISPONIBILIDADE_RESTRICOES).length).toBeLessThanOrEqual(5);
+    expect(caminhos.size).toBeLessThanOrEqual(6);
     expect(caminhos.has('/api/pacientes/paciente-1/evolucoes')).toBe(false);
     expect(caminhos.has('/api/pacientes/paciente-1/tarefas-acompanhamento')).toBe(false);
     expect([...caminhos].some((caminho) => caminho.includes('/materiais'))).toBe(false);

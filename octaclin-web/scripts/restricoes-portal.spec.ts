@@ -209,7 +209,8 @@ test("declaração: cada tipo vira o conteúdo do contrato, sem gravidade nem ob
     alergia: { natureza: "clinica", subtipoClinico: "alergia_alimentar" },
     intolerancia: { natureza: "clinica", subtipoClinico: "intolerancia_alimentar" },
     outra: { natureza: "clinica", subtipoClinico: "doenca_ou_condicao_com_restricao" },
-    nao_sei: { natureza: "clinica", subtipoClinico: "outra_restricao_clinica" },
+    // NUX-24 (backend na #559): "Não sei dizer" leva a marca fechada para a equipe ver "Tipo não informado pelo paciente".
+    nao_sei: { natureza: "clinica", subtipoClinico: "outra_restricao_clinica", classificacaoPeloPaciente: "nao_sabe" },
     escolha: { natureza: "escolha" },
   };
   for (const [tipo, parte] of Object.entries(esperado)) {

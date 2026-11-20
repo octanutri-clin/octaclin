@@ -8,9 +8,11 @@ interface MenuProps {
   children: React.ReactNode;
   className?: string;
   alinhamento?: 'inicio' | 'fim';
+  /** Chamado cada vez que o menu abre (ex.: carregar um item opcional só quando a pessoa olha o menu). */
+  aoAbrir?: () => void;
 }
 
-export function Menu({ gatilho, children, className, alinhamento = 'fim' }: MenuProps) {
+export function Menu({ gatilho, children, className, alinhamento = 'fim', aoAbrir }: MenuProps) {
   const [aberto, setAberto] = React.useState(false);
   const raizRef = React.useRef<HTMLDivElement>(null);
   const menuRef = React.useRef<HTMLDivElement>(null);
@@ -37,8 +39,12 @@ export function Menu({ gatilho, children, className, alinhamento = 'fim' }: Menu
 
   // Padrao ARIA de menu: ao abrir, o foco vai para o primeiro item; sem isso o
   // usuario de teclado abre o menu e continua parado no gatilho.
+  const aoAbrirRef = React.useRef(aoAbrir);
+  React.useEffect(() => { aoAbrirRef.current = aoAbrir; }, [aoAbrir]);
+
   React.useEffect(() => {
     if (!aberto) return;
+    aoAbrirRef.current?.();
     gatilhoRef.current = raizRef.current?.querySelector<HTMLElement>(`#${CSS.escape(idBotao)}`) ?? null;
     focarItem(0);
 
