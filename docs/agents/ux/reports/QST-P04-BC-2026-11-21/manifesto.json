@@ -1,0 +1,17 @@
+{
+  "etapas": [
+    "B",
+    "C",
+    "D"
+  ],
+  "instancia": "/root/qst_p04_ux_a",
+  "modalidade": "revisao estatica independente da escrita; execucao e visual somente coordenador",
+  "papel_fonte": "../QST-P04-A-2026-11-21/manifesto.json",
+  "paciente": "NA justificado",
+  "testes_proprios_revisor": "NOT RUN",
+  "artefatos_sha256": {
+    "avaliacao.md": "41619079358927015dc6d6ee102546cbd11105b27dde86d2479998b06e469661",
+    "desktop-200.png": "7ba3534aaff112af990b702425bb2ad8997ae85e5ab7b3b5aefd31dbd59b7741",
+    "mobile-200.png": "46e0c7e1eb39e106ea8da87d2e05b8faaad2de8bd03896a17d679d9b302e139e"
+  }
+}
