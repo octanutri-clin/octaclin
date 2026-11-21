@@ -169,6 +169,11 @@ function criarServico(dados: Record<string, any>) {
   const execucoesRegra = (dados.execucoesRegra ?? (dados.execucoesRegra = [])) as Record<string, any>[];
   const outboxEventos = (dados.outboxEventos ?? (dados.outboxEventos = [])) as Record<string, any>[];
   const gerenciador = {
+    // Double apenas do protocolo de leitura. A prova das travas fica no PostgreSQL real.
+    query: jest.fn(async (sql: string, parametros: [string, string[]]) => {
+      if (!sql.includes('FROM questionarios') || !sql.endsWith('FOR SHARE')) throw new Error('SQL não suportado no double.');
+      return dados.questionarios.filter((item: any) => item.tenantId === parametros[0] && parametros[1].includes(item.id));
+    }),
     getRepository: jest.fn((entidade: { name: string }) => {
       if (entidade === CategoriaPerguntaOrm) return repositorios.categoria;
       if (entidade === QuestionarioOrm) return repositorios.questionario;
@@ -424,7 +429,7 @@ describe('ServicoQuestionarios', () => {
 
   it('deve listar apenas perguntas visiveis da biblioteca do tenant com busca e categoria', async () => {
     const { servico } = criarServico({
-      questionarios: [],
+      questionarios: [{ id: 'q-1', tenantId: 'tenant-1', versao: 1 }, { id: 'q-2', tenantId: 'tenant-2', versao: 1 }],
       categorias: [],
       perguntas: [
         {
@@ -482,7 +487,7 @@ describe('ServicoQuestionarios', () => {
 
   it('deve incluir na ordem final uma copia independente da pergunta da biblioteca', async () => {
     const { servico, dados } = criarServico({
-      questionarios: [{ id: 'q-destino', tenantId: 'tenant-1', versao: 2 }],
+      questionarios: [{ id: 'q-destino', tenantId: 'tenant-1', versao: 2 }, { id: 'q-origem', tenantId: 'tenant-1', versao: 1 }],
       categorias: [],
       perguntas: [
         {
