@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { Botao } from '@/components/ui/botao';
-import { AreaTexto, Campo, Rotulo, Selecao } from '@/components/ui/campo';
+import { AreaTexto, Rotulo } from '@/components/ui/campo';
 import { Esqueleto } from '@/components/ui/feedback';
 import { Modal, ModalConfirmacao } from '@/components/ui/modal';
 import {
@@ -16,14 +16,13 @@ import {
   confirmarRestricaoProntuario,
   consultarAvaliacaoProntuario,
   iniciarAvaliacaoProntuario,
+  inativarRestricaoProntuario,
   listarRestricoesProntuario,
-  registrarRestricaoProntuario,
+  reavaliarRestricaoProntuario,
   rejeitarRestricaoProntuario,
   type FalhaProntuario
 } from '@/lib/restricoes-prontuario-api';
 import {
-  OPCOES_GRAVIDADE,
-  OPCOES_TIPO_REGISTRO,
   TEXTOS_RESTRICOES_PRONTUARIO as T,
   formatarDataProntuario,
   rotuloEstadoRestricao,
@@ -32,27 +31,20 @@ import {
   rotuloTipoRestricao,
   textoSituacaoAvaliacao
 } from '@/lib/textos-restricoes-prontuario';
+import { DialogoCorrecao, InativacaoEmDoisPassos, aceitaAcaoProtegida, aceitaCorrecao } from './acoes-restricao-confirmada';
+import { FormularioRegistro, mensagemFalhaProntuario } from './formulario-registro-restricao';
 
 type Estado =
   | { fase: 'carregando' }
   | { fase: 'falha'; tipo: FalhaProntuario }
   | { fase: 'pronto'; escopo: 'completo' | 'autoria'; itens: RestricaoProntuario[]; avaliacao: AvaliacaoProntuario | null | 'indisponivel' };
 
-function mensagem(tipo: FalhaProntuario): string {
-  switch (tipo) {
-    case 'indisponivel': return T.indisponivel;
-    case 'sessao': return T.sessao;
-    case 'semAcesso': return T.semPermissao;
-    case 'mudou': return T.mudou;
-    case 'invalida': return T.invalida;
-    case 'incerto': return T.incerto;
-    default: return T.carregarFalhou;
-  }
-}
 
 // NUX-01 (etapa B): com "Não sei dizer", o rótulo do tipo não é afirmado como fato em lugar nenhum.
 const naoSabe = (i: RestricaoProntuario) => i.conteudo.classificacaoPeloPaciente === 'nao_sabe';
 const tipoDe = (i: RestricaoProntuario) => (naoSabe(i) ? T.tipoNaoInformado : rotuloTipoRestricao(i.conteudo.natureza, i.conteudo.subtipoClinico));
+/** Tipo dentro de uma frase ("Você está inativando {tipo} confirmada"). */
+const tipoNaFrase = (i: RestricaoProntuario) => (naoSabe(i) ? T.descricaoNaoSabe : tipoDe(i).toLocaleLowerCase('pt-BR'));
 const descricao = (i: RestricaoProntuario) => descricaoRestricao(i, naoSabe(i) ? T.descricaoNaoSabe : tipoDe(i));
 /** NUX-02: o diálogo de confirmar repete o que importa para decidir. */
 function detalhesConfirmacao(i: RestricaoProntuario): string {
@@ -63,7 +55,6 @@ function detalhesConfirmacao(i: RestricaoProntuario): string {
   if (i.conteudo.observacao) partes.push(`${T.observacao}: ${i.conteudo.observacao}`);
   return partes.join(' ');
 }
-const novaChave = () => crypto.randomUUID();
 
 /**
  * Aba "Restrições" do prontuário (FOOD06 P3-3). O backend decide carteira, delegação e a concessão clínica; o `escopo`
@@ -81,13 +72,21 @@ export function AbaRestricoes({ pacienteId, papel, podeGerenciar }: { pacienteId
   const [justificativa, setJustificativa] = useState('');
   const [erroJustificativa, setErroJustificativa] = useState(false);
   const [erroDialogo, setErroDialogo] = useState('');
+  const [reavaliando, setReavaliando] = useState<{ alvo: RestricaoProntuario; destino: 'ativa' | 'em_reavaliacao' } | null>(null);
+  const [inativando, setInativando] = useState<RestricaoProntuario | null>(null);
+  const [erroInativar, setErroInativar] = useState('');
+  const [corrigindo, setCorrigindo] = useState<RestricaoProntuario | null>(null);
   const idTipoRegistro = useId();
   const [enviando, setEnviando] = useState(false);
   const titulo = useRef<HTMLHeadingElement>(null);
   const idJustificativa = useId();
   const idAjudaJustificativa = useId();
 
+  // R4 (BAIXA): só a recarga mais recente pinta a tela; uma resposta tardia não volta a lista para uma versão velha.
+  const sequencia = useRef(0);
   const carregar = useCallback(async (signal?: AbortSignal, inicial = false): Promise<RestricaoProntuario[] | null> => {
+    const minha = ++sequencia.current;
+    const atual = () => minha === sequencia.current;
     if (!inicial) setEstado({ fase: 'carregando' });
     try {
       const lista = await listarRestricoesProntuario(pacienteId, colaborador, signal);
@@ -102,11 +101,11 @@ export function AbaRestricoes({ pacienteId, papel, podeGerenciar }: { pacienteId
         }
       }
       if (signal?.aborted) return null;
-      setEstado({ fase: 'pronto', escopo: lista.escopo, itens: lista.itens, avaliacao });
+      if (atual()) setEstado({ fase: 'pronto', escopo: lista.escopo, itens: lista.itens, avaliacao });
       return lista.itens;
     } catch (falha) {
       if (signal?.aborted) return null;
-      setEstado({ fase: 'falha', tipo: falha instanceof ErroRestricoesProntuario ? falha.tipo : 'leitura' });
+      if (atual()) setEstado({ fase: 'falha', tipo: falha instanceof ErroRestricoesProntuario ? falha.tipo : 'leitura' });
       return null;
     }
   }, [pacienteId, colaborador]);
@@ -122,7 +121,7 @@ export function AbaRestricoes({ pacienteId, papel, podeGerenciar }: { pacienteId
     await carregar();
     setAviso(texto);
   }
-  const falhaDeEscrita = (falha: unknown) => mensagem(falha instanceof ErroRestricoesProntuario ? falha.tipo : 'incerto');
+  const falhaDeEscrita = (falha: unknown) => mensagemFalhaProntuario(falha instanceof ErroRestricoesProntuario ? falha.tipo : 'incerto');
 
   async function confirmar() {
     if (!confirmando) return;
@@ -187,7 +186,54 @@ export function AbaRestricoes({ pacienteId, papel, podeGerenciar }: { pacienteId
     }
   }
 
-  const item = (i: RestricaoProntuario, comAcoes: boolean) => (
+  async function reavaliar() {
+    if (!reavaliando) return;
+    const { alvo, destino } = reavaliando;
+    setEnviando(true);
+    try {
+      await reavaliarRestricaoProntuario(pacienteId, alvo.id, alvo.revisao, destino);
+      setReavaliando(null);
+      await depoisDaEscrita(destino === 'em_reavaliacao' ? T.reavaliado(descricao(alvo)) : T.mantida(descricao(alvo)));
+    } catch (falha) {
+      setReavaliando(null);
+      await depoisDaEscrita(falhaDeEscrita(falha));
+    } finally {
+      setEnviando(false);
+      titulo.current?.focus();
+    }
+  }
+
+  /** Segundo passo da inativação. Em 409 ou incerto, recarrega; se ainda couber, o diálogo volta ao passo 1 com o texto. */
+  async function inativar(motivo: string, justificativaInativacao: string): Promise<boolean> {
+    if (!inativando) return true;
+    const alvo = inativando;
+    setEnviando(true);
+    setErroInativar('');
+    try {
+      await inativarRestricaoProntuario(pacienteId, alvo.id, alvo.revisao, motivo, justificativaInativacao);
+      setInativando(null);
+      await depoisDaEscrita(T.inativado(descricao(alvo)));
+      titulo.current?.focus();
+      return true;
+    } catch (falha) {
+      const texto = falhaDeEscrita(falha);
+      const itens = await carregar();
+      const atual = itens?.find((x) => x.id === alvo.id);
+      if (atual && aceitaAcaoProtegida(atual)) {
+        setInativando(atual);
+        setErroInativar(texto);
+        return false;
+      }
+      setInativando(null);
+      setAviso(atual?.estado === 'inativa' ? T.inativado(descricao(alvo)) : texto);
+      titulo.current?.focus();
+      return true;
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  const item = (i: RestricaoProntuario, comAcoes: boolean, protegidas = false) => (
     <li key={i.id} className="grid gap-2 rounded-md border border-linha bg-white p-3">
       <div className="min-w-0">
         <p className="break-words text-sm font-semibold text-tinta">
@@ -215,13 +261,34 @@ export function AbaRestricoes({ pacienteId, papel, podeGerenciar }: { pacienteId
           </Botao>
         </div>
       ) : null}
+      {protegidas && aceitaAcaoProtegida(i) ? (
+        <div className="flex flex-wrap gap-2">
+          {i.estado === 'ativa' ? (
+            <Botao type="button" tamanho="sm" variante="secundario" aria-label={`${T.botaoReavaliar}: ${descricao(i)}`} onClick={() => setReavaliando({ alvo: i, destino: 'em_reavaliacao' })}>
+              {T.botaoReavaliar}
+            </Botao>
+          ) : (
+            <Botao type="button" tamanho="sm" variante="secundario" aria-label={`${T.botaoManterConfirmada}: ${descricao(i)}`} onClick={() => setReavaliando({ alvo: i, destino: 'ativa' })}>
+              {T.botaoManterConfirmada}
+            </Botao>
+          )}
+          {aceitaCorrecao(i) ? (
+            <Botao type="button" tamanho="sm" variante="secundario" aria-label={`${T.botaoCorrigir}: ${descricao(i)}`} onClick={() => setCorrigindo(i)}>
+              {T.botaoCorrigir}
+            </Botao>
+          ) : null}
+          <Botao type="button" tamanho="sm" variante="secundario" aria-label={`${T.botaoInativar}: ${descricao(i)}`} onClick={() => { setErroInativar(''); setInativando(i); }}>
+            {T.botaoInativar}
+          </Botao>
+        </div>
+      ) : null}
     </li>
   );
 
-  const grupo = (id: string, rotulo: string, itens: RestricaoProntuario[], comAcoes: boolean) => itens.length ? (
+  const grupo = (id: string, rotulo: string, itens: RestricaoProntuario[], comAcoes: boolean, protegidas = false) => itens.length ? (
     <section aria-labelledby={id} className="grid gap-2">
       <h4 id={id} className="text-sm font-semibold text-tinta">{rotulo} ({itens.length})</h4>
-      <ul className="grid gap-2">{itens.map((i) => item(i, comAcoes))}</ul>
+      <ul className="grid gap-2">{itens.map((i) => item(i, comAcoes, protegidas))}</ul>
     </section>
   ) : null;
 
@@ -230,7 +297,7 @@ export function AbaRestricoes({ pacienteId, papel, podeGerenciar }: { pacienteId
     if (estado.fase === 'falha') {
       return (
         <div className="grid gap-2">
-          <p className="text-sm text-tinta">{mensagem(estado.tipo)}</p>
+          <p className="text-sm text-tinta">{mensagemFalhaProntuario(estado.tipo)}</p>
           {estado.tipo === 'leitura' ? <Botao type="button" variante="secundario" onClick={() => void carregar()}>{T.tentarNovamente}</Botao> : null}
         </div>
       );
@@ -256,8 +323,8 @@ export function AbaRestricoes({ pacienteId, papel, podeGerenciar }: { pacienteId
         ) : (
           <div className="grid gap-4">
             {grupo('restricoes-pendentes', T.grupoPendentes, s.pendentes, decide)}
-            {grupo('restricoes-confirmadas', T.grupoConfirmadas, s.confirmadas, false)}
-            {grupo('restricoes-reavaliacao', T.grupoReavaliacao, s.emReavaliacao, false)}
+            {grupo('restricoes-confirmadas', T.grupoConfirmadas, s.confirmadas, false, decide)}
+            {grupo('restricoes-reavaliacao', T.grupoReavaliacao, s.emReavaliacao, false, decide)}
             {s.recolhidas.length ? (
               <details className="rounded-md border border-linha bg-white p-3">
                 <summary className="cursor-pointer text-sm font-semibold text-tinta">{T.grupoRecolhidas} ({s.recolhidas.length})</summary>
@@ -270,6 +337,8 @@ export function AbaRestricoes({ pacienteId, papel, podeGerenciar }: { pacienteId
       </div>
     );
   };
+
+  const conferenciaEmDia = estado.fase === 'pronto' && estado.avaliacao !== 'indisponivel' && estado.avaliacao?.situacao === 'restricoes_registradas';
 
   return (
     <section aria-label={T.titulo} className="grid gap-4 rounded-md border border-linha bg-white p-4">
@@ -305,6 +374,27 @@ export function AbaRestricoes({ pacienteId, papel, podeGerenciar }: { pacienteId
           </div>
         </form>
       </Modal>
+      <ModalConfirmacao
+        aberto={reavaliando !== null}
+        titulo={reavaliando ? (reavaliando.destino === 'em_reavaliacao' ? T.reavaliarTitulo(descricao(reavaliando.alvo)) : T.manterTitulo(descricao(reavaliando.alvo))) : ''}
+        mensagem={reavaliando?.destino === 'ativa' ? T.ajudaManterConfirmada : T.ajudaReavaliar}
+        rotuloConfirmar={reavaliando?.destino === 'ativa' ? T.botaoManterConfirmada : T.botaoReavaliar}
+        rotuloCancelar={T.manter}
+        confirmando={enviando}
+        aoConfirmar={() => void reavaliar()}
+        aoCancelar={() => setReavaliando(null)}
+      />
+      <Modal aberto={inativando !== null} aoFechar={() => { if (!enviando) setInativando(null); }} titulo={inativando ? T.inativarTitulo(descricao(inativando)) : ''}>
+        {inativando ? (
+          <InativacaoEmDoisPassos key={inativando.id} tipo={tipoNaFrase(inativando)} alimento={inativando.conteudo.alvoDeclarado ?? T.semNomeCatalogo}
+            erro={erroInativar} enviando={enviando} aoInativar={inativar} aoCancelar={() => setInativando(null)} invalidaConferencia={conferenciaEmDia} />
+        ) : null}
+      </Modal>
+      {corrigindo ? (
+        <DialogoCorrecao key={corrigindo.id} pacienteId={pacienteId} antiga={corrigindo} tipoAntiga={tipoNaFrase(corrigindo)}
+          descricaoAntiga={descricao(corrigindo)} recarregar={() => carregar()} invalidaConferencia={conferenciaEmDia}
+          aoFechar={(texto) => { setCorrigindo(null); setAviso(texto); titulo.current?.focus(); }} />
+      ) : null}
     </section>
   );
 }
@@ -329,89 +419,6 @@ function BlocoAvaliacao({ avaliacao, pendentes, podeIniciar, enviando, aoIniciar
           ) : null}
         </>
       )}
-    </section>
-  );
-}
-
-/**
- * Registro para conferência. A chave de criação nasce com o formulário e só muda depois de um envio confirmado: repetir
- * depois de um resultado incerto não duplica (o backend é idempotente por chave).
- */
-function FormularioRegistro({ idTipo, pacienteId, colaborador, aoConcluir }: { idTipo: string; pacienteId: string; colaborador: boolean; aoConcluir: (texto: string) => void }) {
-  const [chave, setChave] = useState(novaChave);
-  const [tipo, setTipo] = useState('');
-  const [alimento, setAlimento] = useState('');
-  const [gravidade, setGravidade] = useState('nao_informada');
-  const [observacao, setObservacao] = useState('');
-  const [avisoQuebra, setAvisoQuebra] = useState(false);
-  const [erros, setErros] = useState<{ tipo?: boolean; alimento?: boolean }>({});
-  const [enviando, setEnviando] = useState(false);
-  const [falha, setFalha] = useState('');
-  const ids = { tipo: idTipo, alimento: useId(), ajudaAlimento: useId(), gravidade: useId(), observacao: useId(), ajudaObservacao: useId() };
-  const campoTipo = useRef<HTMLSelectElement>(null);
-  const campoAlimento = useRef<HTMLInputElement>(null);
-  const clinico = tipo !== '' && tipo !== 'escolha';
-
-  async function enviar() {
-    const novos = { tipo: !tipo, alimento: !alimento.trim() };
-    setErros(novos);
-    if (novos.tipo) return campoTipo.current?.focus();
-    if (novos.alimento) return campoAlimento.current?.focus();
-    setEnviando(true);
-    setFalha('');
-    const nome = alimento.trim();
-    try {
-      await registrarRestricaoProntuario(pacienteId, colaborador, {
-        chaveCriacao: chave, tipo, alimento: nome, gravidade: clinico ? gravidade : '', observacao
-      });
-      setChave(novaChave());
-      setTipo(''); setAlimento(''); setGravidade('nao_informada'); setObservacao(''); setAvisoQuebra(false);
-      aoConcluir(T.registrado(nome));
-    } catch (erro) {
-      // Incerto: mantém a mesma chave e o texto para repetir sem duplicar.
-      setFalha(mensagem(erro instanceof ErroRestricoesProntuario ? erro.tipo : 'incerto'));
-    } finally {
-      setEnviando(false);
-    }
-  }
-
-  return (
-    <section aria-labelledby="restricoes-registrar" className="grid gap-3 rounded-md border border-linha p-3 sm:max-w-xl">
-      <div>
-        <h3 id="restricoes-registrar" className="text-sm font-semibold text-tinta">{T.tituloRegistrar}</h3>
-        <p className="text-xs text-texto-suave">{T.ajudaRegistrar}</p>
-      </div>
-      <form className="grid gap-2" noValidate onSubmit={(e) => { e.preventDefault(); void enviar(); }}>
-        <Rotulo htmlFor={ids.tipo}>{T.rotuloTipo}</Rotulo>
-        <Selecao ref={campoTipo} id={ids.tipo} value={tipo} aria-invalid={erros.tipo || undefined} onChange={(e) => { setTipo(e.target.value); setErros((x) => ({ ...x, tipo: false })); }}>
-          <option value="">Escolha o tipo</option>
-          {OPCOES_TIPO_REGISTRO.map((o) => <option key={o.valor} value={o.valor}>{o.rotulo}</option>)}
-        </Selecao>
-        {erros.tipo ? <p className="text-xs text-tinta">{T.erroTipo}</p> : null}
-        <Rotulo htmlFor={ids.alimento}>{T.rotuloAlimento}</Rotulo>
-        <Campo ref={campoAlimento} id={ids.alimento} value={alimento} maxLength={200} autoComplete="off" aria-describedby={ids.ajudaAlimento}
-          aria-invalid={erros.alimento || undefined} onChange={(e) => { setAlimento(e.target.value); setErros((x) => ({ ...x, alimento: false })); }} />
-        <p id={ids.ajudaAlimento} className="text-xs text-texto-suave">{erros.alimento ? `${T.erroAlimento} ` : ''}{T.ajudaAlimento}</p>
-        {clinico ? (
-          <>
-            <Rotulo htmlFor={ids.gravidade}>{T.rotuloGravidade}</Rotulo>
-            <Selecao id={ids.gravidade} value={gravidade} onChange={(e) => setGravidade(e.target.value)}>
-              {OPCOES_GRAVIDADE.map((o) => <option key={o.valor} value={o.valor}>{o.rotulo}</option>)}
-            </Selecao>
-          </>
-        ) : null}
-        <Rotulo htmlFor={ids.observacao}>{T.rotuloObservacao}</Rotulo>
-        <AreaTexto id={ids.observacao} value={observacao} maxLength={1000} rows={3} aria-describedby={ids.ajudaObservacao}
-          onChange={(e) => {
-            const bruto = e.target.value;
-            const limpo = bruto.replace(/[\r\n\t]+/g, ' ');
-            if (limpo !== bruto) setAvisoQuebra(true);
-            setObservacao(limpo);
-          }} />
-        <p id={ids.ajudaObservacao} className="text-xs text-texto-suave">{avisoQuebra ? `${T.avisoQuebraLinha} ` : ''}{T.ajudaObservacao}</p>
-        {falha ? <p role="alert" className="text-sm text-tinta">{falha}</p> : null}
-        <Botao type="submit" variante="primario" disabled={enviando}>{enviando ? 'Registrando' : T.botaoRegistrar}</Botao>
-      </form>
     </section>
   );
 }

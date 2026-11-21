@@ -51,8 +51,14 @@ export const consultarAvaliacaoProntuario = (pacienteId: string, signal?: AbortS
 export const iniciarAvaliacaoProntuario = (pacienteId: string) => pedir<{ id: string }>(`${base(pacienteId, false)}/avaliacao/iniciar`, {}, true);
 export const registrarRestricaoProntuario = (pacienteId: string, colaborador: boolean,
   entrada: { chaveCriacao: string; tipo: string; alimento: string; gravidade: string; observacao: string }) =>
-  pedir<{ id: string }>(`${base(pacienteId, colaborador)}/registrar`, entrada, true);
+  pedir<{ id: string; revisao: number }>(`${base(pacienteId, colaborador)}/registrar`, entrada, true);
 export const confirmarRestricaoProntuario = (pacienteId: string, restricaoId: string, revisao: number) =>
   pedir<{ id: string }>(`${base(pacienteId, false)}/${encodeURIComponent(restricaoId)}/confirmar`, { revisao }, true);
 export const rejeitarRestricaoProntuario = (pacienteId: string, restricaoId: string, revisao: number, justificativa: string) =>
   pedir<{ id: string }>(`${base(pacienteId, false)}/${encodeURIComponent(restricaoId)}/rejeitar`, { revisao, justificativa }, true);
+// P3-4a: ações protegidas. `confirmacaoEmDoisPassos` só é enviado depois do segundo passo da tela.
+export const inativarRestricaoProntuario = (pacienteId: string, restricaoId: string, revisao: number, motivo: string, justificativa: string) =>
+  pedir<{ id: string; revisao: number }>(`${base(pacienteId, false)}/${encodeURIComponent(restricaoId)}/inativar`,
+    { revisao, motivo, justificativa, confirmacaoEmDoisPassos: true }, true);
+export const reavaliarRestricaoProntuario = (pacienteId: string, restricaoId: string, revisao: number, destino: "ativa" | "em_reavaliacao") =>
+  pedir<{ id: string; revisao: number }>(`${base(pacienteId, false)}/${encodeURIComponent(restricaoId)}/reavaliar`, { revisao, destino }, true);

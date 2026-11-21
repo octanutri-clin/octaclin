@@ -42,6 +42,12 @@ pessoas) continua pendente para estes mesmos textos.
 | `portal.informarSucesso` | Depois de informar uma restrição | "Enviamos a informação. Quem faz seu acompanhamento vai conferir. Em caso de dúvida ou sintomas, fale com quem faz seu acompanhamento." | "Enviamos a informação sobre {nome}. Quem faz seu acompanhamento vai conferir. Em caso de dúvida ou sintomas, fale com quem faz seu acompanhamento." |
 | `portal.planoNaoMuda` | Registrar não altera o plano (PUX-03) | "Registrar uma restrição aqui não muda seu plano alimentar automaticamente. Se algo mudou, fale com quem faz seu acompanhamento." | "Registrar uma restrição aqui não muda o plano alimentar de {nome} automaticamente. Se algo mudou, fale com quem faz o acompanhamento." |
 
+Aprovado pelo responsável clínico em 2026-11-20 sobre a versão `d6ea88a1`, sem mudanças:
+
+| Id | Finalidade | Conta própria | Responsável |
+| --- | --- | --- | --- |
+| `portal.seloRevisada` | Informação rejeitada, visível por 30 dias (PUX-01/05, 2026-11-20) | "Revisada por quem faz seu acompanhamento. Se tiver dúvida, converse na próxima consulta." | "Revisada por quem faz o acompanhamento de {nome}. Se tiver dúvida, converse na próxima consulta." |
+
 ## Perguntas ao responsável clínico
 
 - **Urgência:** a lista de sinais ("falta de ar ou inchaço na boca ou na garganta") e a orientação "192 (SAMU)" estão adequadas
@@ -49,9 +55,3 @@ pessoas) continua pendente para estes mesmos textos.
 - **Mensagem depois de informar:** "Em caso de dúvida ou sintomas, fale com quem faz seu acompanhamento" é suficiente, ou sintomas
   devem levar ao aviso de urgência?
 - **Plano não muda:** o texto deixa claro que nada muda no plano até a equipe agir, sem gerar alarme?
-
-## Textos pendentes (cópia de conferência)
-
-| Id | Finalidade | Conta própria | Responsável |
-| --- | --- | --- | --- |
-| `portal.seloRevisada` | Informação rejeitada, visível por 30 dias (PUX-01/05, 2026-11-20) | "Revisada por quem faz seu acompanhamento. Se tiver dúvida, converse na próxima consulta." | "Revisada por quem faz o acompanhamento de {nome}. Se tiver dúvida, converse na próxima consulta." |

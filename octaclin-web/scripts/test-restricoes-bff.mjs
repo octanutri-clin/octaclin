@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const temp = mkdtempSync(join(tmpdir(), "octaclin-restricoes-bff-"));
-const specs = ["scripts/restricoes-portal.spec.ts", "scripts/validacao-textos-clinicos.spec.ts", "scripts/restricoes-bff.spec.ts", "scripts/restricoes-equipe.spec.ts", "scripts/restricoes-equipe-bff.spec.ts", "scripts/restricoes-prontuario.spec.ts", "scripts/restricoes-prontuario-bff.spec.ts"];
+const specs = ["scripts/restricoes-portal.spec.ts", "scripts/validacao-textos-clinicos.spec.ts", "scripts/restricoes-bff.spec.ts", "scripts/restricoes-equipe.spec.ts", "scripts/restricoes-equipe-bff.spec.ts", "scripts/restricoes-prontuario.spec.ts", "scripts/restricoes-prontuario-bff.spec.ts", "scripts/restricoes-acoes-protegidas.spec.ts"];
 const files = [
   ...specs,
   "lib/textos-restricoes.ts",

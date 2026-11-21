@@ -165,3 +165,45 @@ export function montarRejeicaoRestricao(v: unknown): { revisao: number; justific
 
 export const descricaoRestricao = (i: RestricaoProntuario, rotuloTipo: string) =>
   `${rotuloTipo.toLocaleLowerCase("pt-BR")}: ${i.conteudo.alvoDeclarado ?? "item de catálogo"}`;
+
+// ---------------------------------------------------------------- P3-4a: ações protegidas sobre restrição confirmada
+const MOTIVOS_INATIVACAO = ["registro_incorreto", "informacao_clinica_revisada", "solicitacao_fundamentada", "outro"] as const;
+const DESTINOS_REAVALIACAO = ["ativa", "em_reavaliacao"] as const;
+// O domínio do backend aceita até 1000 caracteres sem nenhum caractere de controle (nem quebra de linha) na inativação.
+const JUSTIFICATIVA_INATIVACAO = /^[^\p{C}]{1,1000}$/u;
+
+/**
+ * Inativação em dois passos (Q3). A tela só envia depois do segundo passo; `confirmacaoEmDoisPassos` vem dela, explícito,
+ * e o BFF exige `true`. Quebras de linha viram espaço (NUX-12). Proteção da alergia, carteira e concessão são do backend.
+ */
+export function montarInativacaoRestricao(v: unknown): { revisao: number; motivo: string; justificativa: string; confirmacaoEmDoisPassos: true } | null {
+  if (!objeto(v) || !chavesExatas(v, ["revisao", "motivo", "justificativa", "confirmacaoEmDoisPassos"]) || !revisao(v.revisao) ||
+    !em(MOTIVOS_INATIVACAO, v.motivo) || v.confirmacaoEmDoisPassos !== true || typeof v.justificativa !== "string") return null;
+  const justificativa = v.justificativa.replace(/[\r\n\t]+/g, " ").replace(/ {2,}/g, " ").trim();
+  return JUSTIFICATIVA_INATIVACAO.test(justificativa) ? { revisao: v.revisao, motivo: v.motivo, justificativa, confirmacaoEmDoisPassos: true } : null;
+}
+
+export function montarReavaliacaoRestricao(v: unknown): { revisao: number; destino: (typeof DESTINOS_REAVALIACAO)[number] } | null {
+  return objeto(v) && chavesExatas(v, ["revisao", "destino"]) && revisao(v.revisao) && em(DESTINOS_REAVALIACAO, v.destino)
+    ? { revisao: v.revisao, destino: v.destino } : null;
+}
+
+/** Confere que a resposta é da MESMA restrição, na revisão seguinte, no estado pedido. */
+export function projetarEstadoRestricao(v: unknown, id: string, revisaoEnviada: number, esperado: "inativa" | "ativa" | "em_reavaliacao") {
+  if (!objeto(v) || v.id !== id.toLowerCase() || v.revisao !== revisaoEnviada + 1 || v.estado !== esperado) return null;
+  return { id: v.id as string, revisao: v.revisao as number, estado: esperado };
+}
+
+const TIPO_DO_SUBTIPO: Readonly<Record<string, string>> = Object.freeze({
+  alergia_alimentar: "alergia", intolerancia_alimentar: "intolerancia", doenca_ou_condicao_com_restricao: "condicao", outra_restricao_clinica: "outra",
+});
+
+/**
+ * "Corrigir registro" (NUX-01): o formulário da nova restrição parte da antiga. Com "não sei dizer", o tipo fica em branco
+ * para a equipe escolher (nunca afirma "outra restrição clínica" como fato).
+ */
+export function formularioCorrecao(i: RestricaoProntuario): { tipo: string; alimento: string; gravidade: string; observacao: string } {
+  const c = i.conteudo;
+  const tipo = c.classificacaoPeloPaciente === "nao_sabe" ? "" : c.natureza === "escolha" ? "escolha" : TIPO_DO_SUBTIPO[c.subtipoClinico ?? ""] ?? "";
+  return { tipo, alimento: c.alvoDeclarado ?? "", gravidade: c.gravidade ?? "nao_informada", observacao: c.observacao ?? "" };
+}

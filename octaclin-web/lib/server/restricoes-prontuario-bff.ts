@@ -1,10 +1,13 @@
 import {
   montarConfirmacaoRestricao,
+  montarInativacaoRestricao,
+  montarReavaliacaoRestricao,
   montarRegistroProntuario,
   montarRejeicaoRestricao,
   projetarAcaoRestricao,
   projetarAvaliacaoInicial,
   projetarAvaliacaoProntuario,
+  projetarEstadoRestricao,
   projetarListaProntuario,
   projetarRegistroProntuario,
 } from "../restricoes-prontuario";
@@ -63,3 +66,30 @@ async function decidir(request: Request, pacienteId: string, restricaoId: string
 
 export const tratarConfirmarRestricao = (request: Request, pacienteId: string, restricaoId: string) => decidir(request, pacienteId, restricaoId, "confirmar");
 export const tratarRejeitarRestricao = (request: Request, pacienteId: string, restricaoId: string) => decidir(request, pacienteId, restricaoId, "rejeitar");
+
+/**
+ * P3-4a: inativar (dois passos) e reavaliar uma restrição confirmada. Mesma permissão grossa das escritas; a proteção da
+ * alergia confirmada, a concessão `restricoes.confirmar` e a carteira são do backend, sob lock. A resposta é conferida
+ * (mesma restrição, revisão seguinte, estado pedido) e só id, revisão e estado voltam.
+ */
+async function mudarEstado(request: Request, pacienteId: string, restricaoId: string, acao: "inativar" | "reavaliar"): Promise<Response> {
+  if (!restricoesClinicasHabilitadasNaWeb()) return erroRestricoes(404);
+  if (!UUID_RESTRICOES.test(restricaoId)) return erroRestricoes(400);
+  const id = restricaoId.toLowerCase();
+  let enviada = 0;
+  let esperado: "inativa" | "ativa" | "em_reavaliacao" = "inativa";
+  const montar = (v: unknown) => {
+    if (acao === "inativar") {
+      const corpo = montarInativacaoRestricao(v);
+      if (corpo) enviada = corpo.revisao;
+      return corpo;
+    }
+    const corpo = montarReavaliacaoRestricao(v);
+    if (corpo) { enviada = corpo.revisao; esperado = corpo.destino; }
+    return corpo;
+  };
+  return paciente(request, pacienteId, "", `${encodeURIComponent(id)}/${acao}`, ESCREVER, montar, (v) => projetarEstadoRestricao(v, id, enviada, esperado));
+}
+
+export const tratarInativarRestricao = (request: Request, pacienteId: string, restricaoId: string) => mudarEstado(request, pacienteId, restricaoId, "inativar");
+export const tratarReavaliarRestricao = (request: Request, pacienteId: string, restricaoId: string) => mudarEstado(request, pacienteId, restricaoId, "reavaliar");
