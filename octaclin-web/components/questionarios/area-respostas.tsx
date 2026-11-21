@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { ChevronDown, ChevronRight, ClipboardList, Download, RefreshCcw, TrendingUp } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { Cartao } from '@/components/ui/cartao';
@@ -8,11 +8,67 @@ import { Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import { formatarDataResposta, formatarValorResposta } from './usar-workspace-questionarios';
 import type { WorkspaceQuestionarios } from './usar-workspace-questionarios';
 
+function TextoComRealce({ texto, busca }: { texto: string; busca: string }) {
+  const termo = busca.trim().toLocaleLowerCase('pt-BR');
+  if (!termo) return texto;
+  const normalizado = texto.toLocaleLowerCase('pt-BR');
+  // Mapear offsets preserva Unicode quando o lower-case expande um caractere.
+  const limites: { inicio: number; fim: number }[] = [];
+  let posicao = 0;
+  for (const caractere of texto) {
+    for (let i = 0; i < caractere.toLocaleLowerCase('pt-BR').length; i += 1) {
+      limites.push({ inicio: posicao, fim: posicao + caractere.length });
+    }
+    posicao += caractere.length;
+  }
+  const partes = [];
+  let fimAnterior = 0;
+  let indice = normalizado.indexOf(termo);
+  while (indice !== -1) {
+    const inicio = limites[indice].inicio;
+    const fim = limites[indice + termo.length - 1].fim;
+    if (inicio >= fimAnterior) {
+      partes.push(texto.slice(fimAnterior, inicio));
+      partes.push(<mark key={inicio} className="rounded-sm bg-alerta-suave text-tinta">{texto.slice(inicio, fim)}</mark>);
+      fimAnterior = fim;
+    }
+    indice = normalizado.indexOf(termo, indice + termo.length);
+  }
+  partes.push(texto.slice(fimAnterior));
+  return partes;
+}
+
 function ListaRespostas({
-  respostasVisiveis, pacientesPorId, carregandoRespostas
-}: Pick<WorkspaceQuestionarios, 'respostasVisiveis' | 'pacientesPorId' | 'carregandoRespostas'>) {
+  respostasVisiveis, pacientesPorId, carregandoRespostas, buscaRespostas
+}: Pick<WorkspaceQuestionarios, 'respostasVisiveis' | 'pacientesPorId' | 'carregandoRespostas' | 'buscaRespostas'>) {
   const idLista = useId();
   const [recolhidas, setRecolhidas] = useState<Set<string>>(() => new Set());
+
+  const [leituraId, setLeituraId] = useState<string | null>(null);
+  const grupoRef = useRef<HTMLDivElement>(null);
+  const tituloLeituraRef = useRef<HTMLHeadingElement>(null);
+  const gatilhosRef = useRef(new Map<string, HTMLButtonElement>());
+  const origemRef = useRef<string | null>(null);
+  const devolverFocoRef = useRef(false);
+  const indiceLeitura = respostasVisiveis.findIndex((resposta) => resposta.respostaId === leituraId);
+  const respostaLeitura = respostasVisiveis[indiceLeitura];
+  // Ajuste condicional do próprio estado: um envio removido não pode reabrir
+  // quando o filtro voltar. A identidade, e não a posição, controla a seleção.
+  if (leituraId !== null && indiceLeitura === -1) setLeituraId(null);
+
+  useEffect(() => {
+    if (leituraId !== null) {
+      if (grupoRef.current) grupoRef.current.scrollTop = 0;
+      tituloLeituraRef.current?.focus();
+    } else if (origemRef.current) {
+      if (devolverFocoRef.current || document.activeElement === document.body) {
+        const gatilho = gatilhosRef.current.get(origemRef.current);
+        (gatilho && !gatilho.disabled ? gatilho : grupoRef.current)?.focus();
+      }
+      origemRef.current = null;
+      devolverFocoRef.current = false;
+    }
+  }, [leituraId]);
 
   function alternarResposta(respostaId: string) {
     setRecolhidas((atuais) => {
@@ -35,29 +91,45 @@ function ListaRespostas({
   }
 
   return (
-    <div className="grid min-w-0 gap-3" data-qst01-respostas>
+    <div ref={grupoRef} tabIndex={-1} role="group" aria-label="Leitura dos envios" className={respostaLeitura ? 'flex min-w-0 flex-col gap-3 md:max-h-[75vh] md:overflow-y-auto' : 'grid min-w-0 gap-3'} data-qst01-respostas data-qst-p02-leitura={respostaLeitura ? true : undefined}>
       {respostasVisiveis.length ? (
         <>
+          {respostaLeitura ? (
+            <div className="z-10 grid min-w-0 shrink-0 gap-2 rounded-md border border-linha bg-white p-3 md:sticky md:top-0">
+              <h3 ref={tituloLeituraRef} tabIndex={-1} className="text-sm font-semibold text-tinta">Leitura individual</h3>
+              <div role="status" aria-live="polite" aria-atomic="true" className="min-w-0 break-words text-sm text-tinta">
+                <p>{carregandoRespostas ? 'Atualizando envios...' : `Envio ${indiceLeitura + 1} de ${respostasVisiveis.length}`}</p>
+                <p>{pacientesPorId.get(respostaLeitura.pacienteId)?.nome ?? 'Paciente não identificado'}</p>
+                <p>Finalizado em {formatarDataResposta(respostaLeitura.finalizadoEm)}</p>
+              </div>
+              <div role="group" aria-label="Navegação entre envios" className="flex flex-wrap gap-2">
+                <Botao type="button" disabled={carregandoRespostas || indiceLeitura === 0} onClick={() => setLeituraId(respostasVisiveis[indiceLeitura - 1].respostaId)}>Anterior</Botao>
+                <Botao type="button" disabled={carregandoRespostas || indiceLeitura === respostasVisiveis.length - 1} onClick={() => setLeituraId(respostasVisiveis[indiceLeitura + 1].respostaId)}>Próximo</Botao>
+                <Botao type="button" onClick={() => { devolverFocoRef.current = true; setLeituraId(null); }}>Voltar à lista</Botao>
+              </div>
+            </div>
+          ) : (
           <div role="group" aria-label="Organizar respostas exibidas" className="flex flex-wrap items-center gap-2">
             <p className="w-full text-xs text-texto-suave">As ações abaixo se aplicam aos resultados exibidos.</p>
             <Botao type="button" tamanho="sm" disabled={carregandoRespostas} onClick={() => organizarExibidas(false)}>Expandir tudo</Botao>
             <Botao type="button" tamanho="sm" disabled={carregandoRespostas} onClick={() => organizarExibidas(true)}>Recolher tudo</Botao>
           </div>
-          {respostasVisiveis.map((resposta) => {
+          )}
+          {(respostaLeitura ? [respostaLeitura] : respostasVisiveis).map((resposta) => {
             const paciente = pacientesPorId.get(resposta.pacienteId);
-            const aberta = !recolhidas.has(resposta.respostaId);
+            const aberta = Boolean(respostaLeitura) || !recolhidas.has(resposta.respostaId);
             const conteudoId = `${idLista}-${resposta.respostaId}`;
             return (
-              <article key={resposta.respostaId} className="min-w-0 rounded-md border border-linha bg-superficie p-4">
+              <article key={resposta.respostaId} className="min-w-0 shrink-0 rounded-md border border-linha bg-superficie p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0 break-words">
-                    <p className="text-sm font-semibold text-tinta">{paciente?.nome ?? 'Paciente não identificado'}</p>
+                    <p className="text-sm font-semibold text-tinta"><TextoComRealce texto={paciente?.nome ?? 'Paciente não identificado'} busca={buscaRespostas} /></p>
                     <p className="text-xs text-texto-suave">Finalizado em {formatarDataResposta(resposta.finalizadoEm)}</p>
                   </div>
                   <span className="rounded-full border border-linha bg-white px-3 py-1 text-xs font-semibold text-texto-suave">
                     {resposta.totalRespostas} {resposta.totalRespostas === 1 ? 'resposta' : 'respostas'}
                   </span>
-                  <Botao
+                  {!respostaLeitura ? <Botao
                     type="button" tamanho="sm" disabled={carregandoRespostas}
                     aria-expanded={aberta} aria-controls={conteudoId}
                     aria-label={`${aberta ? 'Recolher' : 'Expandir'} respostas de ${paciente?.nome ?? 'paciente não identificado'}`}
@@ -65,14 +137,19 @@ function ListaRespostas({
                   >
                     {aberta ? <ChevronDown className="h-4 w-4 shrink-0" aria-hidden="true" /> : <ChevronRight className="h-4 w-4 shrink-0" aria-hidden="true" />}
                     {aberta ? 'Recolher respostas' : 'Expandir respostas'}
-                  </Botao>
+                  </Botao> : null}
+                  {!respostaLeitura ? <Botao
+                    ref={(elemento) => { if (elemento) gatilhosRef.current.set(resposta.respostaId, elemento); else gatilhosRef.current.delete(resposta.respostaId); }}
+                    type="button" tamanho="sm" disabled={carregandoRespostas}
+                    onClick={() => { origemRef.current = resposta.respostaId; setLeituraId(resposta.respostaId); }}
+                  >Ler envio</Botao> : null}
                 </div>
                 <div id={conteudoId} hidden={!aberta}>
                   <dl className="mt-4 grid gap-2 md:grid-cols-2">
                     {resposta.respostas.map((item) => (
                       <div key={`${resposta.respostaId}-${item.perguntaId}`} className="min-w-0 rounded-md border border-linha bg-white p-3">
-                        <dt className="text-xs font-medium text-texto-suave">{item.enunciado}</dt>
-                        <dd className="mt-1 break-words text-sm font-semibold text-tinta">{formatarValorResposta(item.valor)}</dd>
+                        <dt className="text-xs font-medium text-texto-suave"><TextoComRealce texto={item.enunciado} busca={buscaRespostas} /></dt>
+                        <dd className="mt-1 break-words text-sm font-semibold text-tinta"><TextoComRealce texto={formatarValorResposta(item.valor)} busca={buscaRespostas} /></dd>
                       </div>
                     ))}
                   </dl>
@@ -91,6 +168,7 @@ function ListaRespostas({
 }
 
 export function AreaRespostas({ workspace }: { workspace: WorkspaceQuestionarios }) {
+  const buscaRef = useRef<HTMLInputElement>(null);
   const {
     respostasVisiveis, leituraClinica, carregandoRespostas, pacienteFiltroRespostas,
     setPacienteFiltroRespostas, carregarRespostas, questionarioAtual, buscaRespostas,
@@ -152,15 +230,30 @@ export function AreaRespostas({ workspace }: { workspace: WorkspaceQuestionarios
                 ))}
               </Selecao>
             </label>
-            <label className="space-y-1.5">
+            <div className="min-w-0 space-y-1.5" data-qst-p01-busca>
               <Rotulo htmlFor="busca-respostas">Busca</Rotulo>
+              <div className="flex min-w-0 flex-wrap gap-2">
               <Campo
+                ref={buscaRef}
+                className="min-w-0 flex-1"
                 id="busca-respostas"
                 value={buscaRespostas}
                 onChange={(event) => setBuscaRespostas(event.target.value)}
                 placeholder="Paciente, pergunta ou resposta"
               />
-            </label>
+              <Botao type="button" disabled={!buscaRespostas} onClick={() => {
+                setBuscaRespostas('');
+                buscaRef.current?.focus();
+              }}>Limpar busca</Botao>
+              </div>
+            </div>
+          </div>
+
+          <div data-qst-p01-contagem>
+            <p role="status" aria-live="polite" aria-atomic="true" className="text-sm text-texto-suave">
+              {carregandoRespostas ? 'Atualizando envios...' : `${respostasVisiveis.length} ${respostasVisiveis.length === 1 ? 'envio exibido' : 'envios exibidos'}`}
+            </p>
+            <p className="text-xs text-texto-suave">A contagem considera apenas a lista carregada.</p>
           </div>
 
           {leituraClinica ? (
@@ -230,6 +323,7 @@ export function AreaRespostas({ workspace }: { workspace: WorkspaceQuestionarios
             key={`${questionarioAtual?.id ?? ''}:${pacienteFiltroRespostas}`}
             respostasVisiveis={respostasVisiveis}
             pacientesPorId={pacientesPorId}
+            buscaRespostas={buscaRespostas}
             carregandoRespostas={carregandoRespostas}
           />
         </div>
