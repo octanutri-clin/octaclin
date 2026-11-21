@@ -1,0 +1,25 @@
+{
+  "etapa": "A",
+  "base": "60bbe01f944d3c14a3dd30210bb4843b4187e356",
+  "modalidade": "subagente runtime com papel explicito resumido; nao selecao nativa TOML",
+  "instancia": "/root/melhorias_profissionais_ux",
+  "fork_turns": "none",
+  "inicio": "nao capturado em timestamp; chamada registrada na trilha de ferramentas desta sessao",
+  "registro_apos_retorno_utc": "2026-11-21T00:51:27.859008+00:00",
+  "papel_fonte": ".codex/agents/octaclin-nutricionista-ux.toml",
+  "papel_fonte_sha256": "6259b40a98e2c49053cbc6adbc0c59d0312b14e191b228ab73de2f2eac53af6d",
+  "artefatos_sha256": {
+    "brief.md": "f3d7e1cdf6066da9538fb5543f1aeb0113361c43646a33f045ff167873274754",
+    "consolidado.md": "69910fbcda8824f87e05ff32735a663324bb565ed16e42b43f85a0f6f4db663d",
+    "nutricionista.md": "485f84fa6e16c7c59c41f9e2b8718543a9d71aad3e1dda9f71194b84b255ce4d",
+    "paciente.md": "a3ceb50eb6e87eaaca0a19d0c777f74afc4c583efd012d8e323a09ae3d277765"
+  },
+  "ferramentas_revisor_observadas": [],
+  "paciente": "NA justificado pelo coordenador; nao invocado",
+  "limitacoes": [
+    "brief.md e nutricionista.md sao sinteses editoriais; hashes identificam arquivos, nao o prompt ou retorno integrais",
+    "somente planejamento; sem interface, teste visual, usuario real ou R4",
+    "restricao de ferramentas por instrucao, sem comprovar sandbox independente"
+  ],
+  "resultado": "retorno recebido; quatro achados preservados, sugestoes nao aprovam produto"
+}

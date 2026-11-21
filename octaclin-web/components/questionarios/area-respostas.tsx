@@ -1,11 +1,94 @@
 'use client';
 
-import { ClipboardList, Download, RefreshCcw, TrendingUp } from 'lucide-react';
+import { useId, useState } from 'react';
+import { ChevronDown, ChevronRight, ClipboardList, Download, RefreshCcw, TrendingUp } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { Cartao } from '@/components/ui/cartao';
 import { Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import { formatarDataResposta, formatarValorResposta } from './usar-workspace-questionarios';
 import type { WorkspaceQuestionarios } from './usar-workspace-questionarios';
+
+function ListaRespostas({
+  respostasVisiveis, pacientesPorId, carregandoRespostas
+}: Pick<WorkspaceQuestionarios, 'respostasVisiveis' | 'pacientesPorId' | 'carregandoRespostas'>) {
+  const idLista = useId();
+  const [recolhidas, setRecolhidas] = useState<Set<string>>(() => new Set());
+
+  function alternarResposta(respostaId: string) {
+    setRecolhidas((atuais) => {
+      const proximas = new Set(atuais);
+      if (proximas.has(respostaId)) proximas.delete(respostaId);
+      else proximas.add(respostaId);
+      return proximas;
+    });
+  }
+
+  function organizarExibidas(recolher: boolean) {
+    setRecolhidas((atuais) => {
+      const proximas = new Set(atuais);
+      respostasVisiveis.forEach(({ respostaId }) => {
+        if (recolher) proximas.add(respostaId);
+        else proximas.delete(respostaId);
+      });
+      return proximas;
+    });
+  }
+
+  return (
+    <div className="grid min-w-0 gap-3" data-qst01-respostas>
+      {respostasVisiveis.length ? (
+        <>
+          <div role="group" aria-label="Organizar respostas exibidas" className="flex flex-wrap items-center gap-2">
+            <p className="w-full text-xs text-texto-suave">As ações abaixo se aplicam aos resultados exibidos.</p>
+            <Botao type="button" tamanho="sm" disabled={carregandoRespostas} onClick={() => organizarExibidas(false)}>Expandir tudo</Botao>
+            <Botao type="button" tamanho="sm" disabled={carregandoRespostas} onClick={() => organizarExibidas(true)}>Recolher tudo</Botao>
+          </div>
+          {respostasVisiveis.map((resposta) => {
+            const paciente = pacientesPorId.get(resposta.pacienteId);
+            const aberta = !recolhidas.has(resposta.respostaId);
+            const conteudoId = `${idLista}-${resposta.respostaId}`;
+            return (
+              <article key={resposta.respostaId} className="min-w-0 rounded-md border border-linha bg-superficie p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0 break-words">
+                    <p className="text-sm font-semibold text-tinta">{paciente?.nome ?? 'Paciente não identificado'}</p>
+                    <p className="text-xs text-texto-suave">Finalizado em {formatarDataResposta(resposta.finalizadoEm)}</p>
+                  </div>
+                  <span className="rounded-full border border-linha bg-white px-3 py-1 text-xs font-semibold text-texto-suave">
+                    {resposta.totalRespostas} {resposta.totalRespostas === 1 ? 'resposta' : 'respostas'}
+                  </span>
+                  <Botao
+                    type="button" tamanho="sm" disabled={carregandoRespostas}
+                    aria-expanded={aberta} aria-controls={conteudoId}
+                    aria-label={`${aberta ? 'Recolher' : 'Expandir'} respostas de ${paciente?.nome ?? 'paciente não identificado'}`}
+                    onClick={() => alternarResposta(resposta.respostaId)}
+                  >
+                    {aberta ? <ChevronDown className="h-4 w-4 shrink-0" aria-hidden="true" /> : <ChevronRight className="h-4 w-4 shrink-0" aria-hidden="true" />}
+                    {aberta ? 'Recolher respostas' : 'Expandir respostas'}
+                  </Botao>
+                </div>
+                <div id={conteudoId} hidden={!aberta}>
+                  <dl className="mt-4 grid gap-2 md:grid-cols-2">
+                    {resposta.respostas.map((item) => (
+                      <div key={`${resposta.respostaId}-${item.perguntaId}`} className="min-w-0 rounded-md border border-linha bg-white p-3">
+                        <dt className="text-xs font-medium text-texto-suave">{item.enunciado}</dt>
+                        <dd className="mt-1 break-words text-sm font-semibold text-tinta">{formatarValorResposta(item.valor)}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
+              </article>
+            );
+          })}
+        </>
+      ) : (
+        <div className="p-2 text-sm text-texto-suave">
+          {carregandoRespostas ? 'Carregando respostas.' : 'Nenhuma resposta encontrada para os filtros atuais.'}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function AreaRespostas({ workspace }: { workspace: WorkspaceQuestionarios }) {
   const {
@@ -143,38 +226,12 @@ export function AreaRespostas({ workspace }: { workspace: WorkspaceQuestionarios
             </div>
           ) : null}
 
-          {respostasVisiveis.length ? (
-            <div className="grid gap-3">
-              {respostasVisiveis.map((resposta) => {
-                const paciente = pacientesPorId.get(resposta.pacienteId);
-                return (
-                  <article key={resposta.respostaId} className="rounded-md border border-linha bg-superficie p-4">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold text-tinta">{paciente?.nome ?? 'Paciente não identificado'}</p>
-                        <p className="text-xs text-texto-suave">Finalizado em {formatarDataResposta(resposta.finalizadoEm)}</p>
-                      </div>
-                      <span className="rounded-full border border-linha bg-white px-3 py-1 text-xs font-semibold text-texto-suave">
-                        {resposta.totalRespostas} respostas
-                      </span>
-                    </div>
-                    <dl className="mt-4 grid gap-2 md:grid-cols-2">
-                      {resposta.respostas.map((item) => (
-                        <div key={`${resposta.respostaId}-${item.perguntaId}`} className="rounded-md border border-linha bg-white p-3">
-                          <dt className="text-xs font-medium text-texto-suave">{item.enunciado}</dt>
-                          <dd className="mt-1 break-words text-sm font-semibold text-tinta">{formatarValorResposta(item.valor)}</dd>
-                        </div>
-                      ))}
-                    </dl>
-                  </article>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="p-2 text-sm text-texto-suave">
-              {carregandoRespostas ? 'Carregando respostas.' : 'Nenhuma resposta encontrada para os filtros atuais.'}
-            </div>
-          )}
+          <ListaRespostas
+            key={`${questionarioAtual?.id ?? ''}:${pacienteFiltroRespostas}`}
+            respostasVisiveis={respostasVisiveis}
+            pacientesPorId={pacientesPorId}
+            carregandoRespostas={carregandoRespostas}
+          />
         </div>
       </Cartao>
 
