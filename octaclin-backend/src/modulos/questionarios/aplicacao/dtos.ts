@@ -14,6 +14,7 @@ import {
   IsUUID,
   Max,
   MaxLength,
+  Matches,
   Min,
   ValidateIf,
   ValidateNested
@@ -303,4 +304,11 @@ export class SolicitarUploadFormularioPacienteDto {
   @IsNumber()
   @Min(1)
   tamanhoBytes: number;
+}
+
+/** Apenas a revisão emitida pelo servidor; a definição nunca vem do cliente. */
+export class DuplicarPerguntaDto {
+  @IsString()
+  @Matches(/^[a-f0-9]{64}$/)
+  revisaoEsperada: string;
 }
