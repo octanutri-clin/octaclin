@@ -1,5 +1,24 @@
 # Revisão SQ — 21/11/2026, PR #566
 
+## Estado vigente — ratificação e aplicação
+
+O proprietário autorizou a continuidade com “Pode seguir, estamos em sol médio”,
+após a proposta explícita de ratificação até **28/11/2026**. Aplicada a reconciliação
+ao inventário ativo, preservando severidades e todos os alertas atuais: 232 na
+SQ-004, 20 na SQ-259, 2 na SQ-255 e 1 na SQ-258. A proposta isolada abaixo é
+histórica; o registro de ratificação foi acrescentado à evidência da causa ativa.
+
+TDD: testes atualizados falharam funcionalmente em quatro casos antes da aplicação
+(snapshot, cobertura e duas datas). Após a aplicação, **73/73 PASS** e CLI corrente
+PASS com **255 alertas cobertos**. Fronteira preservada: 27/11 e 28/11 válidos,
+29/11 bloqueado. Sem exceção, mudança no validador ou supressão de alerta.
+Revisão cruzada da aplicação por `/root/qst01_governanca_r4`: favorável, sem
+achado bloqueante. Revisor executou 5/5 testes de snapshot/cobertura/fronteiras e
+CLI corrente PASS; não repetiu a suíte completa nem usou rede/runtime/produção.
+CI do novo HEAD pendente; autorização não abrange merge, deploy ou imagens.
+
+## Checkpoint histórico — antes da ratificação
+
 ## Estado e decisão necessária
 
 **BLOCKED — ratificação do proprietário pendente.** A governança do HEAD
@@ -74,14 +93,14 @@ Revisão cruzada R4 independente, somente leitura, pelo subagente
 bytes/hash, snapshot, cobertura bijetiva de 255 referências e executou o
 validador da proposta nas datas 21/11 e 28/11 (PASS estrutural) e 29/11 (FAIL
 esperado por vencimento). Confirmou o inventário ativo inalterado e seu FAIL
-atual. Não executou scanners/build/runtime/produção nem autenticou o run por
+naquele checkpoint. Não executou scanners/build/runtime/produção nem autenticou o run por
 conta própria; evidência de API/eco obtida pelo coordenador. Não ratifica risco.
 
 Sem alteração de Dockerfiles, dependências, exceções, severidades, workflows,
 permissões, produção ou infraestrutura. Não usar Python alpha para corrigir
 imagem. Não remover o gate, o teste de relógio ou a cobertura bijetiva.
 
-Após ratificação: aplicar a reconciliação, atualizar os testes de snapshot/255
+Próximo passo histórico, antes da ratificação: aplicar a reconciliação, atualizar os testes de snapshot/255
 referências e fronteira 28/11 → 29/11 mantendo asserts, executar gates e revisão
 cruzada R4, enviar um novo HEAD e conferir a governança no CI. Ratificação não
 autoriza merge/deploy nem declara corrigidos os alertas residuais.

@@ -2,6 +2,15 @@
 
 ## Atualização — concordância e governança em 21/11
 
+**Estado vigente:** proprietário ratificou a proposta até 28/11 pela mensagem
+“Pode seguir, estamos em sol médio”. Inventário ativo reconciliado e testes de
+snapshot/fronteira atualizados, sem alterar o validador. RED: quatro falhas antes
+da aplicação; GREEN: 73/73 e CLI corrente/255 alertas PASS. Revisão de segurança
+registra o escopo e os limites. CI do novo HEAD pendente. O bloqueio por falta de
+ratificação descrito no checkpoint abaixo foi superado; alertas não estão corrigidos.
+
+### Checkpoint anterior — correção textual e ratificação ainda pendente
+
 Pedido do proprietário: corrigir a falha de governança, a concordância e pesquisar
 melhorias de questionários. Microcopy `1 resposta` / `0 respostas` / `2 respostas`
 corrigida com RED funcional seguido de **16/16 Playwright** desktop/mobile,
