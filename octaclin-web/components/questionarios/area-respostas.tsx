@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import { ChevronDown, ChevronRight, ClipboardList, Download, RefreshCcw, TrendingUp } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { Cartao } from '@/components/ui/cartao';
@@ -8,9 +8,39 @@ import { Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import { formatarDataResposta, formatarValorResposta } from './usar-workspace-questionarios';
 import type { WorkspaceQuestionarios } from './usar-workspace-questionarios';
 
+function TextoComRealce({ texto, busca }: { texto: string; busca: string }) {
+  const termo = busca.trim().toLocaleLowerCase('pt-BR');
+  if (!termo) return texto;
+  const normalizado = texto.toLocaleLowerCase('pt-BR');
+  // Mapear offsets preserva Unicode quando o lower-case expande um caractere.
+  const limites: { inicio: number; fim: number }[] = [];
+  let posicao = 0;
+  for (const caractere of texto) {
+    for (let i = 0; i < caractere.toLocaleLowerCase('pt-BR').length; i += 1) {
+      limites.push({ inicio: posicao, fim: posicao + caractere.length });
+    }
+    posicao += caractere.length;
+  }
+  const partes = [];
+  let fimAnterior = 0;
+  let indice = normalizado.indexOf(termo);
+  while (indice !== -1) {
+    const inicio = limites[indice].inicio;
+    const fim = limites[indice + termo.length - 1].fim;
+    if (inicio >= fimAnterior) {
+      partes.push(texto.slice(fimAnterior, inicio));
+      partes.push(<mark key={inicio} className="rounded-sm bg-alerta-suave text-tinta">{texto.slice(inicio, fim)}</mark>);
+      fimAnterior = fim;
+    }
+    indice = normalizado.indexOf(termo, indice + termo.length);
+  }
+  partes.push(texto.slice(fimAnterior));
+  return partes;
+}
+
 function ListaRespostas({
-  respostasVisiveis, pacientesPorId, carregandoRespostas
-}: Pick<WorkspaceQuestionarios, 'respostasVisiveis' | 'pacientesPorId' | 'carregandoRespostas'>) {
+  respostasVisiveis, pacientesPorId, carregandoRespostas, buscaRespostas
+}: Pick<WorkspaceQuestionarios, 'respostasVisiveis' | 'pacientesPorId' | 'carregandoRespostas' | 'buscaRespostas'>) {
   const idLista = useId();
   const [recolhidas, setRecolhidas] = useState<Set<string>>(() => new Set());
 
@@ -51,7 +81,7 @@ function ListaRespostas({
               <article key={resposta.respostaId} className="min-w-0 rounded-md border border-linha bg-superficie p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0 break-words">
-                    <p className="text-sm font-semibold text-tinta">{paciente?.nome ?? 'Paciente não identificado'}</p>
+                    <p className="text-sm font-semibold text-tinta"><TextoComRealce texto={paciente?.nome ?? 'Paciente não identificado'} busca={buscaRespostas} /></p>
                     <p className="text-xs text-texto-suave">Finalizado em {formatarDataResposta(resposta.finalizadoEm)}</p>
                   </div>
                   <span className="rounded-full border border-linha bg-white px-3 py-1 text-xs font-semibold text-texto-suave">
@@ -71,8 +101,8 @@ function ListaRespostas({
                   <dl className="mt-4 grid gap-2 md:grid-cols-2">
                     {resposta.respostas.map((item) => (
                       <div key={`${resposta.respostaId}-${item.perguntaId}`} className="min-w-0 rounded-md border border-linha bg-white p-3">
-                        <dt className="text-xs font-medium text-texto-suave">{item.enunciado}</dt>
-                        <dd className="mt-1 break-words text-sm font-semibold text-tinta">{formatarValorResposta(item.valor)}</dd>
+                        <dt className="text-xs font-medium text-texto-suave"><TextoComRealce texto={item.enunciado} busca={buscaRespostas} /></dt>
+                        <dd className="mt-1 break-words text-sm font-semibold text-tinta"><TextoComRealce texto={formatarValorResposta(item.valor)} busca={buscaRespostas} /></dd>
                       </div>
                     ))}
                   </dl>
@@ -91,6 +121,7 @@ function ListaRespostas({
 }
 
 export function AreaRespostas({ workspace }: { workspace: WorkspaceQuestionarios }) {
+  const buscaRef = useRef<HTMLInputElement>(null);
   const {
     respostasVisiveis, leituraClinica, carregandoRespostas, pacienteFiltroRespostas,
     setPacienteFiltroRespostas, carregarRespostas, questionarioAtual, buscaRespostas,
@@ -152,15 +183,30 @@ export function AreaRespostas({ workspace }: { workspace: WorkspaceQuestionarios
                 ))}
               </Selecao>
             </label>
-            <label className="space-y-1.5">
+            <div className="min-w-0 space-y-1.5" data-qst-p01-busca>
               <Rotulo htmlFor="busca-respostas">Busca</Rotulo>
+              <div className="flex min-w-0 flex-wrap gap-2">
               <Campo
+                ref={buscaRef}
+                className="min-w-0 flex-1"
                 id="busca-respostas"
                 value={buscaRespostas}
                 onChange={(event) => setBuscaRespostas(event.target.value)}
                 placeholder="Paciente, pergunta ou resposta"
               />
-            </label>
+              <Botao type="button" disabled={!buscaRespostas} onClick={() => {
+                setBuscaRespostas('');
+                buscaRef.current?.focus();
+              }}>Limpar busca</Botao>
+              </div>
+            </div>
+          </div>
+
+          <div data-qst-p01-contagem>
+            <p role="status" aria-live="polite" aria-atomic="true" className="text-sm text-texto-suave">
+              {carregandoRespostas ? 'Atualizando envios...' : `${respostasVisiveis.length} ${respostasVisiveis.length === 1 ? 'envio exibido' : 'envios exibidos'}`}
+            </p>
+            <p className="text-xs text-texto-suave">A contagem considera apenas a lista carregada.</p>
           </div>
 
           {leituraClinica ? (
@@ -230,6 +276,7 @@ export function AreaRespostas({ workspace }: { workspace: WorkspaceQuestionarios
             key={`${questionarioAtual?.id ?? ''}:${pacienteFiltroRespostas}`}
             respostasVisiveis={respostasVisiveis}
             pacientesPorId={pacientesPorId}
+            buscaRespostas={buscaRespostas}
             carregandoRespostas={carregandoRespostas}
           />
         </div>
