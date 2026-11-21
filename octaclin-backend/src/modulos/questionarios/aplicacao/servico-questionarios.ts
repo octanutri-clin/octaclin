@@ -1,5 +1,5 @@
-import { BadRequestException, ConflictException, GoneException, Injectable, NotFoundException } from '@nestjs/common';
-import { createHmac, timingSafeEqual } from 'crypto';
+import { BadRequestException, ConflictException, GoneException, Injectable, NotFoundException, ForbiddenException, UnauthorizedException } from '@nestjs/common';
+import { createHmac, randomUUID, timingSafeEqual } from 'crypto';
 import { EntityManager, ILike, In, IsNull, LessThanOrEqual } from 'typeorm';
 import { CronExpressionParser } from 'cron-parser';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
@@ -12,6 +12,10 @@ import { registrarNotificacao } from '../../notificacoes/aplicacao/registrar-not
 import { registrarEventoWebhook } from '../../integracoes/aplicacao/registrar-evento-webhook';
 import { dispararGatilhoAutomacao } from '../../automacoes/aplicacao/disparar-gatilho-automacao';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
+import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
+import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
+import { SessaoUsuarioOrm } from '../../auth/infraestrutura/sessao-usuario.orm';
+import { copiarDefinicaoPergunta, planejarInsercaoCopiaPergunta } from '../dominio/copia-pergunta';
 import { normalizarConfiguracaoPergunta } from '../dominio/configuracao-pergunta';
 import { MODELOS_QUESTIONARIO, ModeloQuestionarioResumo, resumirModeloQuestionario } from '../dominio/modelos-questionario';
 import { normalizarOrdemPerguntas } from '../dominio/reordenacao-perguntas';
@@ -306,7 +310,7 @@ export class ServicoQuestionarios {
   ): Promise<QuestionarioOrm> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const repositorio = gerenciador.getRepository(QuestionarioOrm);
-      const questionario = await this.garantirQuestionarioDoProfissional(gerenciador, tenantId, questionarioId, usuario);
+      const questionario = await this.garantirQuestionarioDoProfissional(gerenciador, tenantId, questionarioId, usuario, 'pessimistic_write');
 
       if (dados.titulo !== undefined) questionario.titulo = dados.titulo;
       if (dados.descricao !== undefined) questionario.descricao = dados.descricao;
@@ -325,7 +329,7 @@ export class ServicoQuestionarios {
   ): Promise<QuestionarioOrm> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const repositorioQuestionarios = gerenciador.getRepository(QuestionarioOrm);
-      const original = await this.garantirQuestionarioDoProfissional(gerenciador, tenantId, questionarioId, usuario);
+      const original = await this.garantirQuestionarioDoProfissional(gerenciador, tenantId, questionarioId, usuario, 'pessimistic_read');
       const profissionalIdDoUsuario = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
 
       const duplicado = await repositorioQuestionarios.save(
@@ -391,6 +395,49 @@ export class ServicoQuestionarios {
     });
   }
 
+  async prepararCopiaPergunta(tenantId: string, questionarioId: string, perguntaId: string, usuario: UsuarioAutenticado) {
+    this.validarAtorCopia(tenantId, usuario);
+    return this.executarComandoCopia(tenantId, async (gerenciador) => {
+      const { questionario, perguntas, origem, sessaoExpiraEm } = await this.carregarEstadoCopia(gerenciador, tenantId, questionarioId, perguntaId, usuario, 'pessimistic_read');
+      const resultado = { revisao: this.revisaoCopia(questionario, perguntas, origem.id, usuario), definicao: copiarDefinicaoPergunta(origem) };
+      if (sessaoExpiraEm.getTime() <= Date.now()) throw new UnauthorizedException('Sessão expirada durante a preparação.');
+      return resultado;
+    });
+  }
+
+  async duplicarPergunta(tenantId: string, questionarioId: string, perguntaId: string, revisaoEsperada: string, usuario: UsuarioAutenticado) {
+    this.validarAtorCopia(tenantId, usuario);
+    if (typeof revisaoEsperada !== 'string' || !/^[a-f0-9]{64}$/.test(revisaoEsperada)) {
+      throw new BadRequestException('Revisão da cópia inválida. Confira novamente a pergunta.');
+    }
+    return this.executarComandoCopia(tenantId, async (gerenciador) => {
+      const { questionario, perguntas, origem, sessaoExpiraEm } = await this.carregarEstadoCopia(gerenciador, tenantId, questionarioId, perguntaId, usuario, 'pessimistic_write');
+      const atual = this.revisaoCopia(questionario, perguntas, origem.id, usuario);
+      if (!timingSafeEqual(Buffer.from(atual, 'hex'), Buffer.from(revisaoEsperada, 'hex'))) {
+        throw new ConflictException('A prévia está desatualizada. Confira o questionário antes de duplicar novamente.');
+      }
+      const definicao = copiarDefinicaoPergunta(origem);
+      const copiaId = randomUUID();
+      const plano = planejarInsercaoCopiaPergunta(perguntas, origem.id, copiaId);
+      const { opcoes, ...campos } = definicao;
+      const repositorio = gerenciador.getRepository(PerguntaOrm);
+      await repositorio.save(repositorio.create({ ...campos, id: copiaId, tenantId, questionarioId,
+        ordem: plano.find((item) => item.id === copiaId)!.ordem }));
+      if (opcoes.length) {
+        const repoOpcoes = gerenciador.getRepository(OpcaoPerguntaOrm);
+        await repoOpcoes.save(opcoes.map((opcao) => repoOpcoes.create({ ...opcao,
+          imagemUrl: opcao.imagemUrl ?? undefined, id: randomUUID(), tenantId, perguntaId: copiaId })));
+      }
+      for (const item of plano) {
+        if (item.id !== copiaId) await repositorio.update({ id: item.id, tenantId, questionarioId }, { ordem: item.ordem });
+      }
+      questionario.versao += 1;
+      await gerenciador.getRepository(QuestionarioOrm).save(questionario);
+      if (sessaoExpiraEm.getTime() <= Date.now()) throw new UnauthorizedException('Sessão expirada durante a cópia.');
+      return { perguntaId: copiaId, versaoQuestionario: questionario.versao };
+    });
+  }
+
   async adicionarPergunta(
     tenantId: string,
     questionarioId: string,
@@ -404,7 +451,7 @@ export class ServicoQuestionarios {
     this.validarOpcoes(dados.tipo, dados.opcoes);
 
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
-      const questionario = await this.garantirQuestionarioDoProfissional(gerenciador, tenantId, questionarioId, usuario);
+      const questionario = await this.garantirQuestionarioDoProfissional(gerenciador, tenantId, questionarioId, usuario, 'pessimistic_write');
 
       const totalPerguntas = await gerenciador.getRepository(PerguntaOrm).count({
         where: { tenantId, questionarioId }
@@ -449,7 +496,7 @@ export class ServicoQuestionarios {
 
   async listarPerguntas(tenantId: string, questionarioId: string, usuario: UsuarioAutenticado): Promise<PerguntaComOpcoes[]> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
-      await this.garantirQuestionarioDoProfissional(gerenciador, tenantId, questionarioId, usuario);
+      await this.garantirQuestionarioDoProfissional(gerenciador, tenantId, questionarioId, usuario, 'pessimistic_read');
       const perguntas = await gerenciador.getRepository(PerguntaOrm).find({
         where: { tenantId, questionarioId },
         order: { ordem: 'ASC' }
@@ -463,11 +510,17 @@ export class ServicoQuestionarios {
     filtros: { busca?: string; categoriaId?: string } = {}
   ): Promise<PerguntaComOpcoes[]> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
-      const perguntas = await gerenciador.getRepository(PerguntaOrm).find({
+      const repositorio = gerenciador.getRepository(PerguntaOrm);
+      const where = { tenantId, visivelBiblioteca: true, ...(filtros.categoriaId ? { categoriaId: filtros.categoriaId } : {}) };
+      const referencias = await repositorio.find({ where, select: { questionarioId: true } });
+      const pais = [...new Set(referencias.map((item) => item.questionarioId))].sort();
+      if (!pais.length) return [];
+      // Uma consulta por lote; ordem global dos pais, sem locks por pergunta.
+      const bloqueados: { id: string }[] = await gerenciador.query('SELECT id FROM questionarios WHERE tenant_id=$1 AND id=ANY($2::uuid[]) ORDER BY id FOR SHARE', [tenantId, pais]);
+      if (!bloqueados.length) return [];
+      const perguntas = await repositorio.find({
         where: {
-          tenantId,
-          visivelBiblioteca: true,
-          ...(filtros.categoriaId ? { categoriaId: filtros.categoriaId } : {})
+          ...where, questionarioId: In(bloqueados.map((item) => item.id))
         },
         order: { ordem: 'ASC' }
       });
@@ -488,10 +541,20 @@ export class ServicoQuestionarios {
     usuario: UsuarioAutenticado
   ): Promise<PerguntaComOpcoes> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
-      const questionario = await this.garantirQuestionarioDoProfissional(gerenciador, tenantId, questionarioId, usuario);
       const repositorioPerguntas = gerenciador.getRepository(PerguntaOrm);
-      const origem = await repositorioPerguntas.findOne({
+      const referencia = await repositorioPerguntas.findOne({
         where: { id: perguntaId, tenantId, visivelBiblioteca: true }
+      });
+      if (!referencia) throw new NotFoundException('Pergunta da biblioteca nao encontrada.');
+      for (const id of [...new Set([questionarioId, referencia.questionarioId].map((id) => id.toLowerCase()))].sort()) {
+        const pai = await gerenciador.getRepository(QuestionarioOrm).findOne({
+          where: { id, tenantId }, lock: { mode: 'pessimistic_write' }
+        });
+        if (!pai) throw new NotFoundException('Questionario nao encontrado.');
+      }
+      const questionario = await this.garantirQuestionarioDoProfissional(gerenciador, tenantId, questionarioId, usuario);
+      const origem = await repositorioPerguntas.findOne({
+        where: { id: perguntaId, tenantId, questionarioId: referencia.questionarioId, visivelBiblioteca: true }
       });
       if (!origem) throw new NotFoundException('Pergunta da biblioteca nao encontrada.');
 
@@ -548,7 +611,7 @@ export class ServicoQuestionarios {
     }
 
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
-      await this.garantirQuestionarioDoProfissional(gerenciador, tenantId, questionarioId, usuario);
+      const questionario = await this.garantirQuestionarioDoProfissional(gerenciador, tenantId, questionarioId, usuario, 'pessimistic_write');
       const repositorioPerguntas = gerenciador.getRepository(PerguntaOrm);
       const pergunta = await repositorioPerguntas.findOne({
         where: { id: perguntaId, tenantId, questionarioId }
@@ -588,13 +651,8 @@ export class ServicoQuestionarios {
         }
       }
 
-      const questionario = await gerenciador.getRepository(QuestionarioOrm).findOne({
-        where: { id: questionarioId, tenantId }
-      });
-      if (questionario) {
-        questionario.versao += 1;
-        await gerenciador.getRepository(QuestionarioOrm).save(questionario);
-      }
+      questionario.versao += 1;
+      await gerenciador.getRepository(QuestionarioOrm).save(questionario);
 
       const salva = await repositorioPerguntas.save(pergunta);
       return this.anexarOpcoes(gerenciador, salva);
@@ -610,7 +668,7 @@ export class ServicoQuestionarios {
     const ordemNormalizada = normalizarOrdemPerguntas(dados.perguntas);
 
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
-      await this.garantirQuestionarioDoProfissional(gerenciador, tenantId, questionarioId, usuario);
+      const questionario = await this.garantirQuestionarioDoProfissional(gerenciador, tenantId, questionarioId, usuario, 'pessimistic_write');
       const repositorio = gerenciador.getRepository(PerguntaOrm);
       const perguntasPersistidas = await repositorio.find({ where: { tenantId, questionarioId } });
       const idsPersistidos = new Set(perguntasPersistidas.map((pergunta) => pergunta.id));
@@ -626,6 +684,8 @@ export class ServicoQuestionarios {
       }
 
       await repositorio.save(perguntasPersistidas);
+      questionario.versao += 1;
+      await gerenciador.getRepository(QuestionarioOrm).save(questionario);
       return repositorio.find({ where: { tenantId, questionarioId }, order: { ordem: 'ASC' } });
     });
   }
@@ -667,7 +727,7 @@ export class ServicoQuestionarios {
     usuario: UsuarioAutenticado
   ): Promise<EnvioQuestionarioManualResposta> {
     const envio = await this.executorTenant.executar(tenantId, async (gerenciador) => {
-      const questionario = await this.garantirQuestionarioDoProfissional(gerenciador, tenantId, questionarioId, usuario);
+      const questionario = await this.garantirQuestionarioDoProfissional(gerenciador, tenantId, questionarioId, usuario, 'pessimistic_read');
       const snapshotEstrutura = await this.capturarSnapshotEstruturaQuestionario(gerenciador, tenantId, questionario);
 
       await this.garantirPacienteAtivoDoProfissional(gerenciador, tenantId, dados.pacienteId, usuario);
@@ -700,7 +760,7 @@ export class ServicoQuestionarios {
     usuario: UsuarioAutenticado
   ): Promise<{ total: number }> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
-      const questionario = await this.garantirQuestionarioDoProfissional(gerenciador, tenantId, questionarioId, usuario);
+      const questionario = await this.garantirQuestionarioDoProfissional(gerenciador, tenantId, questionarioId, usuario, 'pessimistic_read');
       if (questionario.status !== 'publicado') throw new BadRequestException('Questionario nao publicado.');
       const snapshotEstrutura = await this.capturarSnapshotEstruturaQuestionario(gerenciador, tenantId, questionario);
       for (const pacienteId of dados.pacienteIds) {
@@ -769,7 +829,7 @@ export class ServicoQuestionarios {
     usuario: UsuarioAutenticado
   ): Promise<VersaoQuestionario[]> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
-      const questionario = await this.garantirQuestionarioDoProfissional(gerenciador, tenantId, questionarioId, usuario);
+      const questionario = await this.garantirQuestionarioDoProfissional(gerenciador, tenantId, questionarioId, usuario, 'pessimistic_read');
 
       const envios = await gerenciador.getRepository(EnvioQuestionarioOrm).find({ where: { tenantId, questionarioId } });
       const enviosOrdenados = [...envios].sort(
@@ -1120,15 +1180,94 @@ export class ServicoQuestionarios {
     });
   }
 
+  private validarAtorCopia(tenantId: string, usuario: UsuarioAutenticado) {
+    if (tenantId !== usuario.tenantId || !['SuperAdmin', 'Professional', 'Collaborator'].includes(usuario.papel) ||
+        !usuario.permissoes.includes('questionarios.gerenciar')) {
+      throw new ForbiddenException('Usuário sem permissão para copiar perguntas.');
+    }
+    if (!usuario.sessaoId) throw new UnauthorizedException('Sessão ativa necessária para copiar perguntas.');
+  }
+
+  private async executarComandoCopia<T>(tenantId: string, operacao: (gerenciador: EntityManager) => Promise<T>): Promise<T> {
+    try { return await this.executorTenant.executar(tenantId, operacao); }
+    catch (erro) {
+      const codigo = (erro as { code?: string; driverError?: { code?: string } })?.driverError?.code ?? (erro as { code?: string })?.code;
+      if (['40P01', '40001', '55P03'].includes(codigo ?? '')) {
+        throw new ConflictException('Conflito de edição. Confira o questionário antes de tentar novamente.');
+      }
+      throw erro;
+    }
+  }
+
+  private async carregarEstadoCopia(gerenciador: EntityManager, tenantId: string, questionarioId: string, perguntaId: string,
+    usuario: UsuarioAutenticado, trava: 'pessimistic_read' | 'pessimistic_write') {
+    const questionario = await this.garantirQuestionarioDoProfissional(gerenciador, tenantId, questionarioId, usuario, trava);
+    // Verificação atual após eventual espera pelo pai. As travas compartilhadas
+    // preservam identidade/sessão/vínculo até o commit, sem ler campos protegidos.
+    const identidade = await gerenciador.getRepository(UsuarioOrm).findOne({
+      where: { id: usuario.usuarioId, tenantId, ativo: true, role: usuario.papel },
+      select: { id: true }, lock: { mode: 'pessimistic_read' }
+    });
+    const sessao = await gerenciador.getRepository(SessaoUsuarioOrm).findOne({
+      where: { id: usuario.sessaoId, usuarioId: usuario.usuarioId, tenantId, revogadoEm: IsNull() },
+      select: { id: true, expiraEm: true }, lock: { mode: 'pessimistic_read' }
+    });
+    // O relógio precisa ser consultado depois da espera pelo lock da sessão.
+    if (!identidade || !sessao || sessao.expiraEm.getTime() <= Date.now()) throw new UnauthorizedException('Sessão encerrada ou acesso alterado.');
+    if (usuario.papel === 'Professional') {
+      const profissional = await gerenciador.getRepository(ProfissionalOrm).findOne({
+        where: { id: questionario.profissionalId, tenantId, usuarioId: usuario.usuarioId, arquivadoEm: IsNull() },
+        select: { id: true }, lock: { mode: 'pessimistic_read' }
+      });
+      if (!profissional) throw new NotFoundException('Questionario nao encontrado.');
+    }
+    if (questionario.status !== 'rascunho') throw new ConflictException('A cópia está disponível somente em rascunhos.');
+    const [legados] = await gerenciador.query(`SELECT EXISTS(SELECT 1 FROM envios_questionario
+      WHERE tenant_id=$1 AND questionario_id=$2 AND NOT COALESCE(
+        jsonb_typeof(snapshot_estrutura)='object' AND jsonb_typeof(snapshot_estrutura->'perguntas')='array', false)) AS bloqueado`,
+      [tenantId, questionarioId]);
+    if (legados.bloqueado) throw new ConflictException('A cópia não está disponível enquanto houver envios sem versão preservada.');
+    const lista = await gerenciador.getRepository(PerguntaOrm).find({
+      where: { tenantId, questionarioId }, order: { ordem: 'ASC', id: 'ASC' }
+    });
+    const perguntas = await this.anexarOpcoesLote(gerenciador, lista);
+    perguntas.forEach((pergunta) => pergunta.opcoes.sort((a, b) => a.ordem - b.ordem || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)));
+    const origem = perguntas.find((pergunta) => pergunta.id === perguntaId.toLowerCase());
+    if (!origem) throw new NotFoundException('Pergunta nao encontrada.');
+    if (!validarTipoPergunta(origem.tipo)) throw new BadRequestException('Tipo de pergunta não suportado.');
+    this.validarOpcoes(origem.tipo, origem.opcoes);
+    return { questionario, perguntas, origem, sessaoExpiraEm: sessao.expiraEm };
+  }
+
+  private revisaoCopia(questionario: QuestionarioOrm, perguntas: PerguntaComOpcoes[], perguntaId: string, usuario: UsuarioAutenticado): string {
+    const ordenar = (valor: unknown): unknown => {
+      if (Array.isArray(valor)) return valor.map(ordenar);
+      if (valor !== null && typeof valor === 'object') {
+        return Object.fromEntries(Object.entries(valor).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0).map(([chave, item]) => [chave, ordenar(item)]));
+      }
+      return valor;
+    };
+    const agregado = { id: questionario.id, profissionalId: questionario.profissionalId, versao: questionario.versao,
+      status: questionario.status, titulo: questionario.titulo, descricao: questionario.descricao,
+      perguntas: perguntas.map((pergunta) => ({ id: pergunta.id, ordem: pergunta.ordem, chaveClinica: pergunta.chaveClinica,
+        ...copiarDefinicaoPergunta(pergunta), visivelBiblioteca: pergunta.visivelBiblioteca,
+        opcoes: pergunta.opcoes.map(({ id, rotulo, valor, imagemUrl, ordem }) => ({ id, rotulo, valor, imagemUrl, ordem })) })) };
+    return createHmac('sha256', obterSegredoFormularioPublico())
+      .update(JSON.stringify(ordenar(['octaclin:qst-p05:revisao:v1', usuario.tenantId, usuario.usuarioId, usuario.papel, usuario.sessaoId, perguntaId, agregado])))
+      .digest('hex');
+  }
+
   private async garantirQuestionarioDoProfissional(
     gerenciador: EntityManager,
     tenantId: string,
     questionarioId: string,
-    usuario: UsuarioAutenticado
+    usuario: UsuarioAutenticado,
+    trava?: 'pessimistic_read' | 'pessimistic_write'
   ): Promise<QuestionarioOrm> {
     const profissionalId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
     const questionario = await gerenciador.getRepository(QuestionarioOrm).findOne({
-      where: { id: questionarioId, tenantId, ...(profissionalId ? { profissionalId } : {}) }
+      where: { id: questionarioId, tenantId, ...(profissionalId ? { profissionalId } : {}) },
+      ...(trava ? { lock: { mode: trava } } : {})
     });
 
     if (!questionario) {
@@ -1202,7 +1341,7 @@ export class ServicoQuestionarios {
       }
 
       const questionario = await gerenciador.getRepository(QuestionarioOrm).findOne({
-        where: { id: envio.questionarioId, tenantId }
+        where: { id: envio.questionarioId, tenantId }, lock: { mode: 'pessimistic_read' }
       });
       if (!questionario) throw new NotFoundException('Questionario nao encontrado.');
 
@@ -1387,9 +1526,10 @@ export class ServicoQuestionarios {
       });
 
       let totalEnvios = 0;
+      agendamentos.sort((a, b) => a.questionarioId < b.questionarioId ? -1 : a.questionarioId > b.questionarioId ? 1 : 0);
       for (const agendamento of agendamentos) {
         const questionario = await gerenciador.getRepository(QuestionarioOrm).findOne({
-          where: { id: agendamento.questionarioId, tenantId }
+          where: { id: agendamento.questionarioId, tenantId }, lock: { mode: 'pessimistic_read' }
         });
         const snapshotEstrutura = questionario
           ? await this.capturarSnapshotEstruturaQuestionario(gerenciador, tenantId, questionario)
@@ -1598,6 +1738,10 @@ export class ServicoQuestionarios {
     tenantId: string,
     questionarioId: string
   ): Promise<PerguntaComOpcoes[]> {
+    const pai = await gerenciador.getRepository(QuestionarioOrm).findOne({
+      where: { tenantId, id: questionarioId }, select: { id: true }, lock: { mode: 'pessimistic_read' }
+    });
+    if (!pai) throw new NotFoundException('Questionario nao encontrado.');
     const perguntas = await gerenciador.getRepository(PerguntaOrm).find({
       where: { tenantId, questionarioId },
       order: { ordem: 'ASC' }

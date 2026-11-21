@@ -1,0 +1,17 @@
+{
+  "etapa": "A",
+  "base": "5873ff1c112a7ec06a9c71d23262593d47e1265a",
+  "instancia": "/root/qst_p04_ux_a",
+  "modalidade": "subagente com papel explicito; planejamento sem visual",
+  "papel_fonte": ".codex/agents/octaclin-nutricionista-ux.toml",
+  "papel_sha256": "6259b40a98e2c49053cbc6adbc0c59d0312b14e191b228ab73de2f2eac53af6d",
+  "artefatos_sha256": {
+    "avaliacao.md": "fca193861d87dbe44f9e385decf014059bb3eb9aab3d4a79e66f7e0830cf63a0"
+  },
+  "paciente": "NA justificado; sem instancia",
+  "limites": [
+    "brief e retorno resumidos editorialmente; nao sao transcricao integral",
+    "sem testes proprios ou usuarios reais",
+    "B/C pendentes; dominio nao habilita UI"
+  ]
+}

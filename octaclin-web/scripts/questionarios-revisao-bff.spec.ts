@@ -150,3 +150,87 @@ test('BFF da fila e detalhe encaminham escopo mínimo sem cache', async () => {
     assert.equal(detalhe.headers.get('Cache-Control'), 'private, no-store');
   } finally { restaurarFetch(original); }
 });
+
+// P05: roteamento e sessão reais; fetch e cookies sintéticos, não prova de banco.
+import { GET as prepararCopia } from '../app/api/questionarios/[id]/perguntas/[perguntaId]/copia/route';
+import { POST as confirmarCopia } from '../app/api/questionarios/[id]/perguntas/[perguntaId]/duplicar/route';
+const idP05 = '00000000-0000-4000-8000-000000000001';
+const paramsP05 = () => ({ params: Promise.resolve({ id: idP05, perguntaId: idP05 }) });
+const revisaoP05 = 'a'.repeat(64);
+const requestP05 = (body: string = JSON.stringify({ revisaoEsperada: revisaoP05 }), origin = 'http://localhost') => new Request('http://localhost/api/copia', {
+  method: 'POST', headers: { 'Content-Type': 'application/json', origin }, body
+});
+async function cenarioP05(permissoes: string[] | null, executar: (chamadas: { url: string; init?: RequestInit }[]) => Promise<void>, corpo: unknown = { perguntaId: idP05, versaoQuestionario: 3 }, status = 201) {
+  if (permissoes) __setCookies(cookiesSessaoValida(permissoes)); else __clearCookies();
+  const original = global.fetch, chamadas: { url: string; init?: RequestInit }[] = [];
+  global.fetch = (async (input, init) => {
+    chamadas.push({ url: String(input), init });
+    return new Response(JSON.stringify(corpo), { status, headers: { 'Content-Type': 'application/json' } });
+  }) as typeof fetch;
+  try { await executar(chamadas); } finally { restaurarFetch(original); __clearCookies(); }
+}
+test('P05 exige sessão e permissão nas duas rotas antes de fetch', async () => {
+  for (const [permissoes, status] of [[null, 401], [['questionarios.ler'], 403]] as const) {
+    await cenarioP05(permissoes ? [...permissoes] : null, async chamadas => {
+      assert.equal((await prepararCopia(new Request('http://localhost'), paramsP05())).status, status);
+      assert.equal((await confirmarCopia(requestP05(), paramsP05())).status, status);
+      assert.equal(chamadas.length, 0);
+    });
+  }
+});
+test('P05 rejeita origem externa, UUIDs e payload adulterados sem consultar backend', async () => {
+  await cenarioP05(['questionarios.gerenciar'], async chamadas => {
+    assert.equal((await confirmarCopia(requestP05(undefined, 'https://externo.invalid'), paramsP05())).status, 403);
+    for (const campo of ['id', 'perguntaId']) {
+      const params = { params: Promise.resolve({ id: idP05, perguntaId: idP05, [campo]: '../outro?tenantId=forjado' }) };
+      assert.equal((await prepararCopia(new Request('http://localhost'), params)).status, 400);
+      assert.equal((await confirmarCopia(requestP05(), params)).status, 400);
+    }
+    for (const raw of ['null', '[]', '{}', '{', JSON.stringify({ revisaoEsperada: revisaoP05, tenantId: idP05 }), JSON.stringify({ revisaoEsperada: 1 }), JSON.stringify({ revisaoEsperada: 'A'.repeat(64) }), JSON.stringify({ revisaoEsperada: revisaoP05 + '\n' })])
+      assert.equal((await confirmarCopia(requestP05(raw), paramsP05())).status, 400);
+    assert.equal((await confirmarCopia(requestP05(' '.repeat(1025)), paramsP05())).status, 413);
+    assert.equal(chamadas.length, 0);
+  });
+});
+test('P05 encaminha somente revisão, projeta ACK e não repassa headers/identidade do navegador', async () => {
+  await cenarioP05(['questionarios.gerenciar'], async chamadas => {
+    const r = await confirmarCopia(requestP05(), paramsP05());
+    assert.equal(r.status, 201); assert.equal(r.headers.get('cache-control'), 'private, no-store');
+    assert.deepEqual(await r.json(), { perguntaId: idP05, versaoQuestionario: 3 });
+    assert.equal(chamadas.length, 1);
+    assert.equal(chamadas[0].url, `http://backend.octaclin.local/questionarios/${idP05}/perguntas/${idP05}/duplicar`);
+    assert.deepEqual(JSON.parse(String(chamadas[0].init?.body)), { revisaoEsperada: revisaoP05 });
+  }, { perguntaId: idP05, versaoQuestionario: 3, token: 'sintético', tenantId: 'não retornar' });
+});
+test('P05 prepara cópia por allowlist sem chave clínica, IDs e vínculo de biblioteca', async () => {
+  const definicao = { categoriaId: idP05, tipo: 'texto_longo', enunciado: 'Sintética', peso: '0.00', obrigatoria: false,
+    configuracao: { placeholder: 'Exemplo' }, visivelBiblioteca: false,
+    opcoes: [{ rotulo: 'A', valor: 'a', ordem: 1, id: idP05 }], chaveClinica: 'não retornar', tenantId: idP05 };
+  await cenarioP05(['questionarios.gerenciar'], async chamadas => {
+    const r = await prepararCopia(new Request('http://localhost'), paramsP05());
+    assert.equal(r.status, 200); assert.equal(r.headers.get('cache-control'), 'private, no-store');
+    assert.deepEqual(await r.json(), { revisao: revisaoP05, definicao: {
+      categoriaId: idP05, tipo: 'texto_longo', enunciado: 'Sintética', peso: '0.00', obrigatoria: false,
+      configuracao: { placeholder: 'Exemplo' }, visivelBiblioteca: false,
+      opcoes: [{ rotulo: 'A', valor: 'a', ordem: 1 }]
+    } });
+    assert.equal(chamadas[0].init?.method, 'GET');
+  }, { revisao: revisaoP05, definicao, interno: 'não retornar' }, 200);
+});
+test('P05 preserva status de conflito/negação sem divulgar corpo bruto nem repetir comando', async () => {
+  for (const status of [400, 401, 403, 404, 409, 429, 500]) {
+    await cenarioP05(['questionarios.gerenciar'], async chamadas => {
+      const r = await confirmarCopia(requestP05(), paramsP05());
+      assert.equal(r.status, status === 500 ? 502 : status);
+      assert.equal(r.headers.get('cache-control'), 'private, no-store');
+      assert.doesNotMatch(await r.text(), /conteúdo protegido/);
+      // O wrapper pode renovar uma sessão em 401, mas nunca repete POST com sucesso simulado.
+      assert.equal(chamadas.filter(c => c.url.endsWith('/duplicar')).length, 1);
+    }, { mensagem: 'conteúdo protegido', stack: 'conteúdo protegido' }, status);
+  }
+});
+test('P05 falha fechada para ACK inválido', async () => {
+  await cenarioP05(['questionarios.gerenciar'], async () => {
+    assert.equal((await confirmarCopia(requestP05(), paramsP05())).status, 502);
+  }, { perguntaId: 'inválido', versaoQuestionario: 3 });
+});
