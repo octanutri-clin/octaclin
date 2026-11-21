@@ -1,3 +1,4 @@
+import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 
 const usuarioProfissional = {
@@ -41,6 +42,74 @@ async function mockarBff(page) {
 }
 
 test.describe('Editor de questionarios', () => {
+  test('P04 amplia uma única prévia e informa larguras efetivas sem habilitar envio', async ({page})=>{
+    await criarSessao(page);await mockarBff(page);await page.goto('/questionarios');
+    await page.getByRole('tab',{name:'Editor',exact:true}).click();
+    await page.getByRole('button',{name:'Ampliar prévia',exact:true}).click();
+    const dialogo=page.getByRole('dialog',{name:'Prévia do questionário'});
+    await expect(dialogo).toBeVisible();
+    await expect(page.getByText('Preview do paciente',{exact:true})).toHaveCount(1);
+    const area=dialogo.locator('[data-qst-p04-area]');
+    await expect.poll(async()=>Math.round((await area.boundingBox()).width)).toBeGreaterThan(0);
+    let largura=Math.round((await area.boundingBox()).width);
+    expect(largura).toBe(Math.min(390, page.viewportSize().width - 66));
+    await expect(dialogo.getByRole('status')).toHaveText(`Largura da prévia: ${largura} px`);
+    await dialogo.getByRole('button',{name:'Desktop — 1024 px',exact:true}).click();
+    await expect(dialogo.getByRole('button',{name:'Desktop — 1024 px',exact:true})).toHaveAttribute('aria-pressed','true');
+    largura=Math.round((await area.boundingBox()).width);
+    expect(largura).toBe(Math.min(1024, page.viewportSize().width - 66));
+    await expect(dialogo.getByRole('status')).toHaveText(`Largura da prévia: ${largura} px`);
+    expect(await area.locator('input,select,textarea,button').evaluateAll(els=>els.every(el=>el.disabled))).toBe(true);
+  });
+
+  test('P04 preserva edição pendente e foco ao fechar sem requests adicionais',async({page})=>{
+    await criarSessao(page);await mockarBff(page);await page.goto('/questionarios');
+    await page.getByRole('tab',{name:'Editor',exact:true}).click();
+    await page.getByLabel('Enunciado',{exact:true}).fill('Pergunta sintética ainda não salva');
+    const storageAntes = await page.evaluate(() => ({ local: { ...localStorage }, session: { ...sessionStorage } }));
+    const requests=[];page.on('request',r=>{if(new URL(r.url()).pathname.startsWith('/api/')) requests.push(r.method());});
+    const gatilho=page.getByRole('button',{name:'Ampliar prévia',exact:true});await gatilho.click();
+    await expect(page.getByRole('dialog').getByText('Pergunta sintética ainda não salva',{exact:true})).toBeVisible();
+    await page.getByRole('button',{name:'Desktop — 1024 px',exact:true}).click();
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog')).toHaveCount(0);await expect(gatilho).toBeFocused();
+    await expect(page.getByLabel('Enunciado',{exact:true})).toHaveValue('Pergunta sintética ainda não salva');
+    expect(requests).toEqual([]);
+    expect(await page.evaluate(() => ({ local: { ...localStorage }, session: { ...sessionStorage } }))).toEqual(storageAntes);
+  });
+
+  test('P04 troca de contexto reinicia modo e não carrega título anterior',async({page})=>{
+    await criarSessao(page);await mockarBff(page);await page.goto('/questionarios');
+    await page.getByRole('tab',{name:'Editor',exact:true}).click();
+    await page.getByRole('button',{name:'Ampliar prévia',exact:true}).click();
+    await page.getByRole('button',{name:'Desktop — 1024 px',exact:true}).click();await page.keyboard.press('Escape');
+    await page.getByRole('tab',{name:'Formulários',exact:true}).click();await page.getByLabel('Selecionar',{exact:true}).selectOption('q-2');
+    await page.getByRole('tab',{name:'Editor',exact:true}).click();await page.getByRole('button',{name:'Ampliar prévia',exact:true}).click();
+    const dialogo=page.getByRole('dialog');
+    await expect(dialogo.getByRole('button',{name:'Celular — 390 px',exact:true})).toHaveAttribute('aria-pressed','true');
+    await expect(dialogo.getByRole('heading',{name:'Avaliação mensal',exact:true})).toBeVisible();
+    await expect(dialogo.getByRole('heading',{name:'Check-in semanal',exact:true})).toHaveCount(0);
+  });
+
+  test('P04 controles continuam acessíveis com texto ampliado',async({page})=>{
+    await criarSessao(page);await mockarBff(page);await page.goto('/questionarios');
+    await page.getByRole('tab',{name:'Editor',exact:true}).click();await page.getByRole('button',{name:'Ampliar prévia',exact:true}).click();
+    await page.evaluate(()=>{document.documentElement.style.fontSize='200%';});
+    const dialogo=page.getByRole('dialog');
+    await dialogo.getByRole('button',{name:'Desktop — 1024 px',exact:true}).click();
+    await dialogo.getByRole('button', { name: 'Fechar', exact: true }).focus();
+    await page.keyboard.press('Shift+Tab');
+    await expect(dialogo.getByRole('button', { name: 'Desktop — 1024 px', exact: true })).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(dialogo.getByRole('button', { name: 'Fechar', exact: true })).toBeFocused();
+    expect(await dialogo.evaluate(el=>el.scrollWidth<=el.clientWidth+1)).toBe(true);
+    const axe=await new AxeBuilder({page}).include('[role="dialog"]').analyze();expect(axe.violations).toEqual([]);
+    await dialogo.locator('[data-qst-p04-area]').getByRole('heading', { name: 'Check-in semanal', exact: true }).scrollIntoViewIfNeeded();
+    await expect(dialogo.locator('[data-qst-p04-area]').getByRole('heading', { name: 'Check-in semanal', exact: true })).toBeInViewport();
+    await dialogo.screenshot({path:test.info().outputPath('p04-previa.png')});
+    await page.keyboard.press('Escape');await expect(page.getByRole('button',{name:'Ampliar prévia',exact:true})).toBeFocused();
+  });
+
   test('bloqueia troca de formulario com alteracao nao salva ate confirmar', async ({ page }) => {
     await criarSessao(page);
     await mockarBff(page);
