@@ -1,5 +1,31 @@
 # QST01 — expandir/recolher respostas de questionários
 
+## Atualização — concordância e governança em 21/11
+
+Pedido do proprietário: corrigir a falha de governança, a concordância e pesquisar
+melhorias de questionários. Microcopy `1 resposta` / `0 respostas` / `2 respostas`
+corrigida com RED funcional seguido de **16/16 Playwright** desktop/mobile,
+lint afetado, typecheck e linguagem PASS em Node 22.21.1. Código/testes no
+commit `fce91fd6`. Conteúdo/contagens numéricas inalterados. Build não repetido
+para a alteração de texto; CI do novo HEAD deverá executá-lo.
+O antigo backlog NUX-QST01-05 foi autorizado pelo proprietário e atendido;
+os relatórios/imagens anteriores permanecem históricos do commit `76609c16`.
+
+CI histórico do HEAD `f94ec88a`: Web, Backend, Mobile, AI, smoke e scanners PASS;
+governança FAIL por `SQ-2026-004` vencida em 20/11, PR Gate FAIL por consequência.
+Isso não constitui aprovação do novo delta nem falseia o bloqueio de segurança.
+
+[Revisão SQ atual](../docs/governance/REVISAO_SECURITY_QUALITY_2026-11-21.md):
+nova captura autenticada e reconciliação propostas; governança continua BLOCKED
+até ratificação explícita do proprietário. Nenhum prazo ativo, gate ou severidade
+foi alterado. A revisão cruzada R4 da proposta não substitui essa decisão.
+
+[Sugestões pesquisadas](questionarios-melhorias-referencias-2026-11-21.md):
+propostas P01–P09, sem implementação automática. Somente a concordância mudou
+funcionalmente nesta correção. Sem merge, deploy ou alteração da FOOD06.
+
+## Checkpoint anterior — implementação e validações de 76609c16
+
 ## Entrega
 
 Autorização: pedido do proprietário para implementar a primeira pequena melhoria
