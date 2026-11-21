@@ -2,12 +2,20 @@
 
 ## Escopo e estado
 
+**Atualização:** QST01 autorizada para implementação pelo proprietário na mensagem
+“Faça, caso tenha alguma dúvida ou sugestão de melhoria durante a implementação,
+me avise”. Código no commit `76609c16`; ver
+[execução e gates](qst01-respostas-recolhiveis.md). OPS03/OPS01 continuam somente
+propostas preparadas. O checkpoint de planejamento original está em `a4305b0b`.
+
 Preparação autorizada pelo proprietário em 21/11/2026: pequenas melhorias para
 o profissional, sem iniciar FOOD08 e sem interferir na FOOD06 do Claude.
-Este incremento entrega planejamento; não contém implementação funcional.
+O preparo original entregou somente planejamento; a execução posterior da QST01
+está isolada e rastreada no handoff acima.
 
 Base inspecionada: `main` em `60bbe01f944d3c14a3dd30210bb4843b4187e356`.
-Branch própria: `docs/melhorias-profissionais-20261121`.
+Branch de preparo: `docs/melhorias-profissionais-20261121`.
+Branch de execução: `feat/qst01-respostas-recolhiveis`.
 Worktree própria: `.worktrees/melhorias-profissionais`, com checkout esparso.
 
 Fontes: [roadmap pós-320](../docs/pos-320/04_Roadmap_Ondas_Pos320_OctaClin.md),
@@ -19,7 +27,7 @@ Não foi consultado repositório externo: nenhum é necessário a este preparo.
 
 | Ordem | Entrega | Evidência observada | Preparação/limite |
 | --- | --- | --- | --- |
-| 1 | QST01 — expandir/recolher respostas | `components/questionarios/area-respostas.tsx:146–169` renderiza todos os detalhes diretamente em `dl`; não há controles nesse trecho | Pronta para implementação delimitada após reconferir exclusividade dos arquivos |
+| 1 | QST01 — expandir/recolher respostas | Na base inspecionada, `components/questionarios/area-respostas.tsx:146–169` renderiza todos os detalhes diretamente em `dl` | Implementada e testada localmente; ver gates no handoff, sem aceite implícito de CI |
 | 2 | OPS03 — ocultar valores financeiros | `components/agenda/painel-agenda.tsx:953` e `pacotes-sessao.tsx:147` mostram valores; dashboard clínico inspecionado não comprova existência de cards financeiros | Auditar cada superfície antes de afirmar cobertura; definir alcance da preferência com o proprietário |
 | 3 | OPS01 — busca rápida na agenda | `lib/agenda-api.ts:370–371` lista consultas sem parâmetros; backend `servico-agenda.ts:125–137` limita a 200 a partir de 30 dias anteriores | Planejar busca server-side e paginação; não simular busca completa filtrando apenas esses 200 itens |
 
@@ -134,6 +142,5 @@ externas ou alterações no Neon/Render.
 - Verificações finais: diff staged e integridade dos links/manifesta, antes do
   commit documental. O SHA do commit é informado na entrega.
 
-**Próxima ação única:** executar QST01 nesse escopo, após confirmar a exclusividade
-dos arquivos e registrar os detalhes de produto como decisão do proprietário.
-As demais melhorias permanecem preparadas, não iniciadas.
+**Próxima ação única:** conferir o CI e a revisão da PR Draft QST01 após envio.
+As demais melhorias permanecem preparadas, não iniciadas; não iniciar FOOD08.
