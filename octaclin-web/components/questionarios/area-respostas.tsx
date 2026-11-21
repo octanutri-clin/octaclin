@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { ChevronDown, ChevronRight, ClipboardList, Download, RefreshCcw, TrendingUp } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { Cartao } from '@/components/ui/cartao';
@@ -44,6 +44,32 @@ function ListaRespostas({
   const idLista = useId();
   const [recolhidas, setRecolhidas] = useState<Set<string>>(() => new Set());
 
+  const [leituraId, setLeituraId] = useState<string | null>(null);
+  const grupoRef = useRef<HTMLDivElement>(null);
+  const tituloLeituraRef = useRef<HTMLHeadingElement>(null);
+  const gatilhosRef = useRef(new Map<string, HTMLButtonElement>());
+  const origemRef = useRef<string | null>(null);
+  const devolverFocoRef = useRef(false);
+  const indiceLeitura = respostasVisiveis.findIndex((resposta) => resposta.respostaId === leituraId);
+  const respostaLeitura = respostasVisiveis[indiceLeitura];
+  // Ajuste condicional do próprio estado: um envio removido não pode reabrir
+  // quando o filtro voltar. A identidade, e não a posição, controla a seleção.
+  if (leituraId !== null && indiceLeitura === -1) setLeituraId(null);
+
+  useEffect(() => {
+    if (leituraId !== null) {
+      if (grupoRef.current) grupoRef.current.scrollTop = 0;
+      tituloLeituraRef.current?.focus();
+    } else if (origemRef.current) {
+      if (devolverFocoRef.current || document.activeElement === document.body) {
+        const gatilho = gatilhosRef.current.get(origemRef.current);
+        (gatilho && !gatilho.disabled ? gatilho : grupoRef.current)?.focus();
+      }
+      origemRef.current = null;
+      devolverFocoRef.current = false;
+    }
+  }, [leituraId]);
+
   function alternarResposta(respostaId: string) {
     setRecolhidas((atuais) => {
       const proximas = new Set(atuais);
@@ -65,20 +91,36 @@ function ListaRespostas({
   }
 
   return (
-    <div className="grid min-w-0 gap-3" data-qst01-respostas>
+    <div ref={grupoRef} tabIndex={-1} role="group" aria-label="Leitura dos envios" className={respostaLeitura ? 'flex min-w-0 flex-col gap-3 md:max-h-[75vh] md:overflow-y-auto' : 'grid min-w-0 gap-3'} data-qst01-respostas data-qst-p02-leitura={respostaLeitura ? true : undefined}>
       {respostasVisiveis.length ? (
         <>
+          {respostaLeitura ? (
+            <div className="z-10 grid min-w-0 shrink-0 gap-2 rounded-md border border-linha bg-white p-3 md:sticky md:top-0">
+              <h3 ref={tituloLeituraRef} tabIndex={-1} className="text-sm font-semibold text-tinta">Leitura individual</h3>
+              <div role="status" aria-live="polite" aria-atomic="true" className="min-w-0 break-words text-sm text-tinta">
+                <p>{carregandoRespostas ? 'Atualizando envios...' : `Envio ${indiceLeitura + 1} de ${respostasVisiveis.length}`}</p>
+                <p>{pacientesPorId.get(respostaLeitura.pacienteId)?.nome ?? 'Paciente não identificado'}</p>
+                <p>Finalizado em {formatarDataResposta(respostaLeitura.finalizadoEm)}</p>
+              </div>
+              <div role="group" aria-label="Navegação entre envios" className="flex flex-wrap gap-2">
+                <Botao type="button" disabled={carregandoRespostas || indiceLeitura === 0} onClick={() => setLeituraId(respostasVisiveis[indiceLeitura - 1].respostaId)}>Anterior</Botao>
+                <Botao type="button" disabled={carregandoRespostas || indiceLeitura === respostasVisiveis.length - 1} onClick={() => setLeituraId(respostasVisiveis[indiceLeitura + 1].respostaId)}>Próximo</Botao>
+                <Botao type="button" onClick={() => { devolverFocoRef.current = true; setLeituraId(null); }}>Voltar à lista</Botao>
+              </div>
+            </div>
+          ) : (
           <div role="group" aria-label="Organizar respostas exibidas" className="flex flex-wrap items-center gap-2">
             <p className="w-full text-xs text-texto-suave">As ações abaixo se aplicam aos resultados exibidos.</p>
             <Botao type="button" tamanho="sm" disabled={carregandoRespostas} onClick={() => organizarExibidas(false)}>Expandir tudo</Botao>
             <Botao type="button" tamanho="sm" disabled={carregandoRespostas} onClick={() => organizarExibidas(true)}>Recolher tudo</Botao>
           </div>
-          {respostasVisiveis.map((resposta) => {
+          )}
+          {(respostaLeitura ? [respostaLeitura] : respostasVisiveis).map((resposta) => {
             const paciente = pacientesPorId.get(resposta.pacienteId);
-            const aberta = !recolhidas.has(resposta.respostaId);
+            const aberta = Boolean(respostaLeitura) || !recolhidas.has(resposta.respostaId);
             const conteudoId = `${idLista}-${resposta.respostaId}`;
             return (
-              <article key={resposta.respostaId} className="min-w-0 rounded-md border border-linha bg-superficie p-4">
+              <article key={resposta.respostaId} className="min-w-0 shrink-0 rounded-md border border-linha bg-superficie p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0 break-words">
                     <p className="text-sm font-semibold text-tinta"><TextoComRealce texto={paciente?.nome ?? 'Paciente não identificado'} busca={buscaRespostas} /></p>
@@ -87,7 +129,7 @@ function ListaRespostas({
                   <span className="rounded-full border border-linha bg-white px-3 py-1 text-xs font-semibold text-texto-suave">
                     {resposta.totalRespostas} {resposta.totalRespostas === 1 ? 'resposta' : 'respostas'}
                   </span>
-                  <Botao
+                  {!respostaLeitura ? <Botao
                     type="button" tamanho="sm" disabled={carregandoRespostas}
                     aria-expanded={aberta} aria-controls={conteudoId}
                     aria-label={`${aberta ? 'Recolher' : 'Expandir'} respostas de ${paciente?.nome ?? 'paciente não identificado'}`}
@@ -95,7 +137,12 @@ function ListaRespostas({
                   >
                     {aberta ? <ChevronDown className="h-4 w-4 shrink-0" aria-hidden="true" /> : <ChevronRight className="h-4 w-4 shrink-0" aria-hidden="true" />}
                     {aberta ? 'Recolher respostas' : 'Expandir respostas'}
-                  </Botao>
+                  </Botao> : null}
+                  {!respostaLeitura ? <Botao
+                    ref={(elemento) => { if (elemento) gatilhosRef.current.set(resposta.respostaId, elemento); else gatilhosRef.current.delete(resposta.respostaId); }}
+                    type="button" tamanho="sm" disabled={carregandoRespostas}
+                    onClick={() => { origemRef.current = resposta.respostaId; setLeituraId(resposta.respostaId); }}
+                  >Ler envio</Botao> : null}
                 </div>
                 <div id={conteudoId} hidden={!aberta}>
                   <dl className="mt-4 grid gap-2 md:grid-cols-2">

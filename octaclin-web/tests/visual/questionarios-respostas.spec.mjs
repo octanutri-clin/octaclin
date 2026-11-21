@@ -79,6 +79,117 @@ function envio(page, nome) {
 }
 
 test.describe('QST01 — organização da leitura de respostas', () => {
+  test('P02 navega sem ciclo e volta ao gatilho com recolhimentos preservados', async ({ page }) => {
+    const requisicoes = await preparar(page);
+    const antes = requisicoes.slice();
+    const primeiro = envio(page, pacientes[0].nome);
+    await primeiro.getByRole('button', { name: /^Recolher respostas/ }).click();
+    await primeiro.getByRole('button', { name: 'Ler envio', exact: true }).click();
+    const leitor = page.locator('[data-qst-p02-leitura]');
+    await expect(leitor.getByRole('heading', { name: 'Leitura individual' })).toBeFocused();
+    await expect(leitor.getByText('Envio 1 de 2', { exact: true })).toBeVisible();
+    await expect(leitor.getByRole('button', { name: 'Anterior', exact: true })).toBeDisabled();
+    await expect(page.getByText('Organizei o almoço', { exact: true })).toBeVisible();
+    await leitor.getByRole('button', { name: 'Próximo', exact: true }).click();
+    await expect(leitor.getByText('Envio 2 de 2', { exact: true })).toBeVisible();
+    await expect(leitor.getByRole('button', { name: 'Próximo', exact: true })).toBeDisabled();
+    await expect(page.getByText('Preparei o jantar', { exact: true })).toBeVisible();
+    await page.keyboard.press('Tab');
+    await expect(leitor.getByRole('button', { name: 'Anterior', exact: true })).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(leitor.getByText('Envio 1 de 2', { exact: true })).toBeVisible();
+    await leitor.getByRole('button', { name: 'Voltar à lista', exact: true }).click();
+    await expect(primeiro.getByRole('button', { name: 'Ler envio', exact: true })).toBeFocused();
+    await expect(primeiro.getByRole('button', { name: /^Expandir respostas/ })).toBeVisible();
+    expect(requisicoes).toEqual(antes);
+  });
+
+  test('P02 respeita busca e não reabre envio removido dos resultados', async ({ page }) => {
+    await preparar(page);
+    const busca = page.getByLabel('Busca', { exact: true });
+    await busca.fill('almoço');
+    await page.getByRole('button', { name: 'Ler envio', exact: true }).click();
+    await expect(page.getByText('Envio 1 de 1', { exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Próximo', exact: true })).toBeDisabled();
+    await busca.fill('jantar');
+    await expect(page.getByRole('heading', { name: 'Leitura individual' })).toHaveCount(0);
+    await expect(busca).toBeFocused();
+    await busca.clear();
+    await expect(page.getByRole('heading', { name: 'Leitura individual' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Ler envio', exact: true })).toHaveCount(2);
+  });
+
+  test('P02 mantém identidade após reordenação e sai com foco seguro após remoção', async ({ page }) => {
+    await preparar(page);
+    let atuais = [respostas[0], { ...respostas[0], respostaId: 'outro-envio', envioId: 'outro', finalizadoEm: '2026-11-21T12:00:00.000Z', respostas: [{ ...respostas[0].respostas[0], valor: 'Outro envio do mesmo paciente' }] }, respostas[1]];
+    await page.route('**/api/questionarios/q-1/respostas/leitura-clinica*', route => route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ questionarioId:'q-1',pacientes:[],perguntas:[],resumo:{totalRespostas:atuais.length,totalPacientes:2,totalPerguntas:1,mediaRespostasPorEnvio:1},respostas:atuais })}));
+    await page.getByRole('button', { name: 'Atualizar respostas', exact: true }).click();
+    await page.locator('article').filter({ hasText:'Outro envio do mesmo paciente' }).getByRole('button', {name:'Ler envio',exact:true}).click();
+    await expect(page.getByText('Envio 2 de 3', {exact:true})).toBeVisible();
+    atuais = [atuais[1],atuais[2],atuais[0]];
+    await page.getByRole('button', {name:'Atualizar respostas',exact:true}).click();
+    await expect(page.getByText('Envio 1 de 3', {exact:true})).toBeVisible();
+    await expect(page.getByText('Outro envio do mesmo paciente', {exact:true})).toBeVisible();
+    atuais = [respostas[1]];
+    await page.getByRole('button', {name:'Atualizar respostas',exact:true}).click();
+    await expect(page.getByRole('heading',{name:'Leitura individual'})).toHaveCount(0);
+    await expect(page.getByText('Preparei o jantar',{exact:true})).toBeVisible();
+    // Atualizar fica temporariamente desabilitado; a remoção devolve o foco
+    // ao grupo estável quando o gatilho original também desaparece.
+    await expect(page.getByRole('group',{name:'Leitura dos envios',exact:true})).toBeFocused();
+  });
+
+  test('P02 leitura individual acessível e sem overflow com fonte ampliada', async ({ page }) => {
+    await preparar(page);
+    await page.getByRole('button', {name:'Ler envio',exact:true}).first().click();
+    await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
+    await page.getByRole('button', {name:'Próximo',exact:true}).click();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth+1)).toBe(true);
+    const resultado=await new AxeBuilder({page}).include('[data-qst-p02-leitura]').analyze();
+    expect(resultado.violations).toEqual([]);
+    await page.locator('[data-qst-p02-leitura]').screenshot({path:test.info().outputPath('p02-leitura.png')});
+  });
+
+  test('P02 volta durante carregamento com foco no grupo estável', async ({ page }) => {
+    await preparar(page);
+    await page.getByRole('button',{name:'Ler envio',exact:true}).first().click();
+    let liberar;
+    const pendente=new Promise(resolve=>{liberar=resolve;});
+    await page.route('**/api/questionarios/q-1/respostas/leitura-clinica*',async route=>{
+      await pendente;
+      await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({questionarioId:'q-1',pacientes:[],perguntas:[],resumo:{totalRespostas:2,totalPacientes:2,totalPerguntas:1,mediaRespostasPorEnvio:1},respostas})});
+    });
+    await page.getByRole('button',{name:'Atualizar respostas',exact:true}).click();
+    await expect(page.getByRole('button',{name:'Próximo',exact:true})).toBeDisabled();
+    await page.getByRole('button',{name:'Voltar à lista',exact:true}).click();
+    try {
+      await expect(page.getByRole('group',{name:'Leitura dos envios',exact:true})).toBeFocused();
+    } finally { liberar(); }
+    await expect(page.getByRole('button',{name:'Ler envio',exact:true}).first()).toBeEnabled();
+  });
+
+  test('P02 cabeçalho acompanha rolagem desktop em resposta longa', async ({page},testInfo)=>{
+    await preparar(page);
+    const longa={...respostas[0],respostas:[{...respostas[0].respostas[0],valor:'Resposta sintética longa para leitura. '.repeat(600)}]};
+    await page.route('**/api/questionarios/q-1/respostas/leitura-clinica*',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({questionarioId:'q-1',pacientes:[],perguntas:[],resumo:{totalRespostas:1,totalPacientes:1,totalPerguntas:1,mediaRespostasPorEnvio:1},respostas:[longa,{...longa,respostaId:"longa-2",envioId:"envio-longo-2"}]})}));
+    await page.getByRole('button',{name:'Atualizar respostas',exact:true}).click();
+    await expect(page.locator('article dd').first()).toContainText('Resposta sintética longa');
+    await page.getByRole('button',{name:'Ler envio',exact:true}).first().click();
+    const cabecalho=page.getByRole('heading',{name:'Leitura individual'}).locator('..');
+    if(testInfo.project.name === 'desktop-chromium') {
+      const leitor=page.locator('[data-qst-p02-leitura]');
+      await leitor.evaluate(el=>{el.scrollTop=180;});
+      await expect.poll(()=>leitor.evaluate(el=>el.scrollTop)).toBeGreaterThan(0);
+      await expect.poll(async()=>Math.round((await cabecalho.boundingBox()).y-(await leitor.boundingBox()).y)).toBe(0);
+      await page.getByRole('button',{name:'Próximo',exact:true}).click();
+      await expect.poll(()=>leitor.evaluate(el=>el.scrollTop)).toBe(0);
+    } else {
+      const alvo=await cabecalho.evaluate(el=>el.getBoundingClientRect().top+window.scrollY+180);
+      await page.evaluate(y=>window.scrollTo(0,y),alvo);
+      await expect.poll(async()=>Math.round((await cabecalho.boundingBox()).y)).toBeLessThan(0);
+    }
+  });
+
   test('P01 realça busca literal, informa exibidos e limpa com foco sem efeitos colaterais', async ({ page }) => {
     const requisicoes = await preparar(page);
     const busca = page.getByLabel('Busca', { exact: true });
