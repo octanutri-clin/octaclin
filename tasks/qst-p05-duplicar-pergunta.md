@@ -2,9 +2,11 @@
 
 ## Estado vigente
 
-T01 (domínio) e T02 (serviço transacional) implementadas e validadas localmente.
-A ação de produto ainda NÃO está disponível: API/BFF, interface, UX B/C, aceite
-transversal e CI do novo HEAD permanecem pendentes. Prova PostgreSQL dirigida
+T01 (domínio), T02 (serviço transacional) e T03 (API/BFF) implementadas e
+validadas localmente nos escopos descritos abaixo.
+A ação de produto ainda NÃO está disponível no editor: interface, UX B/C, aceite
+transversal e CI do novo HEAD permanecem pendentes. Evidências locais T03 e
+limitações estão no checkpoint ao final deste documento. Prova PostgreSQL dirigida
 concluída no escopo T02; não comprova concorrência de toda a aplicação. PR própria Draft,
 base main `5873ff1c`; não inclui a integração P01/P02 da #570 nem FOOD06.
 
@@ -70,7 +72,7 @@ não é evidência RED. A primeira tentativa GREEN encontrou erro de tipagem no
 adaptador de testes; não conta como GREEN. O resultado acima é da suíte final
 corrigida, sem casts para ignorar erro no código de produção.
 
-## Sequência — mesma PR; T01/T02 locais, T03–T05 pendentes
+## Sequência — mesma PR; T01–T03 implementadas, T04/T05 pendentes
 
 1. **T02 — serviço e contrato transacional (PASS local; registro abaixo).** Resolver tenant/ator no servidor,
    autorizar mesmo rascunho, fixar origem salva/revisão exata e lista ordenada;
@@ -94,13 +96,13 @@ corrigida, sem casts para ignorar erro no código de produção.
 
 | ID | Critério | Estado atual |
 | --- | --- | --- |
-| P05-C1 | Origem salva no mesmo rascunho autorizado | PARCIAL: serviço/PG PASS; API e bloqueio de pendências na UI pendentes |
+| P05-C1 | Origem salva no mesmo rascunho autorizado | PARCIAL: serviço/PG e HTTP PASS; bloqueio de pendências na UI pendente |
 | P05-C2 | Cópia independente com novos IDs de pergunta/opções | PARCIAL: geração servidor/persistência PG PASS; integração UI pendente |
-| P05-C3 | Sem herdar chave clínica/biblioteca | PARCIAL: domínio e persistência PG PASS; contrato HTTP pendente |
+| P05-C3 | Sem herdar chave clínica/biblioteca | PARCIAL: domínio/persistência PG e contrato HTTP PASS; jornada UI pendente |
 | P05-C4 | Inserção adjacente e atômica | PARCIAL: transação/locks/revisão/rollback PG PASS; confirmação na UI pendente |
-| P05-C5 | Repetição, rollback e alteração concorrente seguros | PARCIAL: comando/biblioteca/leitor legado dirigidos PASS; HTTP e erros tardios na UI pendentes |
+| P05-C5 | Repetição, rollback e alteração concorrente seguros | PARCIAL: comando/biblioteca/leitor legado dirigidos PASS; status HTTP/BFF PASS; erros tardios na UI pendentes |
 | P05-C6 | Pendências bloqueiam; foco/seleção e erros claros | PENDENTE UI/UX B/C |
-| P05-C7 | Snapshots/envios antigos intactos | PARCIAL: histórico congelado intacto e legado incompleto bloqueado em PG; regressões HTTP/UI pendentes |
+| P05-C7 | Snapshots/envios antigos intactos | PARCIAL: histórico congelado intacto e legado incompleto bloqueado em PG; regressões do módulo/HTTP PASS; jornada UI pendente |
 
 Não declarar P05 pronta para merge com essa matriz parcial. Nenhuma alteração
 na FOOD06, branches alheias, main local, banco externo ou infraestrutura.
@@ -209,10 +211,110 @@ Para reproduzir em Node22, no backend: `QST_P05_POSTGRES=true pnpm test --runInB
 --runTestsByPath src/modulos/questionarios/aplicacao/copia-pergunta.integracao.spec.ts`.
 O runner `pnpm test:rls:testcontainers` também inclui a prova no CI.
 
+## T03 — API/BFF, checkpoint local de 21/11/2026
+
+Escopo R4: expor o comando já autorizado por rotas autenticadas e projeções mínimas.
+Não altera o domínio, o protocolo de locks T02, snapshots, schema ou permissões gerais.
+Rollback de código do incremento não implica desfazer cópias já confirmadas.
+
+- `GET /questionarios/:id/perguntas/:perguntaId/copia`: preparação autorizada,
+  revisão opaca e definição da cópia salva, sem gravação.
+- `POST /questionarios/:id/perguntas/:perguntaId/duplicar`: DTO fechado contendo
+  somente `revisaoEsperada` hex64 minúscula. UUIDs nos dois parâmetros;
+  papel/permissão existentes e tenant do principal. Serviço mantém reautorização.
+- Controlador retorna somente revisão/definição ou ACK perguntaId/versão.
+  Auditoria de confirmação inclui somente questionarioId/origemId e recurso novo;
+  não inclui definição, revisão, sessão ou conteúdo clínico.
+- BFF usa `exigirPermissaoBff`, `requisitarBackendAutenticado` e verificação de
+  Origin compartilhados. Entrada limitada a1KiB; resposta a512KiB com o leitor
+  limitado já existente (`lerTextoLimitado`); nenhuma alteração no módulo de restrições.
+  Projeta definição/opções e ACK por allowlist, sem IDs de opções, chave clínica,
+  tenant ou entidade ORM. Configuração salva por tipo permanece preservada.
+- `peso` continua **string decimal**, conforme o numeric da entidade/driver.
+  Fixture inicial number passou, mas a prova corrigida com string real produziu
+  RED502; GREEN após preservar o contrato, sem conversão ou arredondamento.
+- HTTP/BFF usam private,no-store; BFF aplica também Vary:Cookie, inclusive erros.
+  Corpos de erro do backend não são retransmitidos. Conflito409 exige nova
+  conferência; não existe retry próprio. Renovação401 permanece no wrapper comum.
+  Uma falha de transporte/ACK ou da auditoria após commit exige conferir o estado;
+  não significa rollback nem autoriza repetir o comando cegamente.
+
+### Evidências T03
+
+Código testado/commit local: `91333ea2a90afc69b0e5a9a6db005e429a4048cf`.
+
+| Gate | Resultado e limite |
+| --- | --- |
+| RED HTTP |17 falhas404 com app/guardas/pipe iniciados: rotas inexistentes; não é erro de setup |
+| HTTP final | PASS19/19; UUIDs, sessão/papéis/permissão, DTO adulterado/nulo/array/JSON, revisão, respostas/cache e auditoria mínima |
+| BFF focado | PASS11/11 (5 regressões +6 P05); definição fiel com categoria, tipo suportado e peso string também confirmada no test:authz |
+| RED/GREEN peso BFF | RED10PASS/1FAIL com numeric string; GREEN11/11 após ajuste de projeção |
+| Regressões backend | PASS89 regressões +19HTTP; comando do módulo confirmou107 testes antes da inclusão do19ºHTTP, depois confirmado19/19;31PG SKIPPED sem flag |
+| Typecheck | PASS backend/Web, Node22.21.1 |
+| Build | PASS Nest/artefato e Next webpack, repetido após ajuste das rotas; Node22.21.1, dependências locais preexistentes |
+| test:authz | PASS consolidado dos28 comandos canônicos em Node22; detalhes de execução/setup abaixo |
+| PostgreSQL/RLS | Não repetido no delta de apresentação;31/31 T02 no código99967e14, serviço/locks não modificados; não prova HTTP ligado ao banco |
+| Revisão cruzada | Favorável estática /root/auth2_r4, delta T03; sem execução própria de testes, sem aceite global P05 |
+| CI anterior | aa3a1c70: OctaClinCI44930521345, CodeQL44930521380, Semgrep44930521344, Trivy44930521378 e DependencyReview44930521367 concluídos success; não valida T03 |
+| Segredos/diff | Scanner local PASS; repetir diff final antes de enviar |
+| Next real local | PASS GET/POST401 sem cookies nas rotas geradas pelo build, com private,no-store,max-age=0,must-revalidate do middleware; não é jornada autenticada |
+| Navegador/UX B/C | NOT RUN: interface T04 ainda ausente; permanece obrigatório em T05 |
+
+O `test:authz` foi executado pelos mesmos28 comandos definidos no package.json,
+sem alterar asserts, severidades, dependências ou configurações das suítes. Os8
+primeiros terminaram em série; a orquestração serial foi interrompida para executar
+os restantes em lotes paralelos de3. O bloco dashboard em voo foi reexecutado e
+confirmado5/5; não se atribui PASS à execução interrompida. Os19 comandos finais
+foram registrados individualmente:18 PASS na primeira tentativa; restrições falhou
+antes dos testes (ENOENT do registro clínico, não falha funcional). O registro
+`docs/clinico/validacao-textos-restricoes.json` já existia no mesmo HEAD, mas estava
+fora do sparse-checkout. `git sparse-checkout add docs/clinico` ampliou somente a
+leitura desta worktree, sem modificar o registro ou outras worktrees. Reexecutado
+somente esse bloco: PASS69/69. Portanto o comando serial original não foi uma
+execução global completa; o PASS consolidado cobre todos os mesmos28 subcomandos.
+
+Build Next registrou avisos de convenção middleware e API de Node no Edge oriundos
+da dependência local preexistente; terminou com sucesso. Nenhum codemod ou ajuste
+de segurança foi aplicado. CI canônico do novo HEAD permanece pendente ao envio.
+
+As provas HTTP substituem apenas autenticação e serviço por identidades/dados
+sintéticos: guardas/pipe/controlador são reais, mas não há JWT criptográfico ou
+banco nesse teste. BFF usa cookies/fetch/NextResponse simulados; não comprova
+Next real nem a jornada. Os testes novos integram os runners existentes do módulo
+e de questionários no `test:authz`, sem workflow/dependência nova. O guardrail de APIs dinâmicas
+rejeitou o alias de params importado: corrigidas as rotas com interface Promise
+e await explícitos, sem mudar o guardrail; PASS194arquivos. Lint dirigido PASS.
+
+Dependências locais preexistentes/reutilizadas: CI com lockfile continua necessário.
+O primeiro smoke local esperava cabeçalho exato menor; a observação mostrou o
+middleware acrescentando max-age=0,must-revalidate. A prova corrigida exige o
+cabeçalho completo efetivo; não houve defeito funcional ou mudança do middleware.
+Saída própria `.next` em tmp via symlink ignorado para não pressionar disco;
+nenhum arquivo de outra worktree removido.
+
 ## Próxima ação exata
 
-T03: controlador/DTOs e BFF com validação/limites, guardas existentes,
-auditoria mínima e projeções allowlist, sem habilitar UI parcialmente.
-Continuar na mesma PR Draft, com TDD e testes HTTP/negativas. Depois T04/T05,
-incluindo UX B/C, teclado/mobile, erros tardios e revisão independente final.
+T04: conectar a ação nas propriedades do editor ao preparo/confirmação existente,
+com TDD. Bloquear enquanto houver alterações de pergunta **ou questionário** ainda
+não salvas ou salvamento em curso; explicar o motivo fora do botão desabilitado.
+Conferir definição salva/revisão, sem copiar memória não salva. Em409/falha preservar
+edições e seleção; não repetir cegamente. Em sucesso recarregar lista autorizada,
+selecionar cópia e focar enunciado. Depois T05: UX B/C, Playwright desktop/mobile,
+teclado/fonte200, respostas tardias e revisão independente da jornada completa.
 Sem merge, deploy, migrations externas, alterações na FOOD06 ou infraestrutura.
+
+
+### Mapa delimitado para T04 (somente leitura nesta rodada)
+
+- `components/questionarios/usar-workspace-questionarios.ts`: possui os dois
+  indicadores de pendências, `salvando`, seleção, `salvarPergunta` e carregamento.
+  Integrar preparo/confirmação guardando contexto/origem/revisão; resposta tardia
+  não pode selecionar uma cópia em outro formulário nem sobrescrever edições novas.
+- `components/questionarios/area-editor.tsx`: ação junto a Propriedades e
+  explicação acessível; `enunciado` já tem identificador para foco após sucesso.
+- `lib/questionarios-api.ts`: cliente do BFF, manter erro de conflito explícito e
+  peso decimal compatível; não persistir revisão em localStorage/query string.
+- `tests/visual/questionarios-editor.spec.mjs`: reutilizar a jornada/mocks
+  sintéticos existentes para RED/GREEN, depois executar UX B/C na interface real.
+
+Este mapa não constitui implementação T04 nem nova aprovação de produto.
