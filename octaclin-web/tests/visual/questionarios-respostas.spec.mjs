@@ -79,6 +79,25 @@ function envio(page, nome) {
 }
 
 test.describe('QST01 — organização da leitura de respostas', () => {
+  test('contagens usam singular para uma resposta e plural para zero ou várias', async ({ page }) => {
+    await preparar(page);
+    await expect(envio(page, pacientes[0].nome).getByText('1 resposta', { exact: true })).toBeVisible();
+    const atualizadas = [
+      { ...respostas[0], totalRespostas: 0, respostas: [] },
+      { ...respostas[1], totalRespostas: 2, respostas: [respostas[1].respostas[0], { perguntaId: 'pergunta-2', tipo: 'texto', enunciado: 'O que pretende manter?', valor: 'Organização' }] }
+    ];
+    await page.route('**/api/questionarios/q-1/respostas/leitura-clinica*', (route) => route.fulfill({
+      status: 200, contentType: 'application/json', body: JSON.stringify({
+        questionarioId: 'q-1', pacientes: [], perguntas: [],
+        resumo: { totalRespostas: 2, totalPacientes: 2, totalPerguntas: 2, mediaRespostasPorEnvio: 1 },
+        respostas: atualizadas
+      })
+    }));
+    await page.getByRole('button', { name: 'Atualizar respostas', exact: true }).click();
+    await expect(envio(page, pacientes[0].nome).getByText('0 respostas', { exact: true })).toBeVisible();
+    await expect(envio(page, pacientes[1].nome).getByText('2 respostas', { exact: true })).toBeVisible();
+  });
+
   test('inicia aberto e recolhe somente o envio escolhido, mantendo resumo e conteúdo', async ({ page }) => {
     await preparar(page);
     const primeiro = envio(page, pacientes[0].nome);

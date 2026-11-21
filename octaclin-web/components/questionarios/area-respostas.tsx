@@ -55,7 +55,7 @@ function ListaRespostas({
                     <p className="text-xs text-texto-suave">Finalizado em {formatarDataResposta(resposta.finalizadoEm)}</p>
                   </div>
                   <span className="rounded-full border border-linha bg-white px-3 py-1 text-xs font-semibold text-texto-suave">
-                    {resposta.totalRespostas} respostas
+                    {resposta.totalRespostas} {resposta.totalRespostas === 1 ? 'resposta' : 'respostas'}
                   </span>
                   <Botao
                     type="button" tamanho="sm" disabled={carregandoRespostas}
