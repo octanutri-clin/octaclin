@@ -79,6 +79,68 @@ function envio(page, nome) {
 }
 
 test.describe('QST01 — organização da leitura de respostas', () => {
+  test('P01 realça busca literal, informa exibidos e limpa com foco sem efeitos colaterais', async ({ page }) => {
+    const requisicoes = await preparar(page);
+    const busca = page.getByLabel('Busca', { exact: true });
+    await expect(page.getByRole('status').filter({ hasText: '2 envios exibidos' })).toBeVisible();
+    await page.locator('#filtro-paciente-respostas').selectOption('paciente-a');
+    await expect(page.getByText('1 envio exibido', { exact: true })).toBeVisible();
+    const antes = requisicoes.slice();
+    const persistencias = await page.evaluate(() => window.__persistenciasQst01);
+    await envio(page, pacientes[0].nome).getByRole('button', { name: /^Recolher respostas/ }).click();
+    await busca.fill('  ALMOÇO  ');
+    await expect(page.getByText('1 envio exibido', { exact: true })).toBeVisible();
+    await expect(page.getByText('Organizei o almoço', { exact: true })).toBeHidden();
+    await page.getByRole('button', { name: /^Expandir respostas/ }).click();
+    await expect(page.locator('article dd mark')).toHaveText('almoço');
+    await page.locator('[data-qst01-respostas]').screenshot({ path: test.info().outputPath('p01-realce.png') });
+    await page.getByRole('button', { name: /^Recolher respostas/ }).click();
+    await busca.fill('nenhum resultado sintético');
+    await expect(page.getByText('0 envios exibidos', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Limpar busca', exact: true }).click();
+    await expect(busca).toBeFocused();
+    await expect(busca).toHaveValue('');
+    await expect(page.getByText('1 envio exibido', { exact: true })).toBeVisible();
+    await expect(page.locator('#filtro-paciente-respostas')).toHaveValue('paciente-a');
+    await expect(page.getByRole('button', { name: /^Expandir respostas/ })).toBeVisible();
+    expect(await page.evaluate(() => window.__persistenciasQst01)).toBe(persistencias);
+    await expect(page.locator('article mark')).toHaveCount(0);
+    expect(requisicoes).toEqual(antes);
+  });
+
+  test('P01 anuncia carregamento sem apresentar contagem antiga como atual', async ({ page }) => {
+    await preparar(page);
+    let liberar;
+    const aguardar = new Promise(resolve => { liberar = resolve; });
+    await page.route('**/api/questionarios/q-1/respostas/leitura-clinica*', async route => {
+      await aguardar;
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ questionarioId: 'q-1', pacientes: [], perguntas: [], resumo: { totalRespostas: 0, totalPacientes: 0, totalPerguntas: 0, mediaRespostasPorEnvio: 0 }, respostas: [] }) });
+    });
+    await page.getByRole('button', { name: 'Atualizar respostas', exact: true }).click();
+    const estado = page.locator('[data-qst-p01-contagem] [role="status"]');
+    await expect(estado).toHaveText('Atualizando envios...');
+    liberar();
+    await expect(estado).toHaveText('0 envios exibidos');
+  });
+
+  test('P01 realce mantém Unicode, caracteres especiais e HTML como texto', async ({ page }) => {
+    await preparar(page);
+    await page.route('**/api/questionarios/q-1/respostas/leitura-clinica*', route => route.fulfill({
+      status: 200, contentType: 'application/json', body: JSON.stringify({
+        questionarioId: 'q-1', pacientes: [], perguntas: [],
+        resumo: { totalRespostas: 1, totalPacientes: 1, totalPerguntas: 1, mediaRespostasPorEnvio: 1 },
+        respostas: [{ ...respostas[0], respostas: [{ ...respostas[0].respostas[0], valor: 'İ literal .* <img src=x onerror=alert(1)>' }] }]
+      })
+    }));
+    await page.getByRole('button', { name: 'Atualizar respostas', exact: true }).click();
+    await expect(page.getByText('İ literal .* <img src=x onerror=alert(1)>', { exact: true })).toBeVisible();
+    await page.getByLabel('Busca', { exact: true }).fill('.*');
+    await expect(page.locator('article dd mark')).toHaveText('.*');
+    await page.getByLabel('Busca', { exact: true }).fill('<img');
+    await expect(page.locator('article dd mark')).toHaveText('<img');
+    await expect(page.locator('article img')).toHaveCount(0);
+  });
+
   test('contagens usam singular para uma resposta e plural para zero ou várias', async ({ page }) => {
     await preparar(page);
     await expect(envio(page, pacientes[0].nome).getByText('1 resposta', { exact: true })).toBeVisible();
@@ -231,7 +293,7 @@ test.describe('QST01 — organização da leitura de respostas', () => {
     expect(foco.visivel).toBe(true);
     // O tema usa box-shadow em :focus-visible; outline é apenas outra forma válida.
     expect((foco.outline !== 'none' && foco.largura !== '0px') || foco.sombra !== 'none').toBe(true);
-    const resultado = await new AxeBuilder({ page }).include('[data-qst01-respostas]').analyze();
+    const resultado = await new AxeBuilder({ page }).include('[data-qst01-respostas]').include('[data-qst-p01-busca]').include('[data-qst-p01-contagem]').analyze();
     expect(resultado.violations).toEqual([]);
   });
 
