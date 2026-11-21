@@ -1,0 +1,35 @@
+{
+  "etapas": [
+    "A",
+    "B",
+    "C"
+  ],
+  "base": "9adc6d2e0b953e5bd5a0e15c9449a416985cc076",
+  "modalidade": "subagente com papel explicito; nao selecao nativa TOML",
+  "instancia": "/root/qst_p01_ux",
+  "fork_turns": "none na etapa A; followup B/C",
+  "papel": ".codex/agents/octaclin-nutricionista-ux.toml",
+  "papel_sha256": "6259b40a98e2c49053cbc6adbc0c59d0312b14e191b228ab73de2f2eac53af6d",
+  "registro_utc": "2026-11-21T11:11:28.035898+00:00",
+  "inicio_fim": "nao capturados em timestamp; trilha de invocacoes/retornos da sessao",
+  "artefatos_sha256": {
+    "nutricionista.md": "6abc6ff50f4b3d16757d78cce1afae58d3a7328fffef0024850c61577bc11b23",
+    "desktop-realce.png": "9d48a5d8f0be63c16757c8b4295f8517b5dc3c413a57c1bcb7cb0b23d1df28b2",
+    "mobile-realce.png": "2c856eef3a3552cf4596fd50c919bf13af2c2d35d3500979728699b11c6ce313",
+    "brief.md": "ba10834a3e39247d336b265e0ac3414e34ab0e692bd972e0bd96c16cc8a00386",
+    "paciente.md": "7912fabbc2ae012a7a441f1bec140e125a686366eaabe1fb5f38e9b576ed9c0f",
+    "consolidado.md": "ab918b583974b61861db796422a095085d0eb3a8b7ccb7fc34956f2716d1c9cd"
+  },
+  "codigo_sha256": {
+    "octaclin-web/components/questionarios/area-respostas.tsx": "855de630fbce411c49235e35eea121facc6484c169a77435e8a16cdb216e71d6",
+    "octaclin-web/tests/visual/questionarios-respostas.spec.mjs": "cb7c3b42dd43409a38948a48eee472f00a15e53a53751a9109d92248278e6d31"
+  },
+  "ferramentas_persona_observadas": [],
+  "paciente": "N/A justificado; nao invocado",
+  "limites": [
+    "brief e retornos sao sinteses editoriais; hashes nao sao do prompt integral",
+    "coordenador executou browser e viu screenshot; persona recebeu relato",
+    "sem usuario real ou leitor de tela humano; nao e R4",
+    "dependencias locais anteriores ao lockfile; CI pendente"
+  ]
+}
