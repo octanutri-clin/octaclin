@@ -49,7 +49,7 @@ export function EditorQuestionario() {
         <p className="text-sm text-alerta-forte" role="status">
           Alterações pendentes: {alteracoesQuestionarioPendentes ? 'formulário' : ''}
           {alteracoesQuestionarioPendentes && alteracoesPerguntaPendentes ? ' e ' : ''}
-          {alteracoesPerguntaPendentes ? 'pergunta selecionada' : ''}. Confirme antes de trocar de formulário.
+          {alteracoesPerguntaPendentes ? 'perguntas' : ''}. Confirme antes de trocar de formulário.
         </p>
       ) : null}
 

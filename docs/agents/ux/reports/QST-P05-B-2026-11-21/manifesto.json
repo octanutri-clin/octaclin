@@ -1,0 +1,22 @@
+{
+  "etapa": "B",
+  "base": "de822372f19c4807d7184fe0a3426b134cad226b",
+  "instancia": "/root/qst_p05_ux_b",
+  "modalidade": "subagente runtime com papel explicito adaptado; nao selecao nativa comprovada",
+  "papel_fonte": ".codex/agents/octaclin-nutricionista-ux.toml",
+  "papel_sha256": "6259b40a98e2c49053cbc6adbc0c59d0312b14e191b228ab73de2f2eac53af6d",
+  "inicio_execucao": null,
+  "fim_registro_utc": "2026-11-21T23:54:31.207868+00:00",
+  "ferramentas_do_revisor": [],
+  "brief": "descricao factual sintetica das jornadas e testes fornecida pelo coordenador; sintese editorial no relatorio, nao transcricao integral",
+  "paciente": "NA justificado; sem instancia",
+  "artefatos_sha256": {
+    "avaliacao.md": "48f6c1dbc97ae8d36c78aa8771ece457e284594a46e0c84ae1055830e1a1816c"
+  },
+  "limites": [
+    "Horario inicial nao foi capturado; rastreabilidade da invocacao/retorno pela instancia no runtime",
+    "Persona sem screenshots, interacao propria ou testes proprios; coordenador executou e observou interface real",
+    "Nao e pesquisa com pessoas, validacao clinica, R4 ou UX C",
+    "Resultados de resolucao sao do coordenador; nao revalidacao independente da persona"
+  ]
+}

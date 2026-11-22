@@ -98,6 +98,7 @@ export function PreviewQuestionarioPaciente({ titulo, descricao, perguntas }: Pr
                     <div className="grid gap-2">
                       <input
                         type="range"
+                        aria-label={campo.enunciado}
                         disabled
                         min={Number(campo.atributos.min)}
                         max={Number(campo.atributos.max)}
@@ -115,6 +116,7 @@ export function PreviewQuestionarioPaciente({ titulo, descricao, perguntas }: Pr
                     <div className="grid grid-cols-[1fr_auto] items-center gap-2">
                       <Campo
                         type="number"
+                        aria-label={campo.enunciado}
                         disabled
                         min={Number(campo.atributos.min)}
                         max={Number(campo.atributos.max)}
@@ -129,6 +131,7 @@ export function PreviewQuestionarioPaciente({ titulo, descricao, perguntas }: Pr
 
                   {campo.tipoEntrada === 'textarea' ? (
                     <textarea
+                      aria-label={campo.enunciado}
                       disabled
                       maxLength={Number(campo.atributos.maxLength)}
                       placeholder={String(campo.atributos.placeholder ?? '')}

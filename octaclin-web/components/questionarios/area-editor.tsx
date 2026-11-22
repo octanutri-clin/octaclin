@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect } from 'react';
+import { FluxoCopiaPergunta } from './fluxo-copia-pergunta';
 import { closestCenter, DndContext, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { Check, Plus, Save, Settings2, Trash2 } from 'lucide-react';
@@ -34,10 +36,12 @@ export function AreaEditor({ workspace }: { workspace: WorkspaceQuestionarios })
     atualizarPerguntaLocal, trocarTipoPergunta, atualizarConfiguracao, atualizarOpcao,
     adicionarOpcao, removerOpcao, salvarPergunta, titulo, descricao
   } = workspace;
+  useEffect(() => { if (workspace.focoCopia) document.getElementById('enunciado')?.focus(); }, [workspace.focoCopia]);
   const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
 
   return (
-    <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(320px,1fr)_minmax(320px,1fr)_minmax(360px,1fr)]">
+    <fieldset disabled={workspace.salvando || workspace.carregandoPerguntas || workspace.copiaPergunta.previa !== null} className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-[minmax(320px,1fr)_minmax(320px,1fr)_minmax(360px,1fr)]">
+      <legend className="sr-only">Editor de perguntas</legend>
       <Cartao className="overflow-hidden">
         <div className="flex items-center justify-between border-b border-linha px-4 py-3">
           <h2 className="text-sm font-semibold text-tinta">Perguntas</h2>
@@ -56,6 +60,7 @@ export function AreaEditor({ workspace }: { workspace: WorkspaceQuestionarios })
                     key={pergunta.id}
                     pergunta={pergunta}
                     selecionada={pergunta.id === selecionadaId}
+                    pendente={workspace.perguntasPendentes.includes(pergunta.id)}
                     categoriaNome={categoria?.nome ?? 'Categoria'}
                     categoriaCor={categoria?.corHex ?? '#247BA0'}
                     aoSelecionar={setSelecionadaId}
@@ -73,6 +78,7 @@ export function AreaEditor({ workspace }: { workspace: WorkspaceQuestionarios })
         </CartaoCabecalho>
         {perguntaSelecionada ? (
           <div className="space-y-4 p-4">
+            <FluxoCopiaPergunta copia={workspace.copiaPergunta} titulo={titulo} />
             <div className="space-y-1.5">
               <Rotulo htmlFor="enunciado">Enunciado</Rotulo>
               <AreaTexto
@@ -398,6 +404,6 @@ export function AreaEditor({ workspace }: { workspace: WorkspaceQuestionarios })
       <div className="xl:sticky xl:top-4 xl:self-start">
         <PreviaResponsivaQuestionario key={questionarioAtual?.id ?? 'novo'} titulo={titulo} descricao={descricao} perguntas={perguntas} />
       </div>
-    </div>
+    </fieldset>
   );
 }

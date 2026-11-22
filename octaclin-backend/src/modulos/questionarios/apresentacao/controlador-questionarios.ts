@@ -30,6 +30,7 @@ import {
   CriarQuestionarioAPartirModeloDto,
   CriarQuestionarioDto,
   DuplicarQuestionarioDto,
+  DuplicarPerguntaDto,
   FiltrosMatrizLongitudinalDto,
   IncluirPerguntaBibliotecaDto,
   ReordenarPerguntasDto
@@ -179,6 +180,35 @@ export class ControladorQuestionarios {
       origemId: id
     });
     return duplicado;
+  }
+
+  @Get('questionarios/:id/perguntas/:perguntaId/copia')
+  @Permissoes('questionarios.gerenciar')
+  @Header('Cache-Control', 'private, no-store')
+  async prepararCopiaPergunta(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('perguntaId', ParseUUIDPipe) perguntaId: string
+  ) {
+    const resultado = await this.servicoQuestionarios.prepararCopiaPergunta(usuario.tenantId, id, perguntaId, usuario);
+    return { revisao: resultado.revisao, definicao: resultado.definicao };
+  }
+
+  @Post('questionarios/:id/perguntas/:perguntaId/duplicar')
+  @Permissoes('questionarios.gerenciar')
+  @Header('Cache-Control', 'private, no-store')
+  async duplicarPergunta(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('perguntaId', ParseUUIDPipe) perguntaId: string,
+    @Body() dados: DuplicarPerguntaDto
+  ) {
+    const resultado = await this.servicoQuestionarios.duplicarPergunta(usuario.tenantId, id, perguntaId, dados.revisaoEsperada, usuario);
+    await this.registrarAuditoria(usuario, requisicao, 'questionarios.pergunta.duplicar', 'pergunta', resultado.perguntaId, {
+      questionarioId: id, origemId: perguntaId
+    });
+    return { perguntaId: resultado.perguntaId, versaoQuestionario: resultado.versaoQuestionario };
   }
 
   @Post('questionarios/:id/envios')
