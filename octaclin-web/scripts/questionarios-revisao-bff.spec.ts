@@ -4,11 +4,59 @@ import * as nextHeaders from 'next/headers';
 import { POST as revisarEnvio } from '../app/api/questionarios/envios/[envioId]/revisar/route';
 import { GET as listarPendentes } from '../app/api/questionarios/revisoes/pendentes/route';
 import { GET as abrirResposta } from '../app/api/questionarios/revisoes/[envioId]/route';
+import { POST as exportarFiltrados } from '../app/api/questionarios/[id]/respostas/exportar.csv/route';
 
 const { __clearCookies, __setCookies } = nextHeaders as typeof nextHeaders & {
   __clearCookies: () => void;
   __setCookies: (cookies: Record<string, string>) => void;
 };
+
+test('CSV filtrado exige sessão, permissão, origem e seleção válida sem consultar backend', async () => {
+  const fetchOriginal = global.fetch;
+  let chamadas = 0;
+  global.fetch = (async () => { chamadas++; throw new Error('não chamar'); }) as typeof fetch;
+  const id = '00000000-0000-4000-8000-000000000001';
+  const requisicao = (body: object, origem = 'http://localhost') => new Request('http://localhost/api/questionarios/exportar', {
+    method: 'POST', headers: { Origin: origem, 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+  });
+  try {
+    __clearCookies();
+    assert.equal((await exportarFiltrados(requisicao({ respostaIds: [id] }) as never, { params: Promise.resolve({ id }) })).status, 401);
+    __setCookies(cookiesSessaoValida([]));
+    assert.equal((await exportarFiltrados(requisicao({ respostaIds: [id] }) as never, { params: Promise.resolve({ id }) })).status, 403);
+    __setCookies(cookiesSessaoValida(['questionarios.ler']));
+    assert.equal((await exportarFiltrados(requisicao({ respostaIds: [id] }, 'https://outra-origem.example.test') as never, { params: Promise.resolve({ id }) })).status, 403);
+    for (const body of [{ respostaIds: [] }, { respostaIds: [id, id] }, { respostaIds: ['incorreto'] }, { respostaIds: [id], tenantId: id }]) {
+      const resposta = await exportarFiltrados(requisicao(body) as never, { params: Promise.resolve({ id }) });
+      assert.equal(resposta.status, 400); assert.match(resposta.headers.get('Cache-Control') ?? '', /no-store/);
+    }
+    assert.equal(chamadas, 0);
+  } finally { restaurarFetch(fetchOriginal); __clearCookies(); }
+});
+
+test('CSV filtrado encaminha apenas IDs e retorna arquivo privado sem propagar erro clínico', async () => {
+  const fetchOriginal = global.fetch;
+  const id = '00000000-0000-4000-8000-000000000001';
+  __setCookies(cookiesSessaoValida(['questionarios.ler']));
+  let falhar = false;
+  global.fetch = (async (input, init) => {
+    assert.equal(new URL(String(input)).pathname, `/questionarios/${id}/respostas/exportar.csv`);
+    assert.equal(new URL(String(input)).search, '');
+    assert.equal(init?.method, 'POST');
+    assert.deepEqual(JSON.parse(String(init?.body)), { respostaIds: [id] });
+    return falhar ? new Response('CONTEUDO_INTERNO_NAO_PROPAGAR', { status: 404 })
+      : new Response('id,valor\nsintetico,0\n', { headers: { 'Content-Type': 'text/csv; charset=utf-8' } });
+  }) as typeof fetch;
+  const requisicao = () => new Request('http://localhost/api/exportar', { method: 'POST', headers: { Origin: 'http://localhost' }, body: JSON.stringify({ respostaIds: [id] }) });
+  try {
+    const resposta = await exportarFiltrados(requisicao() as never, { params: Promise.resolve({ id }) });
+    assert.equal(resposta.status, 200); assert.match(resposta.headers.get('Cache-Control') ?? '', /no-store/);
+    assert.equal(resposta.headers.get('Vary'), 'Cookie'); assert.match(await resposta.text(), /sintetico,0/);
+    falhar = true;
+    const negada = await exportarFiltrados(requisicao() as never, { params: Promise.resolve({ id }) });
+    assert.equal(negada.status, 404); assert.doesNotMatch(await negada.text(), /CONTEUDO_INTERNO/);
+  } finally { restaurarFetch(fetchOriginal); __clearCookies(); }
+});
 
 function restaurarFetch(fetchOriginal: typeof global.fetch | undefined) {
   if (fetchOriginal) {

@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Header,
+  HttpCode,
   Param,
   ParseIntPipe,
   ParseUUIDPipe,
@@ -19,6 +20,8 @@ import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
 import { GuardaPermissoes } from '../../auth/apresentacao/guarda-permissoes';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
+import { contarLinhasCsv } from '../../../infraestrutura/exportacao/csv';
+import { ExportarRespostasFiltradasDto } from '../aplicacao/dtos';
 import {
   AtualizarQuestionarioDto,
   AtualizarPerguntaDto,
@@ -347,6 +350,27 @@ export class ControladorQuestionarios {
       ip: requisicao.ip,
       userAgent: requisicao.headers['user-agent'],
       metadados: { linhas: Math.max(csv.trim().split('\n').length - 1, 0) }
+    });
+    return csv;
+  }
+
+  @Post('questionarios/:id/respostas/exportar.csv')
+  @HttpCode(200)
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  @Header('Content-Disposition', 'attachment; filename="octaclin-respostas-filtradas.csv"')
+  @Header('Cache-Control', 'private, no-store')
+  async exportarRespostasFiltradasCsv(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dados: ExportarRespostasFiltradasDto
+  ) {
+    const csv = await this.servicoQuestionarios.exportarRespostasCsv(usuario.tenantId, id, usuario, dados.respostaIds);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId, usuarioId: usuario.usuarioId,
+      acao: 'questionarios.respostas.exportar_csv', recursoTipo: 'questionario', recursoId: id,
+      ip: requisicao.ip, userAgent: requisicao.headers['user-agent'],
+      metadados: { tipo: 'csv_filtrado', linhas: contarLinhasCsv(csv) }
     });
     return csv;
   }

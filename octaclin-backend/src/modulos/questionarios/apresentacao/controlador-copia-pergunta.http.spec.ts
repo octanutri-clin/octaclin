@@ -17,14 +17,14 @@ describe('P05 contrato HTTP da cópia', () => {
   const revisao = 'a'.repeat(64);
   const definicao = { categoriaId: id, tipo: 'texto_longo', enunciado: 'Sintética', peso: '0.00',
     obrigatoria: false, configuracao: {}, visivelBiblioteca: false, opcoes: [] };
-  const prepararCopiaPergunta = jest.fn(), duplicarPergunta = jest.fn(), registrar = jest.fn();
+  const prepararCopiaPergunta = jest.fn(), duplicarPergunta = jest.fn(), registrar = jest.fn(), exportarRespostasCsv = jest.fn();
   const headers = (papel = 'Professional', permissao = 'questionarios.gerenciar') => ({
     'content-type': 'application/json', 'x-papel-sintetico': papel, 'x-permissao-sintetica': permissao
   });
   const caminho = `/questionarios/${id}/perguntas/${origem}`;
   beforeAll(async () => {
     const modulo = await Test.createTestingModule({ controllers: [ControladorQuestionarios], providers: [
-      { provide: ServicoQuestionarios, useValue: { prepararCopiaPergunta, duplicarPergunta } },
+      { provide: ServicoQuestionarios, useValue: { prepararCopiaPergunta, duplicarPergunta, exportarRespostasCsv } },
       { provide: ServicoAuditoria, useValue: { registrar } },
       { provide: ServicoRevisaoFormularios, useValue: {} }
     ] }).overrideGuard(GuardaJwt).useValue({ canActivate(c: ExecutionContext) {
@@ -44,6 +44,25 @@ describe('P05 contrato HTTP da cópia', () => {
     jest.resetAllMocks();
     prepararCopiaPergunta.mockResolvedValue({ revisao, definicao, interno: 'não retornar' });
     duplicarPergunta.mockResolvedValue({ perguntaId: copia, versaoQuestionario: 3, interno: 'não retornar' });
+    exportarRespostasCsv.mockResolvedValue('respostaId,valor\n"sintetica","texto\nmultilinha"\n');
+  });
+  it('exportação filtrada HTTP devolve CSV privado e audita uma linha sem conteúdo', async () => {
+    const resposta = await fetch(url + `/questionarios/${id}/respostas/exportar.csv`, {
+      method: 'POST', headers: headers('Professional', 'questionarios.ler'), body: JSON.stringify({ respostaIds: [origem] })
+    });
+    expect(resposta.status).toBe(200);
+    expect(resposta.headers.get('content-type')).toContain('text/csv');
+    expect(resposta.headers.get('cache-control')).toContain('no-store');
+    expect(await resposta.text()).toContain('multilinha');
+    expect(exportarRespostasCsv).toHaveBeenCalledWith(id, id, expect.objectContaining({ tenantId: id }), [origem]);
+    expect(registrar).toHaveBeenCalledWith(expect.objectContaining({ metadados: { tipo: 'csv_filtrado', linhas: 1 } }));
+  });
+  it.each([{ respostaIds: [] }, { respostaIds: ['incorreto'] }, { respostaIds: [origem, origem] }, { respostaIds: [origem], tenantId: id }])('exportação rejeita payload inválido %#', async body => {
+    const resposta = await fetch(url + `/questionarios/${id}/respostas/exportar.csv`, {
+      method: 'POST', headers: headers('Professional', 'questionarios.ler'), body: JSON.stringify(body)
+    });
+    expect(resposta.status).toBe(400);
+    expect(exportarRespostasCsv).not.toHaveBeenCalled();
   });
   it('prepara sem gravação e confirma com identidade do servidor, resposta mínima e auditoria sem conteúdo', async () => {
     const previa = await fetch(url + caminho + '/copia', { headers: headers() });

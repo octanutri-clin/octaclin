@@ -1,5 +1,7 @@
 import {
   ArrayMaxSize,
+  ArrayMinSize,
+  ArrayUnique,
   Allow,
   IsArray,
   IsBoolean,
@@ -267,6 +269,15 @@ export class RespostaFormularioPacienteDto {
 
   @Allow()
   valor: unknown;
+}
+
+export class ExportarRespostasFiltradasDto {
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(1000)
+  @ArrayUnique()
+  @IsUUID('all', { each: true })
+  respostaIds: string[];
 }
 
 export class FinalizarFormularioPacienteDto {

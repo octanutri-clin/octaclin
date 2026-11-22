@@ -292,6 +292,62 @@ test.describe('QPRO-02 — contexto de leitura', () => {
 });
 
 test.describe('QST01 — organização da leitura de respostas', () => {
+  test('QPRO-01 oferece CSV filtrado por paciente e busca e explica o alcance completo', async ({ page }) => {
+    await preparar(page);
+    await page.locator('#filtro-paciente-respostas').selectOption('paciente-a');
+    await page.getByLabel('Busca', { exact: true }).fill('almoço');
+    let selecao;
+    await page.route('**/api/questionarios/q-1/respostas/exportar.csv', async route => {
+      selecao = route.request().postDataJSON();
+      await route.fulfill({ status: 200, contentType: 'text/csv; charset=utf-8', body: 'respostaId,valor\nresposta-1,0\n' });
+    });
+    const download = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Exportar resultados filtrados', exact: true }).focus();
+    await page.keyboard.press('Enter');
+    expect((await download).suggestedFilename()).toBe('octaclin-respostas-filtradas.csv');
+    expect(selecao).toEqual({ respostaIds: ['resposta-1'] });
+    await expect(page.getByRole('link', { name: 'Exportar todas as respostas', exact: true })).toHaveAttribute('href', '/api/questionarios/q-1/respostas/exportar.csv');
+    await expect(page.getByText(/A exportação completa não aplica os filtros/)).toBeVisible();
+    await page.getByLabel('Busca', { exact: true }).fill('sem resultado sintético');
+    await expect(page.getByRole('button', { name: 'Exportar resultados filtrados', exact: true })).toBeDisabled();
+  });
+  test('QPRO-01 falha de acesso não baixa arquivo nem expõe mensagem interna', async ({ page }) => {
+    await preparar(page);
+    let downloads = 0;
+    page.on('download', () => downloads++);
+    await page.route('**/api/questionarios/q-1/respostas/exportar.csv', route => route.fulfill({ status: 404, body: 'DETALHE_INTERNO_NÃO_MOSTRAR' }));
+    await page.getByRole('button', { name: 'Exportar resultados filtrados', exact: true }).click();
+    await expect(page.getByText('Não foi possível exportar. Atualize as respostas e tente novamente.')).toBeVisible();
+    await expect(page.getByText('DETALHE_INTERNO_NÃO_MOSTRAR')).toHaveCount(0);
+    expect(downloads).toBe(0);
+  });
+  test('QPRO-01 exportação acessível com texto ampliado e sem overflow', async ({ page }) => {
+    await preparar(page);
+    await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
+    const grupo = page.getByRole('group', { name: 'Exportação de respostas' });
+    await expect(grupo).toBeVisible();
+    expect(await grupo.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+    expect((await new AxeBuilder({ page }).include('[aria-label="Exportação de respostas"]').analyze()).violations).toEqual([]);
+    await grupo.screenshot({ path: test.info().outputPath('qpro01-exportacao.png') });
+  });
+  test('QPRO-01 mudança de busca descarta CSV tardio sem download automático', async ({ page }) => {
+    await preparar(page);
+    let liberar, recebeu;
+    const liberada = new Promise(resolve => { liberar = resolve; });
+    const recebida = new Promise(resolve => { recebeu = resolve; });
+    let downloads = 0;
+    page.on('download', () => downloads++);
+    await page.route('**/api/questionarios/q-1/respostas/exportar.csv', async route => {
+      recebeu(); await liberada;
+      await route.fulfill({ status: 200, contentType: 'text/csv', body: 'id,valor\nsintetico,0\n' });
+    });
+    await page.getByRole('button', { name: 'Exportar resultados filtrados', exact: true }).click();
+    await recebida;
+    await page.getByLabel('Busca', { exact: true }).fill('jantar');
+    await entregarRespostaAntiga(page, liberar, '/exportar.csv');
+    expect(downloads).toBe(0);
+    await expect(page.getByRole('button', { name: 'Exportar resultados filtrados', exact: true })).toBeEnabled();
+  });
   test('P02 navega sem ciclo e volta ao gatilho com recolhimentos preservados', async ({ page }) => {
     const requisicoes = await preparar(page);
     const antes = requisicoes.slice();
@@ -557,7 +613,7 @@ test.describe('QST01 — organização da leitura de respostas', () => {
     expect(requisicoes.filter((item) => item.metodo !== 'GET')).toEqual(antes.filter((item) => item.metodo !== 'GET'));
     expect(await page.evaluate(() => window.__persistenciasQst01)).toBe(persistencias);
     expect(page.url()).toBe(url);
-    await expect(page.getByRole('link', { name: 'Exportar CSV' })).toHaveAttribute('href', '/api/questionarios/q-1/respostas/exportar.csv');
+    await expect(page.getByRole('link', { name: 'Exportar todas as respostas' })).toHaveAttribute('href', '/api/questionarios/q-1/respostas/exportar.csv');
     await page.reload();
     await page.getByRole('tab', { name: 'Respostas', exact: true }).click();
     await expect(page.getByRole('button', { name: /^Recolher respostas/ })).toHaveCount(2);

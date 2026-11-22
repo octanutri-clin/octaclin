@@ -1,0 +1,21 @@
+{
+  "base": "9b9747d4203e8b798af4ee69b81e8ffb42892803",
+  "agente": "/root/qst_auditoria_nutri",
+  "etapas": [
+    "B",
+    "C"
+  ],
+  "modo": "runtime com papel fornecido, followup; não seleção TOML nativa",
+  "inicio_utc": null,
+  "fim_utc": null,
+  "ferramentas_persona": [],
+  "paciente": "N/A, justificado no consolidado",
+  "capturas": "coordenador, Playwright sintético; não interação da persona",
+  "resultado": "favorável no escopo relatado; não R4 ou pesquisa com pessoas",
+  "sha256": {
+    "docs/agents/ux/reports/QPRO-01-BC-2026-11-22/consolidado.md": "8c42dca06bf3856ad1789c127be8219ffaf6a5318beb5dab51e3941fb8fa295c",
+    "docs/agents/ux/reports/QPRO-01-BC-2026-11-22/desktop.png": "8f9634f8c857d2a3e2e77bddd676a29cddb22f9580beac9289b8a4e83dc99da3",
+    "docs/agents/ux/reports/QPRO-01-BC-2026-11-22/mobile.png": "997cabb84c389c0f3ea6688098407a31978c95a7aeb92bf9bf59124b97456623",
+    ".codex/agents/octaclin-nutricionista-ux.toml": "6259b40a98e2c49053cbc6adbc0c59d0312b14e191b228ab73de2f2eac53af6d"
+  }
+}
