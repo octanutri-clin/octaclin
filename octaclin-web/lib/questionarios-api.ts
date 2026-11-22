@@ -494,3 +494,20 @@ export async function carregarBootstrapQuestionarios(
 
   return { categorias, profissionais, pacientes, questionarios, modelos };
 }
+
+export interface PreviaCopiaPergunta {
+  revisao: string;
+  definicao: {
+    categoriaId: string; tipo: TipoPergunta; enunciado: string; peso: string;
+    obrigatoria: boolean; configuracao: Record<string, unknown>; visivelBiblioteca: false;
+    opcoes: { rotulo: string; valor: string; ordem: number; imagemUrl?: string | null }[];
+  };
+}
+export function prepararCopiaPergunta(questionarioId: string, perguntaId: string) {
+  return requisitar<PreviaCopiaPergunta>(`/api/questionarios/${encodeURIComponent(questionarioId)}/perguntas/${encodeURIComponent(perguntaId)}/copia`);
+}
+export function confirmarCopiaPergunta(questionarioId: string, perguntaId: string, revisaoEsperada: string) {
+  return requisitar<{ perguntaId: string; versaoQuestionario: number }>(`/api/questionarios/${encodeURIComponent(questionarioId)}/perguntas/${encodeURIComponent(perguntaId)}/duplicar`, {
+    method: 'POST', body: JSON.stringify({ revisaoEsperada })
+  });
+}

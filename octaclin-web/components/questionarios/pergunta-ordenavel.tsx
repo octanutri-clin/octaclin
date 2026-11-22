@@ -20,12 +20,13 @@ const icones: Record<TipoPergunta, ComponentType<{ className?: string }>> = {
 interface Props {
   pergunta: PerguntaEditor;
   selecionada: boolean;
+  pendente?: boolean;
   categoriaNome: string;
   categoriaCor: string;
   aoSelecionar: (id: string) => void;
 }
 
-export function PerguntaOrdenavel({ pergunta, selecionada, categoriaNome, categoriaCor, aoSelecionar }: Props) {
+export function PerguntaOrdenavel({ pergunta, selecionada, pendente, categoriaNome, categoriaCor, aoSelecionar }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: pergunta.id });
   const Icone = icones[pergunta.tipo];
   const secao = typeof pergunta.configuracao?.secao === 'string' ? pergunta.configuracao.secao : 'Sem secao';
@@ -61,6 +62,7 @@ export function PerguntaOrdenavel({ pergunta, selecionada, categoriaNome, catego
         </div>
         <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-texto-suave">
           <span>{secao}</span>
+          {pendente ? <span className="font-semibold text-alerta-forte">Não salva</span> : null}
           <span>{categoriaNome}</span>
           <span>Peso {pergunta.peso}</span>
           <span>{pergunta.obrigatoria ? 'Obrigatória' : 'Opcional'}</span>

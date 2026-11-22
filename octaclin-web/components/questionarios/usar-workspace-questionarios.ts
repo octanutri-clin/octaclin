@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCopiaPergunta } from './usar-copia-pergunta';
 import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { DragEndEvent, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import {
@@ -124,6 +125,8 @@ export function useWorkspaceQuestionarios() {
   const [modelos, setModelos] = useState<ModeloQuestionarioApi[]>([]);
   const [questionarioAtual, setQuestionarioAtual] = useState<QuestionarioApi | null>(null);
   const [perguntas, setPerguntas] = useState<PerguntaEditor[]>([]);
+  const [carregandoPerguntas, setCarregandoPerguntas] = useState(false);
+  const sequenciaLeituraPerguntas = useRef(0);
   const [bibliotecaPerguntas, setBibliotecaPerguntas] = useState<PerguntaApi[]>([]);
   const [buscaBiblioteca, setBuscaBiblioteca] = useState('');
   const [categoriaBibliotecaId, setCategoriaBibliotecaId] = useState('');
@@ -146,7 +149,16 @@ export function useWorkspaceQuestionarios() {
   function possuiAlteracoesPendentes() {
     return alteracoesQuestionarioPendentes || alteracoesPerguntaPendentes;
   }
-  const [alteracoesPerguntaPendentes, setAlteracoesPerguntaPendentes] = useState(false);
+  const [perguntasPendentes, setPerguntasPendentes] = useState<string[]>([]);
+  const alteracoesPerguntaPendentes = perguntasPendentes.length > 0;
+  function setAlteracoesPerguntaPendentes(valor: boolean) {
+    if (!valor) setPerguntasPendentes([]); // troca/limpeza explícita do formulário
+    else if (selecionadaId) setPerguntasPendentes(ids => ids.includes(selecionadaId) ? ids : [...ids, selecionadaId]);
+  }
+  const contextoListaRef = useRef({ id: questionarioAtual?.id });
+  useLayoutEffect(() => {
+    if (contextoListaRef.current.id !== questionarioAtual?.id) contextoListaRef.current = { id: questionarioAtual?.id };
+  }, [questionarioAtual?.id]);
   const [respostasRecebidas, setRespostasRecebidas] = useState<RespostaQuestionarioRecebidaApi[]>([]);
   const [leituraClinica, setLeituraClinica] = useState<LeituraClinicaQuestionarioApi | null>(null);
   const [versoes, setVersoes] = useState<VersaoQuestionarioApi[]>([]);
@@ -171,6 +183,33 @@ export function useWorkspaceQuestionarios() {
   );
 
   const perguntaSelecionada = perguntas.find((pergunta) => pergunta.id === selecionadaId) ?? perguntas[0];
+  const [focoCopia, setFocoCopia] = useState(0);
+  const contextoCopia = useMemo(() => ({
+    questionarioId: questionarioAtual?.id, origemId: perguntaSelecionada?.id,
+    bloqueio: !questionarioAtual || !perguntaSelecionada ? 'Selecione uma pergunta salva para duplicar.'
+      : questionarioAtual.status !== 'rascunho' || status !== 'rascunho' ? 'Duplique perguntas somente em um rascunho.'
+      : salvando || carregando || carregandoPerguntas ? 'Aguarde o salvamento ou carregamento para duplicar.'
+      : alteracoesQuestionarioPendentes || alteracoesPerguntaPendentes ? 'Salve as alterações para duplicar esta pergunta.' : ''
+    // A identidade do objeto invalida respostas após qualquer mudança editorial/contextual.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- as dependências extras fixam a revisão local completa
+  }), [questionarioAtual, perguntaSelecionada, perguntas, status, salvando, carregando, carregandoPerguntas,
+    alteracoesQuestionarioPendentes, alteracoesPerguntaPendentes, titulo, descricao, areaAtiva]);
+  const copiaPergunta = useCopiaPergunta(contextoCopia, (novas, novaId, versao) => {
+    sequenciaLeituraPerguntas.current += 1;
+    setCarregandoPerguntas(false);
+    setPerguntas(novas.map(mapearPergunta));
+    if (novaId) {
+      setSelecionadaId(novaId); setFocoCopia(valor => valor + 1);
+      setSucesso('Pergunta duplicada. A cópia está selecionada para edição.');
+    } else {
+      setSelecionadaId(atual => novas.some(p => p.id === atual) ? atual : novas[0]?.id ?? null);
+      setSucesso('Lista atualizada. Confira se a cópia já está presente antes de duplicar novamente.');
+    }
+    if (versao !== undefined) {
+      setQuestionarioAtual(atual => atual ? { ...atual, versao } : atual);
+      setQuestionarios(atuais => atuais.map(q => q.id === questionarioAtual?.id ? { ...q, versao } : q));
+    }
+  });
   const categoriasPorId = useMemo(() => new Map(categorias.map((categoria) => [categoria.id, categoria])), [categorias]);
   const pacientesPorId = useMemo(() => new Map(pacientes.map((paciente) => [paciente.id, paciente])), [pacientes]);
   const scoreTotal = perguntas.reduce((total, pergunta) => total + pergunta.peso, 0);
@@ -210,10 +249,19 @@ export function useWorkspaceQuestionarios() {
   }, [buscaRespostas, pacientesPorId, respostasRecebidas]);
 
   async function carregarPerguntas(questionarioId: string) {
-    const resposta = await listarPerguntas(questionarioId);
-    const mapeadas = resposta.map(mapearPergunta);
-    setPerguntas(mapeadas);
-    setSelecionadaId(mapeadas[0]?.id ?? null);
+    const sequencia = ++sequenciaLeituraPerguntas.current;
+    setCarregandoPerguntas(true);
+    try {
+      const resposta = await listarPerguntas(questionarioId);
+      if (sequencia !== sequenciaLeituraPerguntas.current) return;
+      const mapeadas = resposta.map(mapearPergunta);
+      setPerguntas(mapeadas);
+      setSelecionadaId(mapeadas[0]?.id ?? null);
+    } catch {
+      if (sequencia === sequenciaLeituraPerguntas.current) setErro('Não foi possível carregar as perguntas. Abra novamente o formulário para conferir.');
+    } finally {
+      if (sequencia === sequenciaLeituraPerguntas.current) setCarregandoPerguntas(false);
+    }
   }
 
   async function carregarRespostas(questionarioId = questionarioAtual?.id, pacienteId = pacienteFiltroRespostas) {
@@ -284,6 +332,8 @@ export function useWorkspaceQuestionarios() {
       return;
     }
     if (!questionario) {
+      sequenciaLeituraPerguntas.current += 1;
+      setCarregandoPerguntas(false);
       setQuestionarioAtual(null);
       setTitulo('');
       setDescricao('');
@@ -308,6 +358,8 @@ export function useWorkspaceQuestionarios() {
     setHistoricoVersoesAberto(false);
     setAlteracoesQuestionarioPendentes(false);
     setAlteracoesPerguntaPendentes(false);
+    setPerguntas([]);
+    setSelecionadaId(null);
     await Promise.all([carregarPerguntas(questionario.id), carregarRespostas(questionario.id)]);
   }
 
@@ -522,7 +574,7 @@ export function useWorkspaceQuestionarios() {
           ? [atualizada, ...atuais.filter((pergunta) => pergunta.id !== atualizada.id)]
           : atuais.filter((pergunta) => pergunta.id !== atualizada.id)
       );
-      setAlteracoesPerguntaPendentes(false);
+      setPerguntasPendentes(ids => ids.filter(id => id !== perguntaSelecionada.id));
       setSucesso('Pergunta salva.');
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao salvar pergunta.');
@@ -590,7 +642,12 @@ export function useWorkspaceQuestionarios() {
 
   async function aoFinalizarArraste(event: DragEndEvent) {
     const { active, over } = event;
-    if (!over || active.id === over.id || !questionarioAtual) return;
+    if (!over || active.id === over.id || !questionarioAtual || salvando || copiaPergunta.fase !== null) return;
+    if (possuiAlteracoesPendentes()) {
+      setErro('Salve as alterações antes de reordenar perguntas.');
+      return;
+    }
+    const contexto = contextoListaRef.current;
 
     const reordenadas = arrayMove(
       perguntas,
@@ -598,6 +655,7 @@ export function useWorkspaceQuestionarios() {
       perguntas.findIndex((pergunta) => pergunta.id === over.id)
     ).map((pergunta, indice) => ({ ...pergunta, ordem: indice + 1 }));
 
+    setSalvando(true);
     setPerguntas(reordenadas);
     setErro(null);
     setSucesso(null);
@@ -606,12 +664,15 @@ export function useWorkspaceQuestionarios() {
         questionarioAtual.id,
         reordenadas.map((pergunta) => ({ id: pergunta.id, ordem: pergunta.ordem }))
       );
+      if (contextoListaRef.current !== contexto) return;
       setPerguntas(persistidas.map(mapearPergunta));
       setSucesso('Ordem salva.');
-    } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao reordenar perguntas.');
-      await carregarPerguntas(questionarioAtual.id);
-    }
+    } catch {
+      if (contextoListaRef.current !== contexto) return;
+      setErro('Não foi possível confirmar a ordem. Abra novamente o formulário para conferir.');
+      // Não reler e substituir silenciosamente uma edição/contexto após falha.
+    } finally { setSalvando(false); }
+
   }
 
   function atualizarPerguntaLocal(campo: keyof PerguntaEditor, valor: string | number | boolean) {
@@ -781,7 +842,10 @@ export function useWorkspaceQuestionarios() {
     erro,
     sucesso,
     carregando,
-    salvando,
+    carregandoPerguntas,
+    salvando: salvando || copiaPergunta.fase !== null,
+    copiaPergunta,
+    focoCopia,
     confirmandoArquivarQuestionario,
     setConfirmandoArquivarQuestionario,
     previewAberto,
@@ -789,6 +853,7 @@ export function useWorkspaceQuestionarios() {
     alteracoesQuestionarioPendentes,
     setAlteracoesQuestionarioPendentes,
     alteracoesPerguntaPendentes,
+    perguntasPendentes,
     setAlteracoesPerguntaPendentes,
     respostasRecebidas,
     leituraClinica,

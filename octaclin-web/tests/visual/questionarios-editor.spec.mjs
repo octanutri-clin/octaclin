@@ -215,3 +215,211 @@ test.describe('Editor de questionarios', () => {
     await expect(page.getByText('3 envio(s)')).toBeVisible();
   });
 });
+
+async function cenarioCopiaP05(page, falha=false) {
+  await criarSessao(page);await mockarBff(page);
+  const origem={id:'p-1',tenantId:'tenant-1',questionarioId:'q-1',categoriaId:'cat-1',tipo:'texto_longo',enunciado:'Pergunta salva',peso:'1.00',obrigatoria:true,configuracao:{limiteCaracteres:1000},opcoes:[],ordem:1,chaveClinica:'original',visivelBiblioteca:true};
+  const itens=[origem,{...origem,id:'p-2',enunciado:'Pergunta seguinte',ordem:2}],comandos=[];
+  await page.route('**/api/questionarios/q-1/perguntas',r=>r.fulfill({json:itens}));
+  await page.route('**/api/questionarios/q-1/perguntas/p-1/copia',r=>r.fulfill({json:{revisao:'a'.repeat(64),definicao:{...origem,visivelBiblioteca:false}}}));
+  await page.route('**/api/questionarios/q-1/perguntas/p-1/duplicar',async r=>{
+    comandos.push(r.request().postDataJSON());
+    if(falha)return r.fulfill({status:409,json:{mensagem:'Confira novamente.'}});
+    itens.splice(1,0,{...origem,id:'p-copia',ordem:2,chaveClinica:null,visivelBiblioteca:false});itens[2].ordem=3;
+    await r.fulfill({status:201,json:{perguntaId:'p-copia',versaoQuestionario:2}});
+  });
+  await page.goto('/questionarios');await page.getByRole('tab',{name:'Editor',exact:true}).click();
+  await expect(page.getByLabel('Enunciado',{exact:true})).toHaveValue('Pergunta salva');
+  return {itens,comandos};
+}
+test('P05 confirma cópia salva, seleciona nova identidade e foca enunciado',async({page})=>{
+  const {comandos}=await cenarioCopiaP05(page);
+  await page.getByRole('button',{name:'Duplicar pergunta',exact:true}).click();
+  const d=page.getByRole('dialog',{name:'Duplicar pergunta salva'});
+  await expect(d.getByText('Pergunta salva',{exact:true})).toBeVisible();expect(comandos).toEqual([]);
+  await d.getByRole('button',{name:'Confirmar cópia',exact:true}).click();
+  await expect(d).toHaveCount(0);await expect(page.getByLabel('Enunciado',{exact:true})).toBeFocused();
+  await expect(page.getByLabel('Chave clínica',{exact:true})).toHaveValue('');
+  await expect(page.getByRole('checkbox',{name:/Disponível na biblioteca/})).not.toBeChecked();
+  expect(comandos).toEqual([{revisaoEsperada:'a'.repeat(64)}]);
+});
+test('P05 bloqueia pendências com explicação visível e sem POST',async({page})=>{
+  const {comandos}=await cenarioCopiaP05(page);
+  await page.getByLabel('Enunciado',{exact:true}).fill('Ainda não salva');
+  await expect(page.getByRole('button',{name:'Duplicar pergunta',exact:true})).toBeDisabled();
+  await expect(page.getByText('Salve as alterações para duplicar esta pergunta.',{exact:true})).toBeVisible();expect(comandos).toEqual([]);
+});
+test('P05 cancela com teclado e mantém acessibilidade com fonte ampliada',async({page})=>{
+  const {comandos}=await cenarioCopiaP05(page);
+  await page.getByRole('button',{name:'Duplicar pergunta',exact:true}).focus();await page.keyboard.press('Enter');
+  const d=page.getByRole('dialog',{name:'Duplicar pergunta salva'});await expect(d).toBeVisible();
+  await page.evaluate(()=>{document.documentElement.style.fontSize='200%';});
+  expect(await d.evaluate(el=>el.scrollWidth<=el.clientWidth+1)).toBe(true);
+  expect((await new AxeBuilder({page}).include('[role="dialog"]').analyze()).violations).toEqual([]);
+  await d.screenshot({path:test.info().outputPath('p05-modal.png')});
+  await page.keyboard.press('Escape');await expect(d).toHaveCount(0);
+  await expect(page.getByRole('button',{name:'Duplicar pergunta',exact:true})).toBeFocused();expect(comandos).toEqual([]);
+});
+test('P05 conflito preserva origem e exige conferir lista sem retry automático',async({page})=>{
+  const {comandos}=await cenarioCopiaP05(page,true);
+  await page.getByRole('button',{name:'Duplicar pergunta',exact:true}).click();await page.getByRole('button',{name:'Confirmar cópia',exact:true}).click();
+  await expect(page.getByRole('dialog',{name:'Duplicar pergunta salva'})).toHaveCount(0);
+  await expect(page.getByLabel('Enunciado',{exact:true})).toHaveValue('Pergunta salva');
+  await expect(page.getByRole('button',{name:'Duplicar pergunta',exact:true})).toBeDisabled();
+  await page.getByRole('button',{name:'Conferir lista de perguntas',exact:true}).click();
+  await expect(page.getByRole('button',{name:'Duplicar pergunta',exact:true})).toBeEnabled();expect(comandos).toHaveLength(1);
+  await expect(page.getByText('Lista atualizada. Confira se a cópia já está presente antes de duplicar novamente.',{exact:true})).toBeVisible();
+});
+
+test('P05 também bloqueia alterações do formulário',async({page})=>{
+  const {comandos}=await cenarioCopiaP05(page);
+  await page.getByRole('tab',{name:'Formulários',exact:true}).click();await page.getByLabel('Título',{exact:true}).fill('Título pendente');
+  await page.getByRole('tab',{name:'Editor',exact:true}).click();await expect(page.getByRole('button',{name:'Duplicar pergunta',exact:true})).toBeDisabled();
+  expect(comandos).toEqual([]);
+});
+
+test('P05 ignora prévia tardia após troca de formulário',async({page})=>{
+  const {comandos,itens}=await cenarioCopiaP05(page);
+  let liberar;const espera=new Promise(r=>{liberar=r;});let iniciou=false;
+  await page.route('**/api/questionarios/q-1/perguntas/p-1/copia',async r=>{iniciou=true;await espera;await r.fulfill({json:{revisao:'a'.repeat(64),definicao:{...itens[0],visivelBiblioteca:false}}});});
+  await page.getByRole('button',{name:'Duplicar pergunta',exact:true}).click();await expect.poll(()=>iniciou).toBe(true);
+  await page.getByRole('tab',{name:'Formulários',exact:true}).click();await page.getByLabel('Selecionar',{exact:true}).selectOption('q-2');
+  const recebeu=page.waitForResponse(r=>r.url().endsWith('/copia'));liberar();await recebeu;
+  await page.getByRole('tab',{name:'Editor',exact:true}).click();await expect(page.getByRole('dialog',{name:'Duplicar pergunta salva'})).toHaveCount(0);
+  expect(comandos).toEqual([]);
+});
+
+test('P05 não envia duas confirmações enquanto aguarda ACK e não permite cancelamento pós-confirmação',async({page})=>{
+  const {comandos,itens}=await cenarioCopiaP05(page);
+  let liberar;const espera=new Promise(r=>{liberar=r;});
+  await page.route('**/api/questionarios/q-1/perguntas/p-1/duplicar',async r=>{
+    comandos.push(r.request().postDataJSON());await espera;
+    itens.splice(1,0,{...itens[0],id:'p-copia',ordem:2,chaveClinica:null,visivelBiblioteca:false});itens[2].ordem=3;
+    await r.fulfill({status:201,json:{perguntaId:'p-copia',versaoQuestionario:2}});
+  });
+  await page.getByRole('button',{name:'Duplicar pergunta',exact:true}).click();await page.getByRole('button',{name:'Confirmar cópia',exact:true}).click();
+  await expect(page.getByRole('button',{name:'Confirmando…',exact:true})).toBeDisabled();
+  await page.keyboard.press('Escape');await expect(page.getByRole('dialog',{name:'Duplicar pergunta salva'})).toBeVisible();
+  expect(comandos).toHaveLength(1);liberar();
+  await expect(page.getByRole('dialog',{name:'Duplicar pergunta salva'})).toHaveCount(0);expect(comandos).toHaveLength(1);
+});
+
+test('P05 falha de leitura após ACK não cria cópia local nem repete POST',async({page})=>{
+  const {comandos,itens}=await cenarioCopiaP05(page);let falhou=false;
+  await page.route('**/api/questionarios/q-1/perguntas',r=>{
+    if(comandos.length && !falhou){falhou=true;return r.fulfill({status:500,json:{mensagem:'Falha sintética'}});}
+    return r.fulfill({json:itens});
+  });
+  await page.getByRole('button',{name:'Duplicar pergunta',exact:true}).click();await page.getByRole('button',{name:'Confirmar cópia',exact:true}).click();
+  await expect(page.getByRole('button',{name:'Conferir lista de perguntas',exact:true})).toBeVisible();
+  await expect(page.getByRole('button',{name:'Reordenar pergunta',exact:true})).toHaveCount(2);
+  await page.getByLabel('Enunciado',{exact:true}).fill('Edição preservada após falha');
+  await expect(page.getByRole('button',{name:'Conferir lista de perguntas',exact:true})).toBeDisabled();
+  expect(comandos).toHaveLength(1);
+});
+
+test('P05 mantém a ordem adjacente e a edição da cópia não altera a origem',async({page})=>{
+  await cenarioCopiaP05(page);await page.getByRole('button',{name:'Duplicar pergunta',exact:true}).click();await page.getByRole('button',{name:'Confirmar cópia',exact:true}).click();
+  await expect(page.getByLabel('Enunciado',{exact:true})).toBeFocused();
+  const lista=page.getByRole('list').filter({has:page.getByRole('button',{name:/Pergunta seguinte/})});
+  await expect(lista.locator('li')).toHaveCount(3);
+  await expect(lista.locator('li').nth(0)).toContainText('Pergunta salva');await expect(lista.locator('li').nth(1)).toContainText('Pergunta salva');await expect(lista.locator('li').nth(2)).toContainText('Pergunta seguinte');
+  await page.getByLabel('Enunciado',{exact:true}).fill('Somente a cópia');
+  await page.getByRole('button',{name:/Pergunta salva/}).first().click();
+  await expect(page.getByLabel('Enunciado',{exact:true})).toHaveValue('Pergunta salva');await expect(page.getByLabel('Chave clínica',{exact:true})).toHaveValue('original');
+});
+
+test('P05 espera ACK de salvar pergunta antes de liberar a cópia',async({page})=>{
+  const {comandos,itens}=await cenarioCopiaP05(page);let liberar;const espera=new Promise(r=>{liberar=r;});let salvamento=false;
+  await page.route('**/api/questionarios/q-1/perguntas/p-1',async r=>{
+    salvamento=true;await espera;Object.assign(itens[0],r.request().postDataJSON());await r.fulfill({json:itens[0]});
+  });
+  await page.getByLabel('Enunciado',{exact:true}).fill('Edição para salvar');await page.getByRole('button',{name:'Salvar pergunta',exact:true}).click();
+  await expect.poll(()=>salvamento).toBe(true);await expect(page.getByRole('button',{name:'Duplicar pergunta',exact:true})).toBeDisabled();expect(comandos).toEqual([]);
+  liberar();await expect(page.getByRole('button',{name:'Duplicar pergunta',exact:true})).toBeEnabled();
+});
+
+test('P05 não disponibiliza duplicação em publicados ou arquivados',async({page})=>{
+  const {comandos}=await cenarioCopiaP05(page);
+  for(const status of ['publicado','arquivado']){
+    await page.route('**/api/questionarios?*',r=>r.fulfill({json:{itens:questionarios.map(q=>q.id==='q-1'?{...q,status}:q),total:2}}));
+    await page.reload();await page.getByRole('tab',{name:'Editor',exact:true}).click();
+    await expect(page.getByRole('button',{name:'Duplicar pergunta',exact:true})).toBeDisabled();
+    await expect(page.getByText('Duplique perguntas somente em um rascunho.',{exact:true})).toBeVisible();
+  }
+  expect(comandos).toEqual([]);
+});
+
+test('P05 salvar B não apaga a pendência nem a edição de A',async({page})=>{
+  const {comandos,itens}=await cenarioCopiaP05(page);
+  await page.route('**/api/questionarios/q-1/perguntas/p-2',r=>r.fulfill({json:itens[1]}));
+  await page.getByLabel('Enunciado',{exact:true}).fill('A ainda não salva');
+  await page.getByRole('button',{name:/Pergunta seguinte/}).click();
+  await page.getByRole('button',{name:'Salvar pergunta',exact:true}).click();
+  await expect(page.getByText('Pergunta salva.',{exact:true})).toBeVisible();
+  await expect(page.getByRole('button',{name:'Duplicar pergunta',exact:true})).toBeDisabled();
+  await page.getByRole('button',{name:/A ainda não salva/}).click();await expect(page.getByLabel('Enunciado',{exact:true})).toHaveValue('A ainda não salva');
+  expect(comandos).toEqual([]);
+});
+
+test('P05 cópia aguarda ACK da reordenação por teclado',async({page})=>{
+  const {comandos,itens}=await cenarioCopiaP05(page);let liberar;const espera=new Promise(r=>{liberar=r;});let iniciou=false;
+  await page.route('**/api/questionarios/q-1/perguntas/ordem',async r=>{
+    iniciou=true;const ordem=r.request().postDataJSON().perguntas;await espera;
+    await r.fulfill({json:ordem.map(o=>({...itens.find(i=>i.id===o.id),ordem:o.ordem}))});
+  });
+  await page.getByRole('button',{name:'Reordenar pergunta',exact:true}).first().focus();
+  await page.keyboard.press('Space');
+  await expect(page.getByRole('button',{name:'Reordenar pergunta',exact:true}).first()).toHaveAttribute('aria-pressed','true');
+  await expect(page.getByRole('status').filter({hasText:'was moved over droppable area p-1'})).toBeAttached();
+  await page.keyboard.press('ArrowDown');
+  await expect(page.getByRole('status').filter({hasText:'p-2'})).toBeAttached();
+  await page.keyboard.press('Space');
+  await expect.poll(()=>iniciou).toBe(true);
+  try{await expect(page.getByRole('button',{name:'Duplicar pergunta',exact:true})).toBeDisabled();expect(comandos).toEqual([]);}finally{liberar();}
+  await expect(page.getByRole('button',{name:'Duplicar pergunta',exact:true})).toBeEnabled();
+});
+
+test('P05 ACK tardio não substitui outro contexto nem cria sucesso falso',async({page})=>{
+  const {comandos,itens}=await cenarioCopiaP05(page);const erros=[];page.on('pageerror',e=>erros.push(e.message));
+  let liberar;const espera=new Promise(r=>{liberar=r;});let iniciou=false;
+  await page.route('**/api/questionarios/q-1/perguntas/p-1/duplicar',async r=>{
+    iniciou=true;comandos.push(r.request().postDataJSON());await espera;
+    itens.splice(1,0,{...itens[0],id:'p-copia',ordem:2,chaveClinica:null,visivelBiblioteca:false});
+    await r.fulfill({status:201,json:{perguntaId:'p-copia',versaoQuestionario:2}});
+  });
+  await page.getByRole('button',{name:'Duplicar pergunta',exact:true}).click();await page.getByRole('button',{name:'Confirmar cópia',exact:true}).click();await expect.poll(()=>iniciou).toBe(true);
+  // Ativação DOM controlada simula mudança externa/assistiva enquanto o ponteiro está contido pelo modal.
+  await page.getByRole('tab',{name:'Formulários',exact:true}).evaluate(el=>el.click());
+  await page.getByLabel('Selecionar',{exact:true}).selectOption('q-2');await expect(page.getByLabel('Título',{exact:true})).toHaveValue('Avaliação mensal');
+  const releu=page.waitForResponse(r=>r.url().endsWith('/q-1/perguntas'));liberar();await releu;
+  await page.getByRole('tab',{name:'Editor',exact:true}).click();
+  await expect(page.getByRole('button',{name:'Reordenar pergunta',exact:true})).toHaveCount(0);
+  await expect(page.getByText('Pergunta duplicada. A cópia está selecionada para edição.',{exact:true})).toHaveCount(0);expect(comandos).toHaveLength(1);expect(erros).toEqual([]);
+});
+
+test('P05 conteúdo extenso preserva leitura e alcance das ações com fonte200',async({page})=>{
+  const {itens,comandos}=await cenarioCopiaP05(page);
+  itens[0].tipo='multipla_escolha';itens[0].enunciado='EnunciadoSemEspaços'.repeat(35);itens[0].configuracao={multipla:false};
+  itens[0].opcoes=[{rotulo:'AlternativaExtensa'.repeat(35),valor:'a',ordem:1},{rotulo:'Outra alternativa',valor:'b',ordem:2}];
+  await page.getByRole('button',{name:'Duplicar pergunta',exact:true}).click();
+  const d=page.getByRole('dialog',{name:'Duplicar pergunta salva'});await expect(d).toBeVisible();
+  await page.evaluate(()=>{document.documentElement.style.fontSize='200%';});
+  expect(await d.evaluate(el=>el.scrollWidth<=el.clientWidth+1)).toBe(true);
+  await d.getByRole('button',{name:'Confirmar cópia',exact:true}).scrollIntoViewIfNeeded();await expect(d.getByRole('button',{name:'Confirmar cópia',exact:true})).toBeInViewport();
+  await d.getByRole('button',{name:'Cancelar',exact:true}).click();await expect(d).toHaveCount(0);expect(comandos).toEqual([]);
+});
+
+test('P05 leitura antiga do seletor não remove cópia após A-B-A',async({page})=>{
+  await cenarioCopiaP05(page);let liberar;const espera=new Promise(r=>{liberar=r;});let iniciou=false;
+  await page.route('**/api/questionarios/q-2/perguntas',async r=>{iniciou=true;await espera;await r.fulfill({json:[]});});
+  await page.getByRole('tab',{name:'Formulários',exact:true}).click();await page.getByLabel('Selecionar',{exact:true}).selectOption('q-2');await expect.poll(()=>iniciou).toBe(true);
+  const leuA=page.waitForResponse(r=>r.url().endsWith('/q-1/perguntas'));
+  await page.getByLabel('Selecionar',{exact:true}).selectOption('q-1');await (await leuA).finished();
+  await page.getByRole('tab',{name:'Editor',exact:true}).click();await page.getByRole('button',{name:'Duplicar pergunta',exact:true}).click();await page.getByRole('button',{name:'Confirmar cópia',exact:true}).click();
+  await expect(page.getByLabel('Enunciado',{exact:true})).toBeFocused();
+  const antiga=page.waitForResponse(r=>r.url().endsWith('/q-2/perguntas'));liberar();await (await antiga).finished();
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+  await expect(page.getByRole('button',{name:'Reordenar pergunta',exact:true})).toHaveCount(3);
+  await expect(page.getByLabel('Enunciado',{exact:true})).toHaveValue('Pergunta salva');
+});
