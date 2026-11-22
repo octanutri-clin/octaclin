@@ -1,0 +1,42 @@
+{
+  "etapas": [
+    "A",
+    "B",
+    "C"
+  ],
+  "commit_codigo": "1b3dd45fc90eca9043c7f14dfd4b61a8277aca00",
+  "base": "f5df797af9f4cfce42200bd2245d24dab20d00e3",
+  "modalidade": "subagente com papel explicito; sem selecao nativa TOML comprovada",
+  "instancia": "/root/qst_p02_ux",
+  "inicio_fim": "timestamps nao capturados; trilha da sessao registra chamada A e followup B/C",
+  "registro_utc": "2026-11-21T11:43:27.613985+00:00",
+  "papel_fonte": ".codex/agents/octaclin-nutricionista-ux.toml",
+  "papel_sha256": "6259b40a98e2c49053cbc6adbc0c59d0312b14e191b228ab73de2f2eac53af6d",
+  "artefatos_sha256": {
+    "nutricionista.md": "3831e718c6777d68de98774fe547baea89813736dc81a28e02764c596dff9768",
+    "brief.md": "70b934bdc62a5a189a439fa86aca6c06a4e1d2538648ff6f968a1563feff03dd",
+    "desktop-leitura.png": "974d8e7c140e5ba6e391212b00b9108f95c7851cc7d186057dc8335e47d54f99",
+    "paciente.md": "013b33c1ec59030605a5f14b7dff9001498bbc0ec3817312bcb0081d050b394f",
+    "consolidado.md": "ef3e4bf619b506593466f7113b7dce9b44db483f6189cfe22cb7bdae7fb86fc6",
+    "mobile-leitura.png": "44e1c483e27fcaae89d1482a02018674c97124c866d233e56ce83c943ac0e85c"
+  },
+  "codigo_sha256": {
+    "octaclin-web/components/questionarios/area-respostas.tsx": "0719bc45bda211f521055899896f3e05b84245bfea671993f3a27c9adc34a031",
+    "octaclin-web/tests/visual/questionarios-respostas.spec.mjs": "2180833726e6cf0ee97017cac46e00871ec3fbecafef194696729ff567d2a867"
+  },
+  "ferramentas_persona_observadas": [],
+  "revisor_tecnico": "/root/qst_p02_tecnica; estatico sem testes proprios",
+  "paciente": "N/A justificado; nao invocado",
+  "resultado_coordenador": {
+    "browser_pass": 34,
+    "skipped": 0,
+    "novos": 12,
+    "regressoes": 22
+  },
+  "limites": [
+    "sinteses editoriais; hashes nao identificam prompt integral",
+    "persona sem interacao ou inspeção independente das imagens",
+    "sem usuarios reais, leitor de tela humano ou R4",
+    "dependencias locais preexistentes anteriores ao lockfile; CI pendente"
+  ]
+}
