@@ -62,7 +62,7 @@ Checkpoint documental antes do push; resultados posteriores são registrados na 
 | Regressão browser | 66 PASS desktop/mobile, incluindo regressões #570/#572 |
 | CSV e acessibilidade final | 8 PASS dirigidos;68 cenários únicos no conjunto das execuções, sem somar repetições. Teclado, fonte200%, axe no grupo, erro de acesso, vazio, busca/paciente e descarte de download tardio |
 | Typechecks/lint | Backend/Web Node22.21.1 e lint Web dirigido PASS nas execuções registradas; build final Next webpack/TypeScript integrado PASS. Rechecagem geral final do backend também PASS |
-| Agregado authz | Launcher pnpm11.19/Node24 tentou reconciliar módulos e abortou sem reinstalação. Os28 scripts canônicos estão sendo executados diretamente com Node22, sem mudar sua implementação; resultado agregado pendente |
+| Agregado authz | Launcher pnpm11.19/Node24 tentou reconciliar módulos e abortou sem reinstalação. Os28 scripts canônicos foram executados diretamente com Node22, sem mudar sua implementação:28 PASS,0 falhas |
 
 Schema de PostgreSQL é **sintético explícito**, não ensaio de migrations. Container
 novo descartável; nenhuma conexão staging/produção. A primeira execução tinha um
@@ -95,6 +95,12 @@ QPRO-03 separada. Não prometer reexportação de uma análise histórica imutá
 o arquivo reflete os registros autorizados no momento da solicitação.
 
 Código validado por camadas: backend `722036ad028e3751ab794b574f719f74d7f40382`; conjunto backend+Web `96a49b735306fc1047f1b1d1e0fb0c0bddca56e9`.
+
+## Correção do gate de auditoria
+
+O CI do HEAD documental `474f8b2c` falhou em `test:redacao-auditoria`: a nova chave `escopo` não estava coberta pela política. RED local:23 PASS/1 FAIL. Corrigido usando `{ tipo: 'csv_filtrado', linhas }`, chave operacional já permitida e valor literal. Nenhuma alteração no redator, allowlist, severidade ou workflow. Gate24/24 e HTTP24/24 PASS após correção; R4 estática pontual confirmou ausência de nova exposição. O novo HEAD deve ser validado pelo CI; a falha do anterior é histórica, não um resultado verde.
+
+Aprendizado: ao criar metadados de auditoria, conferir o vocabulário e executar o gate de redação antes do push, além do teste HTTP.
 
 ## Handoff e gates
 

@@ -55,7 +55,7 @@ describe('P05 contrato HTTP da cópia', () => {
     expect(resposta.headers.get('cache-control')).toContain('no-store');
     expect(await resposta.text()).toContain('multilinha');
     expect(exportarRespostasCsv).toHaveBeenCalledWith(id, id, expect.objectContaining({ tenantId: id }), [origem]);
-    expect(registrar).toHaveBeenCalledWith(expect.objectContaining({ metadados: { escopo: 'filtrados', linhas: 1 } }));
+    expect(registrar).toHaveBeenCalledWith(expect.objectContaining({ metadados: { tipo: 'csv_filtrado', linhas: 1 } }));
   });
   it.each([{ respostaIds: [] }, { respostaIds: ['incorreto'] }, { respostaIds: [origem, origem] }, { respostaIds: [origem], tenantId: id }])('exportação rejeita payload inválido %#', async body => {
     const resposta = await fetch(url + `/questionarios/${id}/respostas/exportar.csv`, {

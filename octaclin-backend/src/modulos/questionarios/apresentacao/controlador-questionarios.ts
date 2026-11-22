@@ -370,7 +370,7 @@ export class ControladorQuestionarios {
       tenantId: usuario.tenantId, usuarioId: usuario.usuarioId,
       acao: 'questionarios.respostas.exportar_csv', recursoTipo: 'questionario', recursoId: id,
       ip: requisicao.ip, userAgent: requisicao.headers['user-agent'],
-      metadados: { escopo: 'filtrados', linhas: contarLinhasCsv(csv) }
+      metadados: { tipo: 'csv_filtrado', linhas: contarLinhasCsv(csv) }
     });
     return csv;
   }
