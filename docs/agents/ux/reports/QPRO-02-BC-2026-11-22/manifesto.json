@@ -1,0 +1,18 @@
+{
+  "base": "0023c12a08f7108eb0272090b8476018b681a1b6",
+  "etapas": [
+    "B",
+    "C"
+  ],
+  "modo": "runtime, papel fornecido por prompt, followup da instância A/D; não seleção nativa",
+  "agente": "/root/qst_auditoria_nutri",
+  "inicio_utc": null,
+  "fim_utc": null,
+  "ferramentas_revisor": [],
+  "paciente": "N/A justificado no relatório",
+  "resultado": "favorável no escopo relatado, não visual nem R4; síntese editorial",
+  "hashes_sha256": {
+    "docs/agents/ux/reports/QPRO-02-BC-2026-11-22/consolidado.md": "cb7c263b88f9db068ce406cea7afd52421b04d3b2297e25ecafacc3c67336e7e",
+    ".codex/agents/octaclin-nutricionista-ux.toml": "6259b40a98e2c49053cbc6adbc0c59d0312b14e191b228ab73de2f2eac53af6d"
+  }
+}
