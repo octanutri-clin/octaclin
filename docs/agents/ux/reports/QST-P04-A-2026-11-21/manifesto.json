@@ -1,0 +1,24 @@
+{
+  "etapa": "A",
+  "base": "9adc6d2e0b953e5bd5a0e15c9449a416985cc076",
+  "instancia": "/root/qst_p04_ux_a",
+  "modalidade": "subagente com papel explicito",
+  "fork_turns": "none",
+  "papel_fonte": ".codex/agents/octaclin-nutricionista-ux.toml",
+  "papel_sha256": "6259b40a98e2c49053cbc6adbc0c59d0312b14e191b228ab73de2f2eac53af6d",
+  "registro_utc": "2026-11-21T11:55:57.991230+00:00",
+  "inicio_fim": "nao capturados; chamada e retorno registrados na trilha da sessao",
+  "artefatos_sha256": {
+    "nutricionista.md": "ef07c3080ae56fc0e3a2af8a7904997274cf9f407c73b6d0767b4c8189190fd6",
+    "brief.md": "78a5cfd2dc046b961feabb893fdacf067d6603ca602820763a18b2508365a8ea",
+    "paciente.md": "fbf38193a34c165e59b2a6a65f05b5c68aef414a0912e43aa3380b854f31e2b7",
+    "consolidado.md": "a8c96ce9c790e6347be479a2b835cf4d1e5dfc96fd9f1a63970fd42f9acc1abe"
+  },
+  "ferramentas_revisor_observadas": [],
+  "paciente": "NA justificado, sem instancia",
+  "limites": [
+    "brief/retorno sao sinteses editoriais; hashes nao sao do prompt integral",
+    "somente planejamento; sem visual, usuario real ou R4",
+    "B/C nao executadas; implementacao depende de aprovacao"
+  ]
+}

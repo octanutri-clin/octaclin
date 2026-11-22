@@ -8,7 +8,7 @@ import { Cartao, CartaoCabecalho, CartaoTitulo } from '@/components/ui/cartao';
 import { AreaTexto, Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import { TipoPergunta } from '@/lib/questionarios-api';
 import { PerguntaOrdenavel } from './pergunta-ordenavel';
-import { PreviewQuestionarioPaciente } from './preview-questionario-paciente';
+import { PreviaResponsivaQuestionario } from './previa-responsiva-questionario';
 import {
   booleanoConfig,
   listaTextoConfig,
@@ -396,7 +396,7 @@ export function AreaEditor({ workspace }: { workspace: WorkspaceQuestionarios })
       </Cartao>
 
       <div className="xl:sticky xl:top-4 xl:self-start">
-        <PreviewQuestionarioPaciente titulo={titulo} descricao={descricao} perguntas={perguntas} />
+        <PreviaResponsivaQuestionario key={questionarioAtual?.id ?? 'novo'} titulo={titulo} descricao={descricao} perguntas={perguntas} />
       </div>
     </div>
   );
