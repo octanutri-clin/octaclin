@@ -104,6 +104,31 @@ Aprendizado: ao criar metadados de auditoria, conferir o vocabulário e executar
 
 ## Handoff e gates
 
+Checkpoint de retomada em22/11/2026: worktree limpa no HEAD remoto `112ca27c`
+antes da alteração; branch/PR preservadas. O executor precisou concluir sua
+inicialização; nenhuma alteração foi feita enquanto estava indisponível.
+
+O CI `45033974877` desse HEAD confirmou Backend, Web, Mobile, governança,
+CodeQL, Semgrep, Trivy e Dependency Review aprovados. O smoke falhou na etapa
+**Linguagem e microcopy**, e o PR Gate falhou por dependência. Não classificar
+esse run global como aprovado.
+
+A reprodução local encontrou uma única inconsistência no marcador sintético
+usado no teste de resposta negada, que continha “NAO” sem acento. Corrigido
+para “NÃO” tanto no body simulado quanto na asserção de não exposição; não
+trocar apenas a expectativa e tornar o teste inócuo. Nenhuma mudança em
+comportamento de produção, regras do verificador, allowlist ou workflow.
+
+RED: verificador de linguagem reprovou a ocorrência no arquivo de teste.
+GREEN: verificador de interface aprovado;8/8 testes da biblioteca de linguagem;
+2/2 casos Playwright dirigidos em desktop/mobile. São reexecuções dirigidas,
+não acrescentar dois casos à contagem histórica de68. As provas anteriores de
+banco/autorização continuam evidências históricas do código não alterado,
+sem afirmar nova execução dessas suítes ou nova R4 nesta correção editorial.
+
+Próxima ação exata: verificar os checks e comentários no novo HEAD após esse
+push corretivo, mantendo Draft. Sem nova PR, merge, deploy ou migrations.
+
 Não declarar Ready for Review enquanto CI do HEAD exato, scanners e comentários
 estiverem pendentes. Publicar uma vez após validações locais, em PR Draft própria.
 Sem merge/deploy/migrations externas. O CI pós-merge #572 na main é evidência

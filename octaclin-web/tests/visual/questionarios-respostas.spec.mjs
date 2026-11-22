@@ -315,10 +315,10 @@ test.describe('QST01 — organização da leitura de respostas', () => {
     await preparar(page);
     let downloads = 0;
     page.on('download', () => downloads++);
-    await page.route('**/api/questionarios/q-1/respostas/exportar.csv', route => route.fulfill({ status: 404, body: 'DETALHE_INTERNO_NAO_MOSTRAR' }));
+    await page.route('**/api/questionarios/q-1/respostas/exportar.csv', route => route.fulfill({ status: 404, body: 'DETALHE_INTERNO_NÃO_MOSTRAR' }));
     await page.getByRole('button', { name: 'Exportar resultados filtrados', exact: true }).click();
     await expect(page.getByText('Não foi possível exportar. Atualize as respostas e tente novamente.')).toBeVisible();
-    await expect(page.getByText('DETALHE_INTERNO_NAO_MOSTRAR')).toHaveCount(0);
+    await expect(page.getByText('DETALHE_INTERNO_NÃO_MOSTRAR')).toHaveCount(0);
     expect(downloads).toBe(0);
   });
   test('QPRO-01 exportação acessível com texto ampliado e sem overflow', async ({ page }) => {
