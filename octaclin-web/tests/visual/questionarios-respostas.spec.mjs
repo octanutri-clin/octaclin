@@ -78,6 +78,219 @@ function envio(page, nome) {
   return page.locator('article').filter({ has: page.getByText(nome, { exact: true }) });
 }
 
+function leituraSintetica(pacienteId) {
+  const selecionadas = respostas.filter(resposta => resposta.pacienteId === pacienteId);
+  return {
+    questionarioId: 'q-1', pacientes: [], perguntas: [],
+    resumo: { totalRespostas: selecionadas.length, totalPacientes: selecionadas.length, totalPerguntas: 1, mediaRespostasPorEnvio: 1 },
+    respostas: selecionadas
+  };
+}
+
+// O servidor sintético controla a ordem da rede; a UI e o workspace são reais.
+async function leituraAdiada(page, erro = false) {
+  let recebeu;
+  const recebida = new Promise(resolve => { recebeu = resolve; });
+  let liberar;
+  const liberada = new Promise(resolve => { liberar = resolve; });
+  await page.route('**/api/questionarios/q-1/respostas/leitura-clinica*', async route => {
+    const paciente = new URL(route.request().url()).searchParams.get('pacienteId');
+    if (paciente === 'paciente-a') { recebeu(); await liberada; }
+    await route.fulfill({
+      status: paciente === 'paciente-a' && erro ? 500 : 200,
+      contentType: 'application/json',
+      body: JSON.stringify(paciente === 'paciente-a' && erro ? { mensagem: 'Falha sintética antiga.' } : leituraSintetica(paciente))
+    });
+  });
+  return { recebida, liberar };
+}
+
+async function entregarRespostaAntiga(page, liberar, trecho) {
+  const resposta = page.waitForResponse(r => r.url().includes(trecho));
+  liberar();
+  await (await resposta).finished();
+  // Esperar os frames da aplicação após a rede, sem timeout arbitrário.
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+}
+
+test.describe('QPRO-02 — contexto de leitura', () => {
+  test('resposta antiga de paciente A não substitui leitura já entregue de B', async ({ page }) => {
+    await preparar(page);
+    const adiada = await leituraAdiada(page);
+    await page.locator('#filtro-paciente-respostas').selectOption('paciente-a');
+    await adiada.recebida;
+    await page.locator('#filtro-paciente-respostas').selectOption('paciente-b');
+    await expect(page.getByText('Preparei o jantar', { exact: true })).toBeVisible();
+    await entregarRespostaAntiga(page, adiada.liberar, 'pacienteId=paciente-a');
+    await expect(page.getByText('Preparei o jantar', { exact: true })).toBeVisible();
+    await expect(page.getByText('Organizei o almoço', { exact: true })).toHaveCount(0);
+    await expect(page.locator('#filtro-paciente-respostas')).toHaveValue('paciente-b');
+  });
+
+  test('erro tardio de A não aparece sobre consulta bem-sucedida de B', async ({ page }) => {
+    await preparar(page);
+    const adiada = await leituraAdiada(page, true);
+    await page.locator('#filtro-paciente-respostas').selectOption('paciente-a');
+    await adiada.recebida;
+    await page.locator('#filtro-paciente-respostas').selectOption('paciente-b');
+    await expect(page.getByText('Preparei o jantar', { exact: true })).toBeVisible();
+    await entregarRespostaAntiga(page, adiada.liberar, 'pacienteId=paciente-a');
+    // Next mantém um anunciador vazio com role=alert, fora da aplicação.
+    await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toHaveCount(0);
+  });
+
+  test('matriz pendente não aparece sob novos filtros sem nova confirmação', async ({ page }) => {
+    await preparar(page);
+    let recebeu;
+    const recebida = new Promise(resolve => { recebeu = resolve; });
+    let liberar;
+    const liberada = new Promise(resolve => { liberar = resolve; });
+    await page.route('**/api/questionarios/matriz-longitudinal*', async route => {
+      recebeu(); await liberada;
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+        filtros: { pacienteId: 'paciente-a' }, resumo: { totalRespostas: 1, totalIndicadores: 1 },
+        indicadores: [{ pacienteId: 'paciente-a', questionarioId: 'q-1', perguntaId: 'metrica-1',
+          questionarioTitulo: 'Questionário sintético 1', enunciado: 'Indicador exclusivo de A', tipo: 'metrica',
+          atual: { valor: 7, finalizadoEm: '2026-11-20T12:00:00.000Z' }, historico: [] }]
+      }) });
+    });
+    await page.locator('#matriz-paciente').selectOption('paciente-a');
+    await page.getByRole('button', { name: 'Atualizar matriz', exact: true }).click();
+    await recebida;
+    await page.locator('#matriz-paciente').selectOption('paciente-b');
+    await entregarRespostaAntiga(page, liberar, '/matriz-longitudinal');
+    await expect(page.getByText('Indicador exclusivo de A', { exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Atualizar matriz', exact: true })).toBeEnabled();
+  });
+
+  test('fim de A não encerra o carregamento ainda pendente de B', async ({ page }) => {
+    await preparar(page);
+    const controles = {};
+    for (const paciente of ['paciente-a', 'paciente-b']) {
+      let recebeu, liberar;
+      const recebida = new Promise(resolve => { recebeu = resolve; });
+      const liberada = new Promise(resolve => { liberar = resolve; });
+      controles[paciente] = { recebeu, recebida, liberar, liberada };
+    }
+    await page.route('**/api/questionarios/q-1/respostas/leitura-clinica*', async route => {
+      const paciente = new URL(route.request().url()).searchParams.get('pacienteId');
+      const controle = controles[paciente];
+      controle.recebeu(); await controle.liberada;
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(leituraSintetica(paciente)) });
+    });
+    await page.locator('#filtro-paciente-respostas').selectOption('paciente-a');
+    await controles['paciente-a'].recebida;
+    await page.locator('#filtro-paciente-respostas').selectOption('paciente-b');
+    await controles['paciente-b'].recebida;
+    await entregarRespostaAntiga(page, controles['paciente-a'].liberar, 'pacienteId=paciente-a');
+    await expect(page.getByRole('button', { name: 'Atualizando respostas', exact: true })).toBeDisabled();
+    await expect(page.getByText('Organizei o almoço', { exact: true })).toHaveCount(0);
+    await entregarRespostaAntiga(page, controles['paciente-b'].liberar, 'pacienteId=paciente-b');
+    await expect(page.getByText('Preparei o jantar', { exact: true })).toBeVisible();
+  });
+
+  test('retorno A-B-A não aceita resultado da primeira passagem por A', async ({ page }) => {
+    await preparar(page);
+    let recebeu, liberar;
+    const recebida = new Promise(resolve => { recebeu = resolve; });
+    const liberada = new Promise(resolve => { liberar = resolve; });
+    let primeira = true;
+    await page.route('**/api/questionarios/q-1/respostas/leitura-clinica*', async route => {
+      const paciente = new URL(route.request().url()).searchParams.get('pacienteId');
+      const leitura = leituraSintetica(paciente);
+      if (paciente === 'paciente-a') {
+        if (primeira) { primeira = false; recebeu(); await liberada; }
+        else leitura.respostas = [{ ...respostas[0], respostas: [{ ...respostas[0].respostas[0], valor: 'Leitura atualizada de A' }] }];
+      }
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(leitura) });
+    });
+    await page.locator('#filtro-paciente-respostas').selectOption('paciente-a');
+    await recebida;
+    await page.locator('#filtro-paciente-respostas').selectOption('paciente-b');
+    await expect(page.getByText('Preparei o jantar', { exact: true })).toBeVisible();
+    await page.locator('#filtro-paciente-respostas').selectOption('paciente-a');
+    await expect(page.getByText('Leitura atualizada de A', { exact: true })).toBeVisible();
+    await entregarRespostaAntiga(page, liberar, 'pacienteId=paciente-a');
+    await expect(page.getByText('Leitura atualizada de A', { exact: true })).toBeVisible();
+    await expect(page.getByText('Organizei o almoço', { exact: true })).toHaveCount(0);
+  });
+
+  for (const filtro of [
+    ['#matriz-paciente', 'paciente-b'], ['#matriz-questionario', 'q-2'],
+    ['#matriz-categoria', 'categoria-1'], ['#matriz-inicio', '2026-11-01'], ['#matriz-fim', '2026-11-22']
+  ]) {
+    test(`alterar ${filtro[0]} remove resultado da matriz até nova consulta`, async ({ page }) => {
+      await preparar(page);
+      await page.route('**/api/questionarios/matriz-longitudinal*', route => route.fulfill({
+        status: 200, contentType: 'application/json', body: JSON.stringify({
+          filtros: {}, resumo: { totalRespostas: 0, totalIndicadores: 0 }, indicadores: []
+        })
+      }));
+      await page.getByRole('button', { name: 'Atualizar matriz', exact: true }).click();
+      await expect(page.getByText('0 indicadores comparaveis em 0 respostas.', { exact: true })).toBeVisible();
+      if (filtro[0].includes('inicio') || filtro[0].includes('fim')) await page.locator(filtro[0]).fill(filtro[1]);
+      else await page.locator(filtro[0]).selectOption(filtro[1]);
+      await expect(page.getByText('0 indicadores comparaveis em 0 respostas.', { exact: true })).toHaveCount(0);
+      await expect(page.getByText('Escolha os filtros e atualize para comparar as duas respostas mais recentes de cada indicador.')).toBeVisible();
+    });
+  }
+
+  test('QPRO-02 adicional — troca de questionário descarta leitura pendente da origem', async ({ page }) => {
+    await preparar(page);
+    const adiada = await leituraAdiada(page);
+    await page.locator('#filtro-paciente-respostas').selectOption('paciente-a');
+    await adiada.recebida;
+    await page.route('**/api/questionarios/q-2/respostas/leitura-clinica*', route => route.fulfill({
+      status: 200, contentType: 'application/json', body: JSON.stringify({
+        ...leituraSintetica('paciente-a'), questionarioId: 'q-2',
+        respostas: [{ ...respostas[0], questionarioId: 'q-2',
+          respostas: [{ ...respostas[0].respostas[0], valor: 'Resposta do segundo questionário' }] }]
+      })
+    }));
+    await page.getByRole('tab', { name: 'Formulários', exact: true }).click();
+    await page.getByLabel('Selecionar', { exact: true }).selectOption('q-2');
+    await page.getByRole('tab', { name: 'Respostas', exact: true }).click();
+    await expect(page.getByText('Resposta do segundo questionário', { exact: true })).toBeVisible();
+    await entregarRespostaAntiga(page, adiada.liberar, 'pacienteId=paciente-a');
+    await expect(page.getByText('Resposta do segundo questionário', { exact: true })).toBeVisible();
+    await expect(page.getByText('Organizei o almoço', { exact: true })).toHaveCount(0);
+  });
+
+  for (const erro of [false, true]) {
+    test(`QPRO-02 adicional — matriz antiga com ${erro ? 'erro' : 'sucesso'} não encerra nem substitui nova consulta`, async ({ page }) => {
+      await preparar(page);
+      const controles = {};
+      for (const paciente of ['paciente-a', 'paciente-b']) {
+        let recebeu, liberar;
+        const recebida = new Promise(resolve => { recebeu = resolve; });
+        const liberada = new Promise(resolve => { liberar = resolve; });
+        controles[paciente] = { recebeu, recebida, liberar, liberada };
+      }
+      await page.route('**/api/questionarios/matriz-longitudinal*', async route => {
+        const paciente = new URL(route.request().url()).searchParams.get('pacienteId');
+        const controle = controles[paciente];
+        controle.recebeu(); await controle.liberada;
+        await route.fulfill({ status: paciente === 'paciente-a' && erro ? 500 : 200,
+          contentType: 'application/json', body: JSON.stringify(paciente === 'paciente-a' && erro
+            ? { mensagem: 'Falha sintética da matriz antiga.' }
+            : { filtros: { pacienteId: paciente }, resumo: { totalRespostas: 0, totalIndicadores: 0 }, indicadores: [] })
+        });
+      });
+      await page.locator('#matriz-paciente').selectOption('paciente-a');
+      await page.getByRole('button', { name: 'Atualizar matriz', exact: true }).click();
+      await controles['paciente-a'].recebida;
+      await page.locator('#matriz-paciente').selectOption('paciente-b');
+      await page.getByRole('button', { name: 'Atualizar matriz', exact: true }).click();
+      await controles['paciente-b'].recebida;
+      await entregarRespostaAntiga(page, controles['paciente-a'].liberar, 'pacienteId=paciente-a');
+      await expect(page.getByRole('button', { name: 'Atualizando matriz', exact: true })).toBeDisabled();
+      await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toHaveCount(0);
+      await entregarRespostaAntiga(page, controles['paciente-b'].liberar, 'pacienteId=paciente-b');
+      await expect(page.getByText('0 indicadores comparaveis em 0 respostas.', { exact: true })).toBeVisible();
+    });
+  }
+});
+
 test.describe('QST01 — organização da leitura de respostas', () => {
   test('P02 navega sem ciclo e volta ao gatilho com recolhimentos preservados', async ({ page }) => {
     const requisicoes = await preparar(page);

@@ -166,16 +166,57 @@ export function useWorkspaceQuestionarios() {
   const [erroVersoes, setErroVersoes] = useState<string | null>(null);
   const [historicoVersoesAberto, setHistoricoVersoesAberto] = useState(false);
   const [carregandoRespostas, setCarregandoRespostas] = useState(false);
-  const [pacienteFiltroRespostas, setPacienteFiltroRespostas] = useState('');
+  const [pacienteFiltroRespostas, definirPacienteFiltroRespostas] = useState('');
+  const sequenciaLeituraRespostas = useRef(0);
   const [buscaRespostas, setBuscaRespostas] = useState('');
   const [matrizLongitudinal, setMatrizLongitudinal] = useState<MatrizLongitudinalRespostasApi | null>(null);
   const [carregandoMatriz, setCarregandoMatriz] = useState(false);
-  const [pacienteFiltroMatriz, setPacienteFiltroMatriz] = useState('');
-  const [questionarioFiltroMatriz, setQuestionarioFiltroMatriz] = useState('');
-  const [categoriaFiltroMatriz, setCategoriaFiltroMatriz] = useState('');
-  const [inicioFiltroMatriz, setInicioFiltroMatriz] = useState('');
-  const [fimFiltroMatriz, setFimFiltroMatriz] = useState('');
+  const [pacienteFiltroMatriz, definirPacienteFiltroMatriz] = useState('');
+  const [questionarioFiltroMatriz, definirQuestionarioFiltroMatriz] = useState('');
+  const [categoriaFiltroMatriz, definirCategoriaFiltroMatriz] = useState('');
+  const [inicioFiltroMatriz, definirInicioFiltroMatriz] = useState('');
+  const [fimFiltroMatriz, definirFimFiltroMatriz] = useState('');
+  const sequenciaLeituraMatriz = useRef(0);
   const [areaAtiva, setAreaAtiva] = useState<string>('formularios');
+
+  function invalidarLeituraRespostas() {
+    sequenciaLeituraRespostas.current += 1;
+    setRespostasRecebidas([]);
+    setLeituraClinica(null);
+    setCarregandoRespostas(false);
+  }
+
+  function setPacienteFiltroRespostas(valor: string) {
+    if (valor !== pacienteFiltroRespostas) invalidarLeituraRespostas();
+    definirPacienteFiltroRespostas(valor);
+  }
+
+  function invalidarLeituraMatriz() {
+    sequenciaLeituraMatriz.current += 1;
+    setMatrizLongitudinal(null);
+    setCarregandoMatriz(false);
+  }
+
+  function setPacienteFiltroMatriz(valor: string) {
+    if (valor !== pacienteFiltroMatriz) invalidarLeituraMatriz();
+    definirPacienteFiltroMatriz(valor);
+  }
+  function setQuestionarioFiltroMatriz(valor: string) {
+    if (valor !== questionarioFiltroMatriz) invalidarLeituraMatriz();
+    definirQuestionarioFiltroMatriz(valor);
+  }
+  function setCategoriaFiltroMatriz(valor: string) {
+    if (valor !== categoriaFiltroMatriz) invalidarLeituraMatriz();
+    definirCategoriaFiltroMatriz(valor);
+  }
+  function setInicioFiltroMatriz(valor: string) {
+    if (valor !== inicioFiltroMatriz) invalidarLeituraMatriz();
+    definirInicioFiltroMatriz(valor);
+  }
+  function setFimFiltroMatriz(valor: string) {
+    if (valor !== fimFiltroMatriz) invalidarLeituraMatriz();
+    definirFimFiltroMatriz(valor);
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -265,21 +306,25 @@ export function useWorkspaceQuestionarios() {
   }
 
   async function carregarRespostas(questionarioId = questionarioAtual?.id, pacienteId = pacienteFiltroRespostas) {
+    const sequencia = ++sequenciaLeituraRespostas.current;
     if (!questionarioId) {
       setRespostasRecebidas([]);
       setLeituraClinica(null);
+      setCarregandoRespostas(false);
       return;
     }
 
     setCarregandoRespostas(true);
     try {
       const leitura = await obterLeituraClinicaQuestionario(questionarioId, { pacienteId: pacienteId || undefined });
+      if (sequencia !== sequenciaLeituraRespostas.current) return;
       setLeituraClinica(leitura);
       setRespostasRecebidas(leitura.respostas);
     } catch (erroAtual) {
+      if (sequencia !== sequenciaLeituraRespostas.current) return;
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar respostas do formulário.');
     } finally {
-      setCarregandoRespostas(false);
+      if (sequencia === sequenciaLeituraRespostas.current) setCarregandoRespostas(false);
     }
   }
 
@@ -308,6 +353,7 @@ export function useWorkspaceQuestionarios() {
   }
 
   async function carregarMatrizLongitudinal() {
+    const sequencia = ++sequenciaLeituraMatriz.current;
     setCarregandoMatriz(true);
     setErro(null);
     try {
@@ -318,11 +364,13 @@ export function useWorkspaceQuestionarios() {
         inicioEm: inicioFiltroMatriz || undefined,
         fimEm: fimFiltroMatriz || undefined
       });
+      if (sequencia !== sequenciaLeituraMatriz.current) return;
       setMatrizLongitudinal(matriz);
     } catch (erroAtual) {
+      if (sequencia !== sequenciaLeituraMatriz.current) return;
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar a matriz longitudinal.');
     } finally {
-      setCarregandoMatriz(false);
+      if (sequencia === sequenciaLeituraMatriz.current) setCarregandoMatriz(false);
     }
   }
 
@@ -331,6 +379,7 @@ export function useWorkspaceQuestionarios() {
       setConfirmacaoTrocaPendente(() => () => void selecionarQuestionario(questionario, true));
       return;
     }
+    if (questionario?.id !== questionarioAtual?.id) invalidarLeituraRespostas();
     if (!questionario) {
       sequenciaLeituraPerguntas.current += 1;
       setCarregandoPerguntas(false);
