@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useId, useRef, useState } from 'react';
-import { ChevronDown, ChevronRight, ClipboardList, Download, RefreshCcw, TrendingUp } from 'lucide-react';
+import { ChevronDown, ChevronRight, ClipboardList, RefreshCcw, TrendingUp } from 'lucide-react';
+import { ExportacaoRespostas } from './exportacao-respostas';
 import { Botao } from '@/components/ui/botao';
 import { Cartao } from '@/components/ui/cartao';
 import { Campo, Rotulo, Selecao } from '@/components/ui/campo';
@@ -197,13 +198,10 @@ export function AreaRespostas({ workspace }: { workspace: WorkspaceQuestionarios
               {carregandoRespostas ? 'Atualizando respostas' : 'Atualizar respostas'}
             </Botao>
             {questionarioAtual ? (
-              <a
-                href={`/api/questionarios/${questionarioAtual.id}/respostas/exportar.csv`}
-                className="inline-flex h-9 w-fit items-center justify-center gap-2 rounded-md border border-linha bg-superficie px-3 text-sm font-medium text-texto-forte hover:bg-white"
-              >
-                <Download className="h-4 w-4" />
-                Exportar CSV
-              </a>
+              <ExportacaoRespostas
+                key={JSON.stringify([questionarioAtual.id, pacienteFiltroRespostas, buscaRespostas, respostasVisiveis.map(r => r.respostaId)])}
+                questionarioId={questionarioAtual.id} respostaIds={respostasVisiveis.map(r => r.respostaId)} carregando={carregandoRespostas}
+              />
             ) : null}
           </div>
         </div>
