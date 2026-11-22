@@ -874,18 +874,44 @@ export class ServicoQuestionarios {
   async listarRespostasQuestionario(
     tenantId: string,
     questionarioId: string,
-    usuario: UsuarioAutenticado
+    usuario: UsuarioAutenticado,
+    idsExportacao?: string[]
   ): Promise<RespostaQuestionarioRecebida[]> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       await this.garantirQuestionarioDoProfissional(gerenciador, tenantId, questionarioId, usuario);
 
-      const envios = await gerenciador.getRepository(EnvioQuestionarioOrm).find({ where: { tenantId, questionarioId } });
-      const enviosPorId = new Map(envios.map((envio) => [envio.id, envio]));
+      let envios = await gerenciador.getRepository(EnvioQuestionarioOrm).find({
+        where: { tenantId, questionarioId }, ...(idsExportacao ? { select: { id: true } } : {})
+      });
       const respostasCheckin = envios.length
         ? await gerenciador.getRepository(RespostaCheckinOrm).find({
-            where: { tenantId, envioQuestionarioId: In(envios.map((envio) => envio.id)) }
+            where: { tenantId, envioQuestionarioId: In(envios.map((envio) => envio.id)), ...(idsExportacao ? { id: In(idsExportacao) } : {}) },
+            ...(idsExportacao ? { select: { id: true, pacienteId: true, envioQuestionarioId: true, finalizadoEm: true } } : {})
           })
         : [];
+
+      if (idsExportacao) {
+        const encontrados = new Set(respostasCheckin.map(resposta => resposta.id));
+        if (idsExportacao.some(id => !encontrados.has(id))) throw new NotFoundException('Seleção de respostas indisponível. Atualize a consulta.');
+        const pacienteIds = [...new Set(respostasCheckin.map(resposta => resposta.pacienteId))].sort();
+        const profissionalId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
+        // Autorizar e manter a carteira estável antes da leitura dos valores.
+        const permitidos: { id: string }[] = await gerenciador.query(
+          `SELECT id FROM pacientes WHERE tenant_id = $1 AND id = ANY($2::uuid[])
+           AND arquivado_em IS NULL AND ($3::uuid IS NULL OR profissional_responsavel_id = $3)
+           ORDER BY id FOR SHARE`, [tenantId, pacienteIds, profissionalId ?? null]
+        );
+        const autorizados = new Set(permitidos.map(p => p.id));
+        if (pacienteIds.some(id => !autorizados.has(id))) throw new NotFoundException('Seleção de respostas indisponível. Atualize a consulta.');
+        const idsEnvio = [...new Set(respostasCheckin.map(resposta => resposta.envioQuestionarioId))];
+        envios = await gerenciador.getRepository(EnvioQuestionarioOrm).find({
+          where: { tenantId, questionarioId, id: In(idsEnvio) },
+          select: { id: true, questionarioId: true, snapshotEstrutura: true }
+        });
+        if (envios.length !== idsEnvio.length) throw new NotFoundException('Seleção de respostas indisponível. Atualize a consulta.');
+      }
+
+      const enviosPorId = new Map(envios.map((envio) => [envio.id, envio]));
 
       const perguntas = await gerenciador.getRepository(PerguntaOrm).find({
         where: { tenantId, questionarioId },
@@ -939,8 +965,17 @@ export class ServicoQuestionarios {
    * `listarRespostasQuestionario`, entao o questionario de outro profissional
    * continua barrado pela mesma checagem.
    */
-  async exportarRespostasCsv(tenantId: string, questionarioId: string, usuario: UsuarioAutenticado): Promise<string> {
-    const respostas = await this.listarRespostasQuestionario(tenantId, questionarioId, usuario);
+  async exportarRespostasCsv(tenantId: string, questionarioId: string, usuario: UsuarioAutenticado, respostaIds?: string[]): Promise<string> {
+    let ids: string[] | undefined;
+    if (respostaIds !== undefined) {
+      const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!Array.isArray(respostaIds) || !respostaIds.length || respostaIds.length > 1000 || respostaIds.some(id => typeof id !== 'string' || !uuid.test(id))) {
+        throw new BadRequestException('Selecione entre 1 e 1000 envios válidos. Refine os filtros se necessário.');
+      }
+      ids = respostaIds.map(id => id.toLowerCase());
+      if (new Set(ids).size !== ids.length) throw new BadRequestException('Seleção de respostas inválida.');
+    }
+    const respostas = await this.listarRespostasQuestionario(tenantId, questionarioId, usuario, ids);
 
     const enunciadoPorPergunta = new Map<string, string>();
     respostas.forEach((resposta) =>
