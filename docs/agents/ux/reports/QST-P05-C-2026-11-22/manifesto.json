@@ -1,0 +1,22 @@
+{
+  "etapa": "C",
+  "codigo": "d832c029a7d228602ee09df51426a3dc7f5fa0d8",
+  "instancia": "/root/qst_p05_ux_b",
+  "modalidade": "subagente runtime retomado com papel explicito adaptado; nao selecao nativa comprovada",
+  "papel_fonte": ".codex/agents/octaclin-nutricionista-ux.toml",
+  "papel_sha256": "6259b40a98e2c49053cbc6adbc0c59d0312b14e191b228ab73de2f2eac53af6d",
+  "inicio_solicitacao_utc": "2026-11-22T00:06:20Z",
+  "fim_registro_utc": "2026-11-22T00:08:41.339778+00:00",
+  "ferramentas_do_revisor": [],
+  "brief": "descricao factual do coordenador; resolucao B,66browser,build e revisao estatica integral; nao screenshots ou execucao propria",
+  "paciente": "NA justificado; sem instancia",
+  "artefatos_sha256": {
+    "avaliacao.md": "ed5d3baeb35b005a9921eb58ed40b2a0734024d6867d8b7483e2b72665942a1d"
+  },
+  "limites": [
+    "Horario inicial e o registro da solicitacao do coordenador, nao medicao de inicio interno do subagente",
+    "Relatorio sintetizado editorialmente, nao transcricao integral",
+    "Nenhuma interacao/teste/validacao com pessoas pela persona",
+    "CI novoHEAD pendente; sem aprovacao de PR, R4, clinica ou producao"
+  ]
+}

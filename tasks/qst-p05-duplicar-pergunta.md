@@ -2,13 +2,13 @@
 
 ## Estado vigente
 
-T01 (domínio), T02 (serviço transacional) e T03 (API/BFF) implementadas e
-validadas localmente nos escopos descritos abaixo.
-A ação de produto ainda NÃO está disponível no editor: interface, UX B/C, aceite
-transversal e CI do novo HEAD permanecem pendentes. Evidências locais T03 e
-limitações estão no checkpoint ao final deste documento. Prova PostgreSQL dirigida
-concluída no escopo T02; não comprova concorrência de toda a aplicação. PR própria Draft,
-base main `5873ff1c`; não inclui a integração P01/P02 da #570 nem FOOD06.
+T01–T04 implementadas e verificadas localmente nos escopos abaixo. A interface
+existe nesta branch; não foi disponibilizada em produção. Código testado:
+`d832c029a7d228602ee09df51426a3dc7f5fa0d8`. T05 local:66 browser PASS, UX B/C e revisão R4
+estática integral favoráveis. CI/scanners do novo HEAD pendentes ao envio.
+PR permanece Draft, sem merge/deploy; prontidão final depende do CI correspondente
+e revisão formal. Base main `5873ff1c`; não inclui #570 nem alterações na FOOD06.
+Prova PostgreSQL dirigida T02 preservada; não comprova concorrência de toda a aplicação.
 
 ## Decisão do proprietário — 21/11/2026
 
@@ -72,7 +72,7 @@ não é evidência RED. A primeira tentativa GREEN encontrou erro de tipagem no
 adaptador de testes; não conta como GREEN. O resultado acima é da suíte final
 corrigida, sem casts para ignorar erro no código de produção.
 
-## Sequência — mesma PR; T01–T03 implementadas, T04/T05 pendentes
+## Sequência — T01–T04 e T05 local executados; CI final pendente
 
 1. **T02 — serviço e contrato transacional (PASS local; registro abaixo).** Resolver tenant/ator no servidor,
    autorizar mesmo rascunho, fixar origem salva/revisão exata e lista ordenada;
@@ -96,19 +96,19 @@ corrigida, sem casts para ignorar erro no código de produção.
 
 | ID | Critério | Estado atual |
 | --- | --- | --- |
-| P05-C1 | Origem salva no mesmo rascunho autorizado | PARCIAL: serviço/PG e HTTP PASS; bloqueio de pendências na UI pendente |
-| P05-C2 | Cópia independente com novos IDs de pergunta/opções | PARCIAL: geração servidor/persistência PG PASS; integração UI pendente |
-| P05-C3 | Sem herdar chave clínica/biblioteca | PARCIAL: domínio/persistência PG e contrato HTTP PASS; jornada UI pendente |
-| P05-C4 | Inserção adjacente e atômica | PARCIAL: transação/locks/revisão/rollback PG PASS; confirmação na UI pendente |
-| P05-C5 | Repetição, rollback e alteração concorrente seguros | PARCIAL: comando/biblioteca/leitor legado dirigidos PASS; status HTTP/BFF PASS; erros tardios na UI pendentes |
-| P05-C6 | Pendências bloqueiam; foco/seleção e erros claros | PENDENTE UI/UX B/C |
-| P05-C7 | Snapshots/envios antigos intactos | PARCIAL: histórico congelado intacto e legado incompleto bloqueado em PG; regressões do módulo/HTTP PASS; jornada UI pendente |
+| P05-C1 | Origem salva no mesmo rascunho autorizado | PASS local: domínio/PG/HTTP e32 cenáriosP05; CI final pendente |
+| P05-C2 | Cópia independente com novos IDs de pergunta/opções | PASS local: geração/persistência PG e seleção/edição independente na UI; CI final pendente |
+| P05-C3 | Sem herdar chave clínica/biblioteca | PASS local: domínio/PG/HTTP/BFF/UI; CI final pendente |
+| P05-C4 | Inserção adjacente e atômica | PASS local: transação/rollback PG e32 cenáriosP05; CI final pendente |
+| P05-C5 | Repetição, rollback e alteração concorrente seguros | PASS local nos cenários dirigidos PG e leitores/escritores/UI descritos; não é prova de toda concorrência da aplicação; CI final pendente |
+| P05-C6 | Pendências bloqueiam; foco/seleção e erros claros | PASS local:32P05+16a11y, UX B/C; Axe/teclado não equivalem a leitor de tela manual; CI final pendente |
+| P05-C7 | Snapshots/envios antigos intactos | PASS T02 histórico no código backend inalterado +18 regressões editor/P04 e HTTP; CI final pendente |
 
-Não declarar P05 pronta para merge com essa matriz parcial. Nenhuma alteração
+Não declarar P05 pronta para merge antes de concluir o CI e a revisão formal aplicáveis. Nenhuma alteração
 na FOOD06, branches alheias, main local, banco externo ou infraestrutura.
 
 
-## T02 — resultado local, 21/11/2026
+## T02 — checkpoint histórico local, 21/11/2026
 
 Código validado: `99967e14e6e484374e319880e2845d108d04e216`.
 Risco R4: autorização, sessão, histórico e persistência. Revisão independente
@@ -211,7 +211,7 @@ Para reproduzir em Node22, no backend: `QST_P05_POSTGRES=true pnpm test --runInB
 --runTestsByPath src/modulos/questionarios/aplicacao/copia-pergunta.integracao.spec.ts`.
 O runner `pnpm test:rls:testcontainers` também inclui a prova no CI.
 
-## T03 — API/BFF, checkpoint local de 21/11/2026
+## T03 — API/BFF, checkpoint histórico local de 21/11/2026
 
 Escopo R4: expor o comando já autorizado por rotas autenticadas e projeções mínimas.
 Não altera o domínio, o protocolo de locks T02, snapshots, schema ou permissões gerais.
@@ -292,7 +292,7 @@ cabeçalho completo efetivo; não houve defeito funcional ou mudança do middlew
 Saída própria `.next` em tmp via symlink ignorado para não pressionar disco;
 nenhum arquivo de outra worktree removido.
 
-## Próxima ação exata
+## Handoff histórico anterior — T04 (substituído pelo fechamento abaixo)
 
 T04: conectar a ação nas propriedades do editor ao preparo/confirmação existente,
 com TDD. Bloquear enquanto houver alterações de pergunta **ou questionário** ainda
@@ -318,3 +318,95 @@ Sem merge, deploy, migrations externas, alterações na FOOD06 ou infraestrutura
   sintéticos existentes para RED/GREEN, depois executar UX B/C na interface real.
 
 Este mapa não constitui implementação T04 nem nova aprovação de produto.
+
+## T04 e fechamento local — 22/11/2026
+
+Risco R4 de integração: nenhuma mudança nova de domínio, serviço, API, BFF,
+permissões ou banco. O código T01/T02/T03 permanece o mesmo dos commits registrados.
+A interface nova existe apenas nesta branch; não está disponível em produção.
+
+### Interface e consistência
+
+- `usar-copia-pergunta.ts`: preparo/confirmação com contexto editorial memoizado,
+  barreira síncrona de operação em voo e verificação de contexto antes de aplicar
+  respostas. Confirma somente a revisão emitida pelo servidor, nunca a definição
+  do navegador. Sem localStorage, query string ou retry próprio.
+- `fluxo-copia-pergunta.tsx`: ação em Propriedades, motivo de bloqueio visível,
+  prévia salva reutilizada e confirmação explícita. Cancelar antes do comando
+  não escreve; após início do POST aguarda resultado, sem simular cancelamento.
+- ACK precisa ser seguido por leitura autorizada contendo a nova identidade.
+  Só então aplica lista/versão, seleciona cópia e foca Enunciado. Não fabrica uma
+  cópia otimista. Erro/conflito/readback falho preserva dados e bloqueia nova
+  cópia até conferência explícita, também bloqueada se surgirem novas edições.
+- Conferência atualiza somente a lista, preserva seleção quando existente e
+  orienta conferir se a cópia já aparece. Não promete identificar uma aplicação
+  após ACK perdido nem provar que o comando não ocorreu. Sem POST na conferência.
+- Editor fica bloqueado enquanto grava/copia/carrega ou mantém a prévia aberta.
+  Foco de cancelamento é devolvido ao gatilho após reabilitar o campo; sucesso
+  foca o enunciado da cópia. Campo de texto/número/slider da prévia reutilizada
+  recebe nome acessível do enunciado, sem alterar sua composição/configuração.
+
+### Achados da revisão e TDD
+
+| ID | Evidência RED | Correção/prova |
+| --- | --- | --- |
+| T04-R01, P1 | EditarA → selecionarB → salvarB deixava Duplicar habilitado, embora A não salva | Pendências por ID; salvar só limpa a pergunta salva. Badge Não salva e mensagem plural. RED/GREEN dirigido desktop/mobile4/4 comR02 |
+| T04-R02, P2 | PATCH de ordem iniciado e aguardando ACK deixava Duplicar habilitado | Reordenação integra salvando, recusa pendências e ignora resposta de contexto antigo (incluindo ABA). Editor bloqueado durante salvamento |
+| T04-R03, P2 | SelecionarB(GET atrasado) → voltarA → copiarA → liberarB removia cópia: esperado3 perguntas, recebido0 | Geração de leitura incrementada sincronamente; sucesso/erro/finally antigos não escrevem. Seleção nula invalida, nova seleção limpa lista anterior. ACK/conferência invalida leitores anteriores; carregamento bloqueia a cópia |
+| A11Y-01 | Axe encontrou textarea de prévia sem nome acessível | Nome explícito associado ao enunciado em textarea/range/number; não se desabilitou regra |
+| FOCUS-01 | Cancelar devolvia foco ao body porque o gatilho estava desabilitado ao abrir | Ref/rAF local após cancelamento; sucesso mantém foco na cópia |
+| NUX-P05-B-01 | Conferir lista não emitia a orientação esperada | Mensagem factual, sem inferir resultado da tentativa; teste de conflito e nova conferência |
+
+O primeiro ensaio do teste de arraste não atingia o PATCH: não era RED funcional.
+A sincronização foi corrigida aguardando aria-pressed e anúncio de droppable
+medido antes de mover/soltar. Não houve ampliação de timeout ou retry. O RED
+aceito R02 é o botão habilitado após PATCH efetivamente iniciado. Uma execução
+intermediária durante edição de nomes de testes foi inválida (test not found);
+não é evidência de produto. Uma regressão intermediária teve45PASS/1FAIL de
+sincronização de DnD, corrigida pelo mesmo critério observável. Resultados finais
+estão discriminados abaixo, sem atribuir PASS às tentativas interrompidas.
+
+### Gates do delta final
+
+| Gate | Estado |
+| --- | --- |
+| Navegador inicial | PASS64/64:30P05 +18editor/P04 +16a11y, antes de R03 |
+| Navegador após R03 | PASS66/66:32P05+18editor/P04+16a11y, desktop/mobile, sem ampliar timeout/retries |
+| Prévia domínio Web | PASS3/3, motor reutilizado inalterado |
+| Lint dirigido | PASS nos arquivos alterados; repetir se houver código novo |
+| Typecheck/build Web | PASS tsc --noEmit e Next webpack apósR03, Node22.21.1; dependências locais preexistentes |
+| Ferramentas UX | PASS validador de papéis e5 testes Python, sem alteração de papéis/permissões |
+| R4 independente integral | Favorável estática `/root/auth2_r4`, base5873ff1c→de822372+deltaT04; os3 achados foram rastreados e corrigidos. Sem execução própria de testes/SQL; não autoriza merge/produção |
+| UX B | [Relatório](../docs/agents/ux/reports/QST-P05-B-2026-11-21/avaliacao.md), persona profissional independente com descrição factual da interface; pacienteN/A. Sem interação própria ou imagem recebida pela persona |
+| UX C | [Parecer favorável limitado](../docs/agents/ux/reports/QST-P05-C-2026-11-22/avaliacao.md), resolução deB sem novos achados concretos; sem testes próprios |
+| PostgreSQL/RLS | Reutilizada prova31/31 T02, código99967e14 inalterado. Não repetida neste delta exclusivamente Web |
+| HTTP/BFF/authz | Reutilizados19HTTP/11BFF/28subcomandos T03; código dessas fronteiras inalterado. Não atribuir esse PASS ao CI de outro HEAD |
+| CI anterior | de822372: workflows CI44942387911, CodeQL44942387994, Semgrep44942387967, Trivy44942387937 e DependencyReview44942387905 concluídos success; não comprovam T04 |
+| CI HEAD final | PENDENTE de envio; dependências canônicas precisam da execução correspondente |
+
+A matriz de navegador usa Next real, Chromium desktop e emulação Pixel5, mas
+intercepta BFF/cookies com fixtures sintéticas. Prova interface/contratos; não
+prova isolamento no banco nem navegador ligado ao PostgreSQL. R03 teve RED em
+build local de produção; o GREEN usa desenvolvimento webpack suportado, sem
+alterar arquitetura, dependências, segurança ou configurações de teste.
+O teste de ACK tardio força ativação DOM de uma aba para simular mudança externa
+de contexto; não é interação normal de ponteiro através do modal. Axe, teclado,
+fonte200 e responsividade não equivalem a teste manual com leitor de tela ou
+aparelho físico, que não foram executados. Não existe ensaio de produção.
+
+
+## Próxima ação exata — estado vigente
+
+Código T04 testado: `d832c029a7d228602ee09df51426a3dc7f5fa0d8`. Os testes e revisões locais acima
+foram concluídos antes do commit, sem mudanças funcionais posteriores. Aguardar
+e conferir CI/scanners do HEAD documental enviado; investigar falhas/threads novas
+sem usar o PASS de de822372 para aprovar o delta. Não repetir suítes locais sem
+novo código, falha ou lacuna relevante. Se todos os checks aplicáveis passarem e
+não houver achado novo, consolidar recomendação de prontidão para revisão formal,
+sem retirar Draft, fazer merge ou deploy automaticamente.
+
+Backend/banco, autorização HTTP/BFF e suas provas foram reaproveitados porque
+seus arquivos não mudaram. Não foi executado novamente o backend inteiro, PG,
+HTTP/BFF ou authz28 neste delta Web. CI canônico permanece necessário. Não houve
+ensaio de banco externo, migration, instalação de dependência ou alteração de
+workflows, infraestrutura, main ou worktree de outro agente.
