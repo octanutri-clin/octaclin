@@ -1,0 +1,23 @@
+{
+  "codigo": "2d08ed4cb220969310ee7887ae4033de3a2bb3f1",
+  "modalidade": "subagente runtime com papel explícito, descrição sanitizada; sem TOML nativo comprovado",
+  "instancia": "/root/qst06_nutricionista_bc",
+  "inicio": null,
+  "fim": null,
+  "data": "2026-11-23; horários não capturados",
+  "ferramentas_persona": [],
+  "paciente": "N/A justificado; não executado",
+  "saidas": "síntese editorial do retorno independente; não transcrição literal",
+  "hashes": {
+    "docs/agents/ux/reports/QST10-06-BC-2026-11-23/checklist-desktop.png": "22a0221706d40e3abc59ae2bdd8d48c40535691c5885ce3a40efd88fb13849d6",
+    "docs/agents/ux/reports/QST10-06-BC-2026-11-23/brief.md": "fd5349dc8bcf12e0b4740379162f157e7f2afd7ef188401debc23a44153ecb56",
+    "docs/agents/ux/reports/QST10-06-BC-2026-11-23/checklist-mobile.png": "ca310cd8b71b3fabfb16651dcf741badc18111242bd1370b995be846b09b4915",
+    "docs/agents/ux/reports/QST10-06-BC-2026-11-23/paciente.md": "792b0f40939ffefc3e7cc727d33dedba4e5dabba3689baeb9fdbcde50b6b06da",
+    "docs/agents/ux/reports/QST10-06-BC-2026-11-23/consolidado.md": "55f1d2e2f3f58fd6a02861f5cfd0f65374d4bb6bb318feeb61cb9b195cf0ff66",
+    "docs/agents/ux/reports/QST10-06-BC-2026-11-23/nutricionista.md": "3f3c8a6fed9513f3db2c4c5ed962e04e669ebd889d9a472f59bd030fedca8088"
+  },
+  "papeis": {
+    ".codex/agents/octaclin-nutricionista-ux.toml": "6259b40a98e2c49053cbc6adbc0c59d0312b14e191b228ab73de2f2eac53af6d",
+    ".codex/agents/octaclin-paciente-ux.toml": "a40b1ded5e47739a2710caa5ec9a9a7871b57be7efc11deefaae0515028ff7d7"
+  }
+}
