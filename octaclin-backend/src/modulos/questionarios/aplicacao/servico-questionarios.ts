@@ -1,3 +1,4 @@
+import { calcularCompletudeHistorica, completudeDesconhecida } from '../dominio/completude-historica';
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
 import { ValidarPreviaEditorDto, ProblemaEditor } from './dto-validacao-editor';
@@ -915,6 +916,47 @@ export class ServicoQuestionarios {
 
       return versoes.sort((a, b) => b.versaoQuestionario - a.versaoQuestionario);
     });
+  }
+
+  async obterCompletudeHistorica(tenantId: string, questionarioId: string, respostaId: string, usuario: UsuarioAutenticado) {
+    return this.executorTenant.executar(tenantId, async gerenciador => {
+      const { resposta, envio, valores } = await this.lerRespostaHistoricaAutorizada(gerenciador, tenantId, questionarioId, respostaId, usuario);
+      let completude = calcularCompletudeHistorica(envio.snapshotEstrutura, valores, valor => this.valorPreenchido(valor));
+      if (completude.estado === 'disponivel') {
+        // Leitura factual de presença, não revalidação clínica de uma submissão antiga.
+        if (!envio.snapshotEstrutura!.perguntas.every(p => validarTipoPergunta(p.tipo))) {
+          completude = completudeDesconhecida('snapshot_invalido');
+        } else if (!valores.every(({ valor }) => valor === null || valor === undefined ||
+          typeof valor === 'string' || typeof valor === 'boolean' ||
+          (typeof valor === 'number' && Number.isFinite(valor)) ||
+          (Array.isArray(valor) && valor.every(item => typeof item === 'string')))) {
+          completude = completudeDesconhecida('respostas_incompativeis');
+        }
+      }
+      return { respostaId: resposta.id, envioId: envio.id, completude };
+    });
+  }
+
+  private async lerRespostaHistoricaAutorizada(gerenciador: EntityManager, tenantId: string, questionarioId: string, respostaId: string, usuario: UsuarioAutenticado) {
+    // Ordem global: questionário → paciente → envio. Autorizar antes do snapshot/valores.
+    await this.garantirQuestionarioDoProfissional(gerenciador, tenantId, questionarioId, usuario, 'pessimistic_read');
+    const resposta = await gerenciador.getRepository(RespostaCheckinOrm).findOne({
+      where: { id: respostaId, tenantId },
+      select: { id: true, pacienteId: true, envioQuestionarioId: true, finalizadoEm: true }
+    });
+    // A data histórica é opcional: a conclusão é comprovada pelo envio respondido abaixo.
+    if (!resposta) throw new NotFoundException('Resposta indisponível.');
+    const paciente = await this.garantirPacienteAtivoDoProfissional(gerenciador, tenantId, resposta.pacienteId, usuario, 'pessimistic_read', true);
+    if (paciente.statusCicloVida === 'DELETED' || paciente.statusCicloVida === 'DELETION_PENDING') throw new NotFoundException('Resposta indisponível.');
+    const envio = await gerenciador.getRepository(EnvioQuestionarioOrm).findOne({
+      where: { id: resposta.envioQuestionarioId, tenantId, questionarioId, pacienteId: paciente.id, status: 'respondido' },
+      select: { id: true, snapshotEstrutura: true }, lock: { mode: 'pessimistic_read' }
+    });
+    if (!envio) throw new NotFoundException('Resposta indisponível.');
+    const valores = await gerenciador.getRepository(RespostaValorOrm).find({
+      where: { tenantId, respostaCheckinId: resposta.id }, select: { perguntaId: true, valor: true }
+    });
+    return { resposta, envio, valores };
   }
 
   async listarRespostasQuestionario(
@@ -1884,7 +1926,9 @@ export class ServicoQuestionarios {
     gerenciador: EntityManager,
     tenantId: string,
     pacienteId: string,
-    usuario: UsuarioAutenticado
+    usuario: UsuarioAutenticado,
+    trava?: 'pessimistic_read',
+    somenteAutorizacao = false
   ): Promise<PacienteOrm> {
     const profissionalId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
     const paciente = await gerenciador.getRepository(PacienteOrm).findOne({
@@ -1893,7 +1937,9 @@ export class ServicoQuestionarios {
         tenantId,
         arquivadoEm: IsNull(),
         ...(profissionalId ? { profissionalResponsavelId: profissionalId } : {})
-      }
+      },
+      ...(trava ? { lock: { mode: trava } } : {}),
+      ...(somenteAutorizacao ? { select: { id: true, statusCicloVida: true } } : {})
     });
     if (!paciente) throw new NotFoundException('Paciente nao encontrado.');
     return paciente;

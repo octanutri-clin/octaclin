@@ -1819,3 +1819,71 @@ describe('QST10-06 prévia do editor sem persistência', () => {
     dados.questionarios[0].profissionalId='outro';await expect(servico.validarPreviaEditor('tenant-1','q1',{versaoEsperada:3,titulo:'x',perguntas:[]},usuarioProfissional)).rejects.toThrow();expect(repositorios.pergunta.find).not.toHaveBeenCalled();
   });
 });
+
+describe('QST10-07 preenchimento histórico autorizado', () => {
+  function preparar() {
+    const perguntas = [{id:'a',tipo:'metrica',obrigatoria:true,configuracao:{minimo:0,maximo:10},opcoes:[]},
+      {id:'b',tipo:'sim_nao',obrigatoria:true,configuracao:{},opcoes:[]},
+      {id:'c',tipo:'texto_longo',obrigatoria:false,configuracao:{},opcoes:[]}];
+    return criarServico({questionarios:[{id:'q1',tenantId:'tenant-1',profissionalId:'profissional-1',versao:99}],perguntas:[],opcaos:[],
+      envios:[{id:'e1',tenantId:'tenant-1',questionarioId:'q1',pacienteId:'p1',status:'respondido',snapshotEstrutura:{versaoQuestionario:2,perguntas}}],
+      respostaCheckins:[{id:'r1',tenantId:'tenant-1',pacienteId:'p1',envioQuestionarioId:'e1',finalizadoEm:new Date('2026-11-20')}],
+      respostaValors:[{perguntaId:'a',tenantId:'tenant-1',respostaCheckinId:'r1',valor:0},{perguntaId:'b',tenantId:'tenant-1',respostaCheckinId:'r1',valor:false}],
+      pacientes:[{id:'p1',tenantId:'tenant-1',profissionalResponsavelId:'profissional-1',statusCicloVida:'ACTIVE'}],
+      profissionals:[{id:'profissional-1',tenantId:'tenant-1',usuarioId:'usuario-profissional-1'}]});
+  }
+  it('usa snapshot original, preserva zero/falso, não gera capability nem grava revisão', async()=>{
+    const {servico,dados,repositorios}=preparar();const antes=JSON.stringify(dados);
+    const resultado=await servico.obterCompletudeHistorica('tenant-1','q1','r1',usuarioProfissional);
+    expect(resultado).toEqual({respostaId:'r1',envioId:'e1',completude:{estado:'disponivel',versaoQuestionario:2,totalPerguntas:3,respondidas:2,obrigatorias:2,obrigatoriasRespondidas:2}});
+    expect(repositorios.pergunta.find).not.toHaveBeenCalled();expect(JSON.stringify(dados)).toBe(antes);
+    expect(resultado).not.toHaveProperty('comprovanteLeitura');for(const repo of Object.values(repositorios))expect(repo.save).not.toHaveBeenCalled();
+  });
+  it('sem snapshot retorna denominadores desconhecidos sem consultar perguntas atuais', async()=>{
+    const {servico,dados,repositorios}=preparar();dados.envios[0].snapshotEstrutura=null;
+    expect((await servico.obterCompletudeHistorica('tenant-1','q1','r1',usuarioProfissional)).completude).toMatchObject({estado:'desconhecido',motivo:'snapshot_ausente',totalPerguntas:null,respondidas:null});
+    expect(repositorios.pergunta.find).not.toHaveBeenCalled();
+  });
+  it.each(['tenant','profissional','carteira','arquivado','excluido','pendenteExclusao','outroQuestionario','outroPaciente','naoFinalizada'])('nega %s antes de carregar valores',async cenario=>{
+    const {servico,dados,repositorios}=preparar();let tenant='tenant-1';
+    if(cenario==='tenant')tenant='outro';if(cenario==='profissional')dados.questionarios[0].profissionalId='outro';
+    if(cenario==='carteira')dados.pacientes[0].profissionalResponsavelId='outro';if(cenario==='arquivado')dados.pacientes[0].arquivadoEm=new Date();
+    if(cenario==='excluido')dados.pacientes[0].statusCicloVida='DELETED';if(cenario==='pendenteExclusao')dados.pacientes[0].statusCicloVida='DELETION_PENDING';
+    if(cenario==='outroQuestionario')dados.envios[0].questionarioId='q2';if(cenario==='outroPaciente')dados.envios[0].pacienteId='p2';
+    if(cenario==='naoFinalizada'){dados.respostaCheckins[0].finalizadoEm=null;dados.envios[0].status='enviado';}
+    await expect(servico.obterCompletudeHistorica(tenant,'q1','r1',{...usuarioProfissional,tenantId:tenant})).rejects.toThrow();expect(repositorios.respostaValor.find).not.toHaveBeenCalled();
+  });
+  it.each(['tipo','duplicada','obrigatoriaAusente','formatoInvalido'])('não inventa contagem em histórico incompatível %s',async cenario=>{
+    const {servico,dados}=preparar();const snapshot=dados.envios[0].snapshotEstrutura;
+    if(cenario==='tipo')snapshot.perguntas[0].tipo='desconhecido';if(cenario==='duplicada')dados.respostaValors.push({...dados.respostaValors[0]});
+    if(cenario==='obrigatoriaAusente')delete snapshot.perguntas[0].obrigatoria;if(cenario==='formatoInvalido')dados.respostaValors[0].valor={formato:'desconhecido'};
+    expect((await servico.obterCompletudeHistorica('tenant-1','q1','r1',usuarioProfissional)).completude).toMatchObject({estado:'desconhecido',totalPerguntas:null});
+  });
+});
+
+describe('QST10-07 presença histórica não é qualidade da submissão', () => {
+  function preparar(valor: unknown) {
+    return criarServico({questionarios:[{id:'q1',tenantId:'tenant-1',profissionalId:'profissional-1',versao:9}],perguntas:[],opcaos:[],
+      envios:[{id:'e1',tenantId:'tenant-1',questionarioId:'q1',pacienteId:'p1',status:'respondido',snapshotEstrutura:{versaoQuestionario:1,perguntas:[
+        {id:'a',tipo:'metrica',obrigatoria:false,configuracao:{minimo:0,maximo:10},opcoes:[]},{id:'b',tipo:'sim_nao',obrigatoria:true,configuracao:{},opcoes:[]}]}}],
+      respostaCheckins:[{id:'r1',tenantId:'tenant-1',pacienteId:'p1',envioQuestionarioId:'e1',finalizadoEm:new Date('2026-11-20')}],
+      respostaValors:[{perguntaId:'a',tenantId:'tenant-1',respostaCheckinId:'r1',valor},{perguntaId:'b',tenantId:'tenant-1',respostaCheckinId:'r1',valor:false}],
+      pacientes:[{id:'p1',tenantId:'tenant-1',profissionalResponsavelId:'profissional-1',statusCicloVida:'ACTIVE'}],
+      profissionals:[{id:'profissional-1',tenantId:'tenant-1',usuarioId:'usuario-profissional-1'}]});
+  }
+  it('ausência null não apaga denominador conhecido nem a resposta falsa de outro campo',async()=>{
+    const {servico,dados}=preparar(null);const antes=JSON.stringify(dados);
+    expect((await servico.obterCompletudeHistorica('tenant-1','q1','r1',usuarioProfissional)).completude).toEqual({estado:'disponivel',versaoQuestionario:1,totalPerguntas:2,respondidas:1,obrigatorias:1,obrigatoriasRespondidas:1});expect(JSON.stringify(dados)).toBe(antes);
+  });
+  it('número fora da faixa continua presente sem aprovar sua qualidade ou mudar o histórico',async()=>{
+    const {servico,dados}=preparar(11);const antes=JSON.stringify(dados);
+    expect((await servico.obterCompletudeHistorica('tenant-1','q1','r1',usuarioProfissional)).completude).toEqual({estado:'disponivel',versaoQuestionario:1,totalPerguntas:2,respondidas:2,obrigatorias:1,obrigatoriasRespondidas:1});expect(JSON.stringify(dados)).toBe(antes);
+  });
+  it('envio respondido com data histórica ausente mantém presença sem inventar data',async()=>{
+    const {servico,dados}=preparar(0);dados.respostaCheckins[0].finalizadoEm=null;
+    const antes=JSON.stringify(dados);
+    expect((await servico.obterCompletudeHistorica('tenant-1','q1','r1',usuarioProfissional)).completude).toMatchObject({estado:'disponivel',totalPerguntas:2,respondidas:2});
+    expect(JSON.stringify(dados)).toBe(antes);
+  });
+
+});
