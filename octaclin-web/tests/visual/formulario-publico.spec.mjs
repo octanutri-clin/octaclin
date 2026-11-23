@@ -305,3 +305,50 @@ test.describe('formulario publico - indisponibilidade e recuperacao', () => {
     await expect(page.getByText('Internal server error')).toHaveCount(0);
   });
 });
+
+async function prepararPendencias(page) {
+  const controle = await prepararFormulario(page);
+  await page.route('**/api/formularios/token-publico', route => route.fulfill({ json: {
+    envioId: 'envio-1', titulo: 'Retorno sintético', status: 'enviado', rascunhoVersao: 0,
+    perguntas: [
+      { id: 'q-booleano', tipo: 'sim_nao', enunciado: 'Pergunta booleana', configuracao: { rotuloSim: 'Sim', rotuloNao: 'Não', secao: 'Rotina' } },
+      { id: 'q-numero', tipo: 'metrica', enunciado: 'Pergunta numérica', configuracao: { minimo: 0, maximo: 20, secao: 'Rotina' } },
+      { id: 'q-texto', tipo: 'texto_longo', enunciado: 'Pergunta de texto', configuracao: { secao: 'Observações' } }
+    ].map((p, i) => ({ ...p, obrigatoria: true, opcoes: [], ordem: i + 1 }))
+  } }));
+  await page.goto('/formularios/token-publico');
+  return controle;
+}
+
+test('QST10-03 lista todas pendências e navega sem perder texto; zero e falso são respostas', async ({ page }) => {
+  const controle = await prepararPendencias(page);
+  await page.getByLabel('Pergunta de texto', { exact: true }).fill('Conteúdo sintético preservado');
+  await page.getByRole('button', { name: 'Enviar respostas', exact: true }).click();
+  const resumo = page.getByRole('alert').filter({ has: page.getByRole('heading', { name: 'Respostas pendentes', exact: true }) });
+  await expect(resumo).toBeFocused();
+  await expect(resumo.getByRole('link')).toHaveCount(2);
+  await resumo.getByRole('link', { name: 'Pergunta booleana', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Sim', exact: true })).toBeFocused();
+  await page.getByRole('button', { name: 'Não', exact: true }).click();
+  await resumo.getByRole('link', { name: 'Pergunta numérica', exact: true }).click();
+  const numero = page.getByRole('spinbutton', { name: 'Pergunta numérica', exact: true });
+  await expect(numero).toBeFocused(); await numero.fill('0');
+  await expect(page.getByLabel('Pergunta de texto', { exact: true })).toHaveValue('Conteúdo sintético preservado');
+  await page.getByRole('button', { name: 'Enviar respostas', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Respostas enviadas', exact: true })).toBeVisible();
+  expect(controle.respostaFinal().respostas).toEqual([
+    { perguntaId: 'q-booleano', valor: false }, { perguntaId: 'q-numero', valor: 0 }, { perguntaId: 'q-texto', valor: 'Conteúdo sintético preservado' }
+  ]);
+});
+
+test('QST10-03 limpar número não inventa zero; erro não rouba foco durante edição', async ({ page }) => {
+  await prepararPendencias(page);
+  const numero = page.getByRole('spinbutton', { name: 'Pergunta numérica', exact: true });
+  await numero.fill('0'); await numero.fill('');
+  await page.getByRole('button', { name: 'Enviar respostas', exact: true }).click();
+  const resumo = page.getByRole('alert').filter({ has: page.getByRole('heading', { name: 'Respostas pendentes', exact: true }) });
+  await expect(resumo.getByRole('link')).toHaveCount(3);
+  const texto = page.getByLabel('Pergunta de texto', { exact: true });
+  await texto.fill('Continuo preenchendo'); await expect(texto).toBeFocused();
+  await expect(resumo.getByRole('link')).toHaveCount(2);
+});
