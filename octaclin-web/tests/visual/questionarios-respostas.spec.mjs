@@ -708,3 +708,35 @@ test('QST10-01 apresenta variação factual sem cores de julgamento clínico', a
   const zero = page.locator('article').filter({ has: page.getByText('Indicador estável', { exact: true }) });
   await expect(zero.getByText('0', { exact: true })).toHaveCount(2);
 });
+
+test('QST10-02 alterna envios e resumo sem perder leitura ou filtros nem fazer consultas', async ({ page }) => {
+  const requisicoes = await preparar(page);
+  const anteriores = requisicoes.slice();
+  const envios = page.getByRole('tab', { name: 'Envios', exact: true });
+  const resumo = page.getByRole('tab', { name: 'Resumo por pergunta', exact: true });
+  await expect(envios).toHaveAttribute('aria-selected', 'true');
+  await envio(page, pacientes[0].nome).getByRole('button', { name: 'Ler envio', exact: true }).click();
+  await resumo.click();
+  await expect(page.getByRole('tabpanel', { name: 'Resumo por pergunta', exact: true })).toBeVisible();
+  await expect(page.getByText('Resumo da consulta', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Leitura individual', exact: true })).not.toBeVisible();
+  await page.getByLabel('Busca', { exact: true }).fill('almoço');
+  await resumo.focus(); await page.keyboard.press('ArrowLeft');
+  await expect(envios).toBeFocused();
+  await expect(page.getByRole('heading', { name: 'Leitura individual', exact: true })).toBeVisible();
+  await expect(page.getByLabel('Busca', { exact: true })).toHaveValue('almoço');
+  await expect(page.getByText('Organizei o almoço', { exact: true })).toBeVisible();
+  expect(requisicoes).toEqual(anteriores);
+});
+
+test('QST10-02 painéis acessíveis com texto ampliado e contexto novo inicia em envios', async ({ page }) => {
+  await preparar(page);
+  await page.getByRole('tab', { name: 'Resumo por pergunta', exact: true }).click();
+  await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
+  const painel = page.getByRole('tabpanel', { name: 'Resumo por pergunta', exact: true });
+  expect(await painel.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+  const axe = await new AxeBuilder({ page }).include('[data-qst10-leitura]').analyze();
+  expect(axe.violations).toEqual([]);
+  await page.locator('#filtro-paciente-respostas').selectOption('paciente-b');
+  await expect(page.getByRole('tab', { name: 'Envios', exact: true })).toHaveAttribute('aria-selected', 'true');
+});
