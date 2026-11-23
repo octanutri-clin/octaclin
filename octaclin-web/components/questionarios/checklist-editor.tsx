@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Botao } from '@/components/ui/botao';
 import { conferirQuestionario, consultarVersaoEditor, type ValidacaoEditorApi } from '@/lib/questionarios-api';
 import type { WorkspaceQuestionarios } from './usar-workspace-questionarios';
@@ -13,9 +13,12 @@ const mensagens: Record<string, string> = {
 };
 const campos: Record<string, string> = { titulo: 'título', enunciado: 'enunciado', peso: 'peso', categoriaId: 'categoria', tipo: 'tipo', configuracao: 'configuração', opcoes: 'opções', dados: 'campos' };
 export function ChecklistEditor({ workspace: w }: { workspace: WorkspaceQuestionarios }) {
-  const contexto = JSON.stringify([w.questionarioAtual?.id, w.questionarioAtual?.versao, w.titulo, w.perguntas, w.perguntasPendentes, w.salvando, w.carregandoPerguntas]);
+  // Identidade por geração editorial: A→B→A não recupera prévia/erro antigos.
+  const contexto = useMemo(() => ({ questionario: w.questionarioAtual, titulo: w.titulo, perguntas: w.perguntas,
+    pendentes: w.perguntasPendentes, salvando: w.salvando, carregando: w.carregandoPerguntas }),
+  [w.questionarioAtual, w.titulo, w.perguntas, w.perguntasPendentes, w.salvando, w.carregandoPerguntas]);
   const atual = useRef(contexto), montado = useRef(false), emVoo = useRef(false);
-  const [estado, setEstado] = useState<{ contexto: string; dados?: ValidacaoEditorApi; erro?: boolean; carregando?: boolean } | null>(null);
+  const [estado, setEstado] = useState<{ contexto: typeof contexto; dados?: ValidacaoEditorApi; erro?: boolean; carregando?: boolean } | null>(null);
   const [foco, setFoco] = useState<{ campo: string; sequencia: number } | null>(null);
   useLayoutEffect(() => { atual.current = contexto; });
   useLayoutEffect(() => { montado.current = true; return () => { montado.current = false; }; }, []);
