@@ -148,7 +148,8 @@ test('formulario sem anexo pode ser finalizado offline e sincroniza ao reconecta
 
   await page.goto('/formularios/token-pwa');
   await page.getByRole('textbox').fill('Resposta privada mantida apenas nesta sessao.');
-  await page.getByRole('button', { name: 'Enviar respostas' }).click();
+  await page.getByRole('button', { name: 'Revisar respostas', exact: true }).click();
+  await page.getByRole('dialog', { name: 'Conferir respostas', exact: true }).getByRole('button', { name: 'Confirmar envio', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Respostas salvas neste dispositivo' })).toBeVisible();
   const fila = await lerFila(page);
   expect(fila).toHaveLength(1);

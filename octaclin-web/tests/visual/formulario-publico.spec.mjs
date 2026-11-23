@@ -383,3 +383,49 @@ test('QST10-04 formulário com uma seção não apresenta navegação desnecess�
   await expect(page.getByRole('button', { name: 'Sim', exact: true })).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Seções do formulário', exact: true })).toHaveCount(0);
 });
+
+test('QST10-05 conferência opcional preserva última edição e permite corrigir sem enviar', async ({ page }) => {
+  const controle = await prepararPendencias(page);
+  const campo = page.getByLabel('Pergunta de texto', { exact: true });
+  await campo.fill('<b>Última edição antes do autosave</b>');
+  await page.getByRole('button', { name: 'Revisar respostas', exact: true }).click();
+  const dialogo = page.getByRole('dialog', { name: 'Conferir respostas', exact: true });
+  await expect(dialogo.getByText('<b>Última edição antes do autosave</b>', { exact: true })).toBeVisible();
+  await expect(dialogo.getByText('Sem resposta', { exact: true })).toHaveCount(2);
+  expect(controle.respostaFinal()).toBeNull();
+  await dialogo.getByRole('button', { name: 'Editar: Pergunta de texto', exact: true }).click();
+  await expect(campo).toBeFocused();
+  await expect(campo).toHaveValue('<b>Última edição antes do autosave</b>');
+  await page.getByRole('button', { name: 'Revisar respostas', exact: true }).click();
+  await dialogo.getByRole('button', { name: 'Confirmar envio', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Respostas pendentes', exact: true })).toBeVisible();
+  expect(controle.respostaFinal()).toBeNull();
+});
+
+test('QST10-05 só anuncia sucesso após ACK e não duplica confirmação', async ({ page }) => {
+  await prepararPendencias(page);
+  await page.getByRole('button', { name: 'Não', exact: true }).click();
+  await page.getByRole('spinbutton', { name: 'Pergunta numérica', exact: true }).fill('0');
+  await page.getByLabel('Pergunta de texto', { exact: true }).fill('Conteúdo conferido');
+  let liberar; const espera = new Promise(resolve => { liberar = resolve; }); let comandos = 0; let corpo;
+  await page.route('**/api/formularios/token-publico/respostas', async route => {
+    comandos++; corpo = route.request().postDataJSON(); await espera;
+    await route.fulfill({ json: { envioId: 'envio-1', status: 'respondido' } });
+  });
+  await page.getByRole('button', { name: 'Revisar respostas', exact: true }).click();
+  const dialogo = page.getByRole('dialog', { name: 'Conferir respostas', exact: true });
+  await expect(dialogo.getByText('Não', { exact: true })).toBeVisible();
+  await expect(dialogo.getByText('0', { exact: true })).toBeVisible();
+  await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
+  const axe = await new AxeBuilder({ page }).include('[role="dialog"]').analyze();
+  expect(axe.violations).toEqual([]);
+  await dialogo.getByRole('button', { name: 'Confirmar envio', exact: true }).click();
+  await expect.poll(() => comandos).toBe(1);
+  try {
+    await expect(page.getByRole('heading', { name: 'Respostas enviadas', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Enviando', exact: true })).toBeDisabled();
+    expect(corpo.respostas.map(item => item.valor)).toEqual([false, 0, 'Conteúdo conferido']);
+  } finally { liberar(); }
+  await expect(page.getByRole('heading', { name: 'Respostas enviadas', exact: true })).toBeVisible();
+  expect(comandos).toBe(1);
+});
