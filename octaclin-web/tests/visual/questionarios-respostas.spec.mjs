@@ -687,3 +687,110 @@ test.describe('QST01 — organização da leitura de respostas', () => {
     await page.screenshot({ path: test.info().outputPath('qst01-texto-ampliado.png'), fullPage: true });
   });
 });
+
+async function prepararDistribuicoes(page, quantidades = [6, 5]) {
+  await preparar(page);
+  const perguntas = quantidades.map((quantidade, indice) => ({
+    perguntaId: `distribuicao-${indice}`, enunciado: `Categorias sintéticas ${indice + 1}`,
+    tipo: 'multipla_escolha', totalRespostas: 30, textosRecentes: [],
+    distribuicao: Array.from({ length: quantidade }, (_, posicao) => ({
+      valor: posicao === 4 ? '<b>Categoria especial</b>' : `Categoria ${posicao + 1}`,
+      total: posicao === 5 ? 0 : 30 - posicao
+    }))
+  }));
+  await page.route('**/api/questionarios/*/respostas/leitura-clinica*', route => route.fulfill({ json: {
+    ...leituraSintetica('paciente-a'), perguntas,
+    questionarioId: new URL(route.request().url()).pathname.split('/')[3]
+  } }));
+  await page.getByRole('button', { name: 'Atualizar respostas', exact: true }).click();
+  await expect(page.getByText(perguntas[0].enunciado, { exact: true })).toBeVisible();
+  return perguntas;
+}
+
+function grupoDistribuicao(page, indice = 1) {
+  return page.getByRole('group', { name: `Distribuição de respostas: Categorias sintéticas ${indice}`, exact: true });
+}
+
+test.describe('QPRO-09 — categorias recebidas da distribuição', () => {
+  test('revela categorias sem alterar ordem, zero, texto, filtros ou rede; perguntas independentes', async ({ page }) => {
+    await prepararDistribuicoes(page);
+    await page.getByLabel('Busca', { exact: true }).fill('Categorias sintéticas');
+    const requisicoes = [];
+    page.on('request', request => { if (new URL(request.url()).pathname.startsWith('/api/')) requisicoes.push(request.url()); });
+    const persistencias = await page.evaluate(() => window.__persistenciasQst01);
+    const primeiro = grupoDistribuicao(page);
+    const segundo = grupoDistribuicao(page, 2);
+    await expect(primeiro.getByRole('status')).toHaveText('4 de 6 categorias recebidas');
+    await expect(primeiro.getByRole('listitem')).toHaveCount(4);
+    const botao = primeiro.getByRole('button', { name: 'Mostrar mais categorias', exact: true });
+    await botao.focus(); await page.keyboard.press('Enter');
+    await expect(primeiro.getByRole('listitem')).toHaveText(['Categoria 1: 30', 'Categoria 2: 29', 'Categoria 3: 28', 'Categoria 4: 27', '<b>Categoria especial</b>: 26', 'Categoria 6: 0']);
+    await expect(primeiro.locator('b')).toHaveCount(0);
+    await expect(primeiro.getByRole('status')).toHaveText('6 de 6 categorias recebidas');
+    const recolher = primeiro.getByRole('button', { name: 'Recolher categorias', exact: true });
+    await expect(recolher).toBeFocused();
+    await expect(recolher).toHaveAttribute('aria-expanded', 'true');
+    await expect(segundo.getByRole('listitem')).toHaveCount(4);
+    await page.keyboard.press('Enter');
+    await expect(primeiro.getByRole('listitem')).toHaveCount(4);
+    await expect(botao).toBeFocused();
+    expect(requisicoes).toEqual([]);
+    expect(await page.evaluate(() => window.__persistenciasQst01)).toBe(persistencias);
+    await expect(page.locator('#filtro-paciente-respostas')).toHaveValue('');
+    await expect(page.getByLabel('Busca', { exact: true })).toHaveValue('Categorias sintéticas');
+  });
+
+  test('limita expansão por etapa, anuncia progresso e recolhe também antes do fim', async ({ page }) => {
+    await prepararDistribuicoes(page, [25]);
+    const grupo = grupoDistribuicao(page);
+    const mais = grupo.getByRole('button', { name: 'Mostrar mais categorias', exact: true });
+    await mais.click();
+    await expect(grupo.getByRole('listitem')).toHaveCount(24);
+    await expect(grupo.getByRole('status')).toHaveText('24 de 25 categorias recebidas');
+    await grupo.getByRole('button', { name: 'Recolher categorias', exact: true }).click();
+    await expect(mais).toBeFocused();
+    await expect(grupo.getByRole('listitem')).toHaveCount(4);
+    await mais.click(); await mais.click();
+    await expect(grupo.getByRole('listitem')).toHaveCount(25);
+    await expect(grupo.getByRole('status')).toHaveText('25 de 25 categorias recebidas');
+    await grupo.getByRole('button', { name: 'Recolher categorias', exact: true }).click();
+    await expect(grupo.getByRole('listitem')).toHaveCount(4);
+  });
+
+  test('nova leitura e troca de paciente ou questionário reiniciam expansão', async ({ page }) => {
+    await prepararDistribuicoes(page);
+    const grupo = grupoDistribuicao(page);
+    const expandir = async () => {
+      await grupo.getByRole('button', { name: 'Mostrar mais categorias', exact: true }).click();
+      await expect(grupo.getByRole('listitem')).toHaveCount(6);
+    };
+    await expandir();
+    await page.getByRole('button', { name: 'Atualizar respostas', exact: true }).click();
+    await expect(grupo.getByRole('listitem')).toHaveCount(4);
+    await expandir();
+    await page.locator('#filtro-paciente-respostas').selectOption('paciente-b');
+    await expect(grupo.getByRole('listitem')).toHaveCount(4);
+    await expandir();
+    await page.getByRole('tab', { name: 'Formulários', exact: true }).click();
+    await page.getByLabel('Selecionar', { exact: true }).selectOption('q-2');
+    await page.getByRole('tab', { name: 'Respostas', exact: true }).click();
+    await expect(grupo.getByRole('listitem')).toHaveCount(4);
+  });
+
+  test('até quatro categorias não cria controles; expansão acessível com texto ampliado', async ({ page }) => {
+    await prepararDistribuicoes(page, [4, 6, 0]);
+    await expect(grupoDistribuicao(page, 3)).toHaveCount(0);
+    await expect(grupoDistribuicao(page).getByRole('listitem')).toHaveCount(4);
+    await expect(grupoDistribuicao(page).getByRole('button')).toHaveCount(0);
+    const grupo = grupoDistribuicao(page, 2);
+    await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
+    await grupo.getByRole('button', { name: 'Mostrar mais categorias', exact: true }).click();
+    await expect(grupo.getByRole('listitem')).toHaveCount(6);
+    const id = await grupo.getByRole('button').getAttribute('aria-controls');
+    await expect(grupo.locator(`[id="${id}"]`)).toHaveAttribute('role', 'list');
+    expect(await grupo.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+    const axe = await new AxeBuilder({ page }).include('[data-qst-distribuicao]').analyze();
+    expect(axe.violations).toEqual([]);
+    await grupo.screenshot({ path: test.info().outputPath('distribuicao-ampliada.png') });
+  });
+});
