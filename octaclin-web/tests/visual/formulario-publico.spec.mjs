@@ -1,3 +1,4 @@
+import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 
 const perguntaId = '11111111-1111-4111-8111-111111111111';
@@ -351,4 +352,8 @@ test('QST10-03 limpar número não inventa zero; erro não rouba foco durante ed
   const texto = page.getByLabel('Pergunta de texto', { exact: true });
   await texto.fill('Continuo preenchendo'); await expect(texto).toBeFocused();
   await expect(resumo.getByRole('link')).toHaveCount(2);
+  await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
+  expect(await resumo.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+  const axe = await new AxeBuilder({ page }).include('[aria-labelledby="titulo-pendencias"]').analyze();
+  expect(axe.violations).toEqual([]);
 });

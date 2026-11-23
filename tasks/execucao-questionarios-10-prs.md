@@ -38,3 +38,22 @@ em execução, NÃO PASS até resultado. Nenhuma alteração de API/storage.
 Ruling: preparar próxima worktree enquanto regressão do pai roda, sem alterar
 código do pai; só publicar pai após resultado. Se falhar, corrigir e propagar
 explicitamente a dependência, revalidando filhos. Custo: eventual retrabalho.
+
+02: regressão final74/74 PASS(4,3min), código9285ce6d + checkpointb2a59f83,
+typecheck/lint/linguagem/segredos/diff PASS. Publicação sobre01 explícita.
+
+## PR lógica03 — pendências do paciente
+
+Baseb2a59f83. RED resumo ausente + campo sem nome acessível. Após resumo/nome,
+RED adicional reproduziu vazio numérico: esperadas3pendências, recebidas2.
+Implementação mínima mantém vazio como stringvazia, filtrada do envio; zero
+informado continua número0. Backend/capabilities/contratos não alterados.
+Suíte formulário16casos e typecheck em execução, ainda NÃO PASS.
+
+03: implementação/regressão16/16 desktop/mobile PASS(1,4min); reforço final
+axe/200%2/2 PASS incluído nos16cenários, não somar reruns. Typecheck e linguagem
+PASS Node22.21.1; lint0erros,1warning preexistente set-state-in-effect no
+carregamento original(sem alteração desse efeito), não escondido. Segredos/
+diff PASS. Commits40a50dd6(C1)/4748893f(C2). Sem prova de banco/RLS/build
+completo local ou leitor de tela manual(SKIPPED, fronteiras não alteradas).
+UX B/C e revisão final do lote pendentes; nenhuma declaração de aceite final.
