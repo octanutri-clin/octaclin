@@ -523,3 +523,20 @@ export async function consultarVersaoEditor(id: string): Promise<{ versao: numbe
 export async function conferirQuestionario(id: string, entrada: { versaoEsperada: number; titulo: string; perguntas: { id: string; dados: Partial<SalvarPerguntaEntrada> }[] }): Promise<ValidacaoEditorApi> {
   return requisitar(`/api/questionarios/${id}/validacao`, { method: 'POST', body: JSON.stringify(entrada) });
 }
+
+
+export interface CompletudeHistoricaApi {
+  respostaId: string;
+  completude: {
+    estado: 'disponivel' | 'desconhecido';
+    motivo?: 'snapshot_ausente' | 'snapshot_invalido' | 'respostas_incompativeis';
+    versaoQuestionario: number | null;
+    totalPerguntas: number | null;
+    respondidas: number | null;
+    obrigatorias: number | null;
+    obrigatoriasRespondidas: number | null;
+  };
+}
+export async function obterCompletudeHistorica(questionarioId: string, respostaId: string, signal?: AbortSignal): Promise<CompletudeHistoricaApi> {
+  return requisitar(`/api/questionarios/${questionarioId}/respostas/${respostaId}/completude`, { cache: 'no-store', signal });
+}
