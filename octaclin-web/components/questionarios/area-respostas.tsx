@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { ChevronDown, ChevronRight, ClipboardList, RefreshCcw, TrendingUp } from 'lucide-react';
 import { ExportacaoRespostas } from './exportacao-respostas';
 import { Botao } from '@/components/ui/botao';
+import { Abas } from '@/components/ui/abas';
 import { Cartao } from '@/components/ui/cartao';
 import { Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import { formatarDataResposta, formatarValorResposta } from './usar-workspace-questionarios';
@@ -170,6 +171,11 @@ function ListaRespostas({
 
 export function AreaRespostas({ workspace }: { workspace: WorkspaceQuestionarios }) {
   const buscaRef = useRef<HTMLInputElement>(null);
+  const abasId = useId();
+  const contexto = JSON.stringify([workspace.questionarioAtual?.id, workspace.pacienteFiltroRespostas]);
+  const [visualizacao, setVisualizacao] = useState({ contexto, aba: 'envios' });
+  if (visualizacao.contexto !== contexto) setVisualizacao({ contexto, aba: 'envios' });
+  const aba = visualizacao.contexto === contexto ? visualizacao.aba : 'envios';
   const {
     respostasVisiveis, leituraClinica, carregandoRespostas, pacienteFiltroRespostas,
     setPacienteFiltroRespostas, carregarRespostas, questionarioAtual, buscaRespostas,
@@ -254,6 +260,11 @@ export function AreaRespostas({ workspace }: { workspace: WorkspaceQuestionarios
             <p className="text-xs text-texto-suave">A contagem considera apenas a lista carregada.</p>
           </div>
 
+          <div data-qst10-leitura>
+          <Abas identificador={abasId} abas={[{ id: 'envios', rotulo: 'Envios' }, { id: 'resumo', rotulo: 'Resumo por pergunta' }]} ativaId={aba} aoMudar={id => setVisualizacao({ contexto, aba: id })} rotulo="Visualização das respostas" />
+          <div id={`${abasId}-resumo-painel`} role="tabpanel" aria-labelledby={`${abasId}-resumo-aba`} hidden={aba !== 'resumo'} className="space-y-4 pt-3">
+            <p className="text-sm font-semibold text-tinta">Resumo da consulta</p>
+            <p className="text-xs text-texto-suave">Os totais consideram os envios da consulta. A busca apenas localiza perguntas e respostas.</p>
           {leituraClinica ? (
             <div className="grid gap-3 md:grid-cols-4">
               <div className="rounded-md border border-linha bg-superficie p-3">
@@ -317,6 +328,8 @@ export function AreaRespostas({ workspace }: { workspace: WorkspaceQuestionarios
             </div>
           ) : null}
 
+          </div>
+          <div id={`${abasId}-envios-painel`} role="tabpanel" aria-labelledby={`${abasId}-envios-aba`} hidden={aba !== 'envios'} className="pt-3">
           <ListaRespostas
             key={`${questionarioAtual?.id ?? ''}:${pacienteFiltroRespostas}`}
             respostasVisiveis={respostasVisiveis}
@@ -324,6 +337,8 @@ export function AreaRespostas({ workspace }: { workspace: WorkspaceQuestionarios
             buscaRespostas={buscaRespostas}
             carregandoRespostas={carregandoRespostas}
           />
+          </div>
+          </div>
         </div>
       </Cartao>
 
