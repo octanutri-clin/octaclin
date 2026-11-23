@@ -511,3 +511,15 @@ export function confirmarCopiaPergunta(questionarioId: string, perguntaId: strin
     method: 'POST', body: JSON.stringify({ revisaoEsperada })
   });
 }
+
+
+export interface ValidacaoEditorApi {
+  versao: number;
+  problemas: { perguntaId?: string; campo: string; codigo: string }[];
+}
+export async function consultarVersaoEditor(id: string): Promise<{ versao: number }> {
+  return requisitar(`/api/questionarios/${id}/validacao`, { cache: 'no-store' });
+}
+export async function conferirQuestionario(id: string, entrada: { versaoEsperada: number; titulo: string; perguntas: { id: string; dados: Partial<SalvarPerguntaEntrada> }[] }): Promise<ValidacaoEditorApi> {
+  return requisitar(`/api/questionarios/${id}/validacao`, { method: 'POST', body: JSON.stringify(entrada) });
+}

@@ -1789,3 +1789,33 @@ describe('ServicoQuestionarios', () => {
     });
   });
 });
+
+describe('QST10-06 prévia do editor sem persistência', () => {
+  const id = '00000000-0000-4000-8000-000000000001', cat = '00000000-0000-4000-8000-000000000002';
+  function preparar() {
+    return criarServico({questionarios:[{id:'q1',tenantId:'tenant-1',profissionalId:'profissional-1',titulo:'Sintético',versao:3}],
+      perguntas:[{id,tenantId:'tenant-1',questionarioId:'q1',categoriaId:cat,tipo:'metrica',enunciado:'Quantidade',peso:'0.00',obrigatoria:false,visivelBiblioteca:false,configuracao:{minimo:0,maximo:10},ordem:1}],
+      opcaos:[],profissionals:[{id:'profissional-1',tenantId:'tenant-1',usuarioId:'usuario-profissional-1'}]});
+  }
+  it('usa versão e edição esperadas, normaliza apenas em memória e não salva',async()=>{
+    const {servico,dados,repositorios}=preparar();const antes=JSON.stringify(dados);
+    const r=await servico.validarPreviaEditor('tenant-1','q1',{versaoEsperada:3,titulo:'Título local',perguntas:[{id,dados:{configuracao:{minimo:10,maximo:1}}}]},usuarioProfissional);
+    expect(r).toEqual({versao:3,problemas:[{perguntaId:id,campo:'configuracao',codigo:'configuracao_invalida'}]});
+    expect(JSON.stringify(dados)).toBe(antes);for(const repo of Object.values(repositorios))expect(repo.save).not.toHaveBeenCalled();
+  });
+  it('aceita peso zero e configuração válida com regras existentes',async()=>{
+    const {servico}=preparar();expect(await servico.validarPreviaEditor('tenant-1','q1',{versaoEsperada:3,titulo:'Válido',perguntas:[]},usuarioProfissional)).toEqual({versao:3,problemas:[]});
+  });
+  it('reporta título enunciado e opções sem retornar texto clínico ou entidade',async()=>{
+    const {servico}=preparar();const r=await servico.validarPreviaEditor('tenant-1','q1',{versaoEsperada:3,titulo:'  ',perguntas:[{id,dados:{tipo:'multipla_escolha',enunciado:' ',opcoes:[]}}]},usuarioProfissional);
+    expect(r.problemas).toEqual([{campo:'titulo',codigo:'titulo_ausente'},{perguntaId:id,campo:'enunciado',codigo:'enunciado_ausente'},{perguntaId:id,campo:'opcoes',codigo:'opcoes_insuficientes'}]);expect(JSON.stringify(r)).not.toContain('Quantidade');
+  });
+  it('rejeita versão stale antes de ler perguntas e não aceita edição externa ou repetida',async()=>{
+    const {servico,repositorios}=preparar();await expect(servico.validarPreviaEditor('tenant-1','q1',{versaoEsperada:2,titulo:'x',perguntas:[]},usuarioProfissional)).rejects.toThrow('questionário mudou');expect(repositorios.pergunta.find).not.toHaveBeenCalled();
+    for(const perguntas of [[{id:'externa',dados:{}}],[{id,dados:{}},{id,dados:{}}]])await expect(servico.validarPreviaEditor('tenant-1','q1',{versaoEsperada:3,titulo:'x',perguntas},usuarioProfissional)).rejects.toThrow('não pertence');
+  });
+  it('nega outro tenant ou proprietário inclusive na consulta de versão',async()=>{
+    const {servico,dados,repositorios}=preparar();await expect(servico.obterVersaoEditor('outro','q1',{...usuarioProfissional,tenantId:'outro'})).rejects.toThrow();
+    dados.questionarios[0].profissionalId='outro';await expect(servico.validarPreviaEditor('tenant-1','q1',{versaoEsperada:3,titulo:'x',perguntas:[]},usuarioProfissional)).rejects.toThrow();expect(repositorios.pergunta.find).not.toHaveBeenCalled();
+  });
+});

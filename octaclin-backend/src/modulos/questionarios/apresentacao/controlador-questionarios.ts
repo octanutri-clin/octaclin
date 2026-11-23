@@ -1,3 +1,4 @@
+import { ValidarPreviaEditorDto } from '../aplicacao/dto-validacao-editor';
 import {
   Body,
   Controller,
@@ -168,6 +169,21 @@ export class ControladorQuestionarios {
       status: dados.status
     });
     return questionario;
+  }
+
+  @Get('questionarios/:id/validacao')
+  @Permissoes('questionarios.gerenciar')
+  @Header('Cache-Control', 'private, no-store')
+  obterVersaoEditor(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('id', ParseUUIDPipe) id: string) {
+    return this.servicoQuestionarios.obterVersaoEditor(usuario.tenantId, id, usuario);
+  }
+
+  @Post('questionarios/:id/validacao')
+  @HttpCode(200)
+  @Permissoes('questionarios.gerenciar')
+  @Header('Cache-Control', 'private, no-store')
+  validarPreviaEditor(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('id', ParseUUIDPipe) id: string, @Body() dados: ValidarPreviaEditorDto) {
+    return this.servicoQuestionarios.validarPreviaEditor(usuario.tenantId, id, dados, usuario);
   }
 
   @Post('questionarios/:id/duplicar')

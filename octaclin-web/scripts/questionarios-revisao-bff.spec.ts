@@ -1,3 +1,4 @@
+import { GET as versaoEditor, POST as conferirEditor } from '../app/api/questionarios/[id]/validacao/route';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import * as nextHeaders from 'next/headers';
@@ -281,4 +282,23 @@ test('P05 falha fechada para ACK inválido', async () => {
   await cenarioP05(['questionarios.gerenciar'], async () => {
     assert.equal((await confirmarCopia(requestP05(), paramsP05())).status, 502);
   }, { perguntaId: 'inválido', versaoQuestionario: 3 });
+});
+
+
+test('QST10-06 prévia exige sessão permissão origem limites e não projeta extras', async()=>{
+  const original=global.fetch; const id='00000000-0000-4000-8000-000000000001';
+  const params={params:Promise.resolve({id})};const corpo={versaoEsperada:1,titulo:'Sintético',perguntas:[]};let chamadas=0;
+  const req=(body:unknown=corpo,origin='http://localhost')=>new Request('http://localhost/api/questionarios/validacao',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify(body)});
+  try{
+    global.fetch=(async()=>{chamadas++;return new Response(JSON.stringify({versao:2,problemas:[{perguntaId:id,campo:'enunciado',codigo:'enunciado_ausente',interno:'não expor'}],interno:'não expor'}),{headers:{'Content-Type':'application/json'}});})as typeof fetch;
+    __clearCookies();assert.equal((await conferirEditor(req(),params)).status,401);
+    __setCookies(cookiesSessaoValida(['questionarios.ler']));assert.equal((await conferirEditor(req(),params)).status,403);
+    __setCookies(cookiesSessaoValida(['questionarios.gerenciar']));assert.equal((await conferirEditor(req(corpo,'https://outra.example.test'),params)).status,403);
+    for(const d of [{...corpo,tenantId:id},{...corpo,versaoEsperada:0},{...corpo,perguntas:[{id:'errado',dados:{}}]}])assert.equal((await conferirEditor(req(d),params)).status,400);
+    assert.equal(chamadas,0);const r=await conferirEditor(req(),params);assert.equal(r.status,200);assert.match(r.headers.get('Cache-Control')??'',/no-store/);
+    assert.deepEqual(await r.json(),{versao:2,problemas:[{perguntaId:id,campo:'enunciado',codigo:'enunciado_ausente'}]});
+    assert.deepEqual(await(await versaoEditor(new Request('http://localhost'),params)).json(),{versao:2});
+    global.fetch=(async()=>new Response(JSON.stringify({versao:2,problemas:[{campo:'secreto',codigo:'interno'}]}),{headers:{'Content-Type':'application/json'}}))as typeof fetch;
+    assert.equal((await conferirEditor(req(),params)).status,502);
+  }finally{restaurarFetch(original);__clearCookies();}
 });

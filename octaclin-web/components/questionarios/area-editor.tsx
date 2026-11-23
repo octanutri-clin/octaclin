@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { ChecklistEditor } from './checklist-editor';
 import { FluxoCopiaPergunta } from './fluxo-copia-pergunta';
 import { closestCenter, DndContext, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
@@ -43,6 +44,7 @@ export function AreaEditor({ workspace }: { workspace: WorkspaceQuestionarios })
     <fieldset disabled={workspace.salvando || workspace.carregandoPerguntas || workspace.copiaPergunta.previa !== null} className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-[minmax(320px,1fr)_minmax(320px,1fr)_minmax(360px,1fr)]">
       <legend className="sr-only">Editor de perguntas</legend>
       <Cartao className="overflow-hidden">
+        <ChecklistEditor workspace={workspace} />
         <div className="flex items-center justify-between border-b border-linha px-4 py-3">
           <h2 className="text-sm font-semibold text-tinta">Perguntas</h2>
           <Botao variante="primario" onClick={adicionarPergunta} disabled={salvando || !questionarioAtual}>
@@ -167,7 +169,7 @@ export function AreaEditor({ workspace }: { workspace: WorkspaceQuestionarios })
               />
             </label>
 
-            <div className="space-y-3 rounded-md border border-linha bg-superficie p-3">
+            <div id="configuracao-pergunta" tabIndex={-1} aria-label="Configuração da pergunta" className="space-y-3 rounded-md border border-linha bg-superficie p-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primaria">
               <div>
                 <p className="text-sm font-semibold text-tinta">Configuração do tipo</p>
                 <p className="text-xs text-texto-suave">Ajuste como esta pergunta será respondida pelo paciente.</p>
