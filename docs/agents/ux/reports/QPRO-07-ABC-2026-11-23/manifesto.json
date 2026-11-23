@@ -1,0 +1,26 @@
+{
+  "base": "65ec84192745ca21eb5c2951383281396fa09a51",
+  "etapas": [
+    "A",
+    "D",
+    "B",
+    "C"
+  ],
+  "agente": "/root/qst_auditoria_nutri",
+  "modo": "runtime com papel fornecido por prompt/followup, sem seleção nativa TOML",
+  "inicio_utc": null,
+  "fim_utc": null,
+  "ferramentas_persona": [],
+  "paciente": "N/A: console profissional sem conteúdo enviado",
+  "capturas": "Playwright real sintético; inspecionadas pelo coordenador, não pela persona",
+  "resultado": "parecer favorável no relato; síntese editorial; não R4 ou pesquisa clínica",
+  "sha256": {
+    "docs/agents/ux/reports/QPRO-07-ABC-2026-11-23/consolidado.md": "553304482be842d2029ec1df0140bf83b6fec639014f2b11e03e10d5349882bc",
+    "docs/agents/ux/reports/QPRO-07-ABC-2026-11-23/desktop-erro-antes.png": "454306305244b064c74d9e53711514b49a1445c55da3f073e803fbe9d69e71ed",
+    "docs/agents/ux/reports/QPRO-07-ABC-2026-11-23/desktop-erro.png": "908f2e83223713e29e64ebe2ea0c0aa12d6c1328df72ef7d968e92a21b3c25a1",
+    "docs/agents/ux/reports/QPRO-07-ABC-2026-11-23/desktop-recuperado.png": "ba9087b99adba9e0d51b2ef9ed37278cbb81f13196a4b4af3f57111d432b3934",
+    "docs/agents/ux/reports/QPRO-07-ABC-2026-11-23/mobile-erro.png": "c142baf427a9d09d6543c828c21abfaf4a6cca851656d381e1b9c05a3699a87b",
+    "docs/agents/ux/reports/QPRO-07-ABC-2026-11-23/mobile-recuperado.png": "fb212ba551dbc505618a681610f77cea6c65db5e56dae075c645d47b1625f7bd",
+    ".codex/agents/octaclin-nutricionista-ux.toml": "6259b40a98e2c49053cbc6adbc0c59d0312b14e191b228ab73de2f2eac53af6d"
+  }
+}
