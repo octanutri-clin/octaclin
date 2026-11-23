@@ -339,8 +339,8 @@ export function useWorkspaceQuestionarios() {
     try {
       const lista = await listarVersoesQuestionario(questionarioId);
       setVersoes(lista);
-    } catch (erroAtual) {
-      setErroVersoes(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar histórico de versões.');
+    } catch {
+      setErroVersoes('Não foi possível carregar o histórico de versões. Tente novamente.');
     } finally {
       setCarregandoVersoes(false);
     }
@@ -912,6 +912,7 @@ export function useWorkspaceQuestionarios() {
     erroVersoes,
     historicoVersoesAberto,
     alternarHistoricoVersoes,
+    carregarVersoes,
     pacienteFiltroRespostas,
     setPacienteFiltroRespostas,
     buscaRespostas,

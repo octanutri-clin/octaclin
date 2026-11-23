@@ -42,6 +42,65 @@ async function mockarBff(page) {
 }
 
 test.describe('Editor de questionarios', () => {
+  test('QPRO-07 tentar novamente relê versões sem fechar o painel e mantém foco', async ({ page }) => {
+    await criarSessao(page);
+    await mockarBff(page);
+    let chamadas = 0, liberar;
+    const liberada = new Promise(resolve => { liberar = resolve; });
+    await page.route('**/api/questionarios/q-1/versoes', async route => {
+      chamadas++;
+      if (chamadas === 1) return route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ mensagem: 'Falha sintética no histórico.' }) });
+      await liberada;
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
+        { versaoQuestionario: 1, titulo: 'Check-in semanal', perguntas: [], atual: true, totalEnvios: 0 }
+      ]) });
+    });
+    await page.goto('/questionarios');
+    await expect(page.getByLabel('Selecionar', { exact: true })).toHaveValue('q-1');
+    await page.getByLabel('Título', { exact: true }).fill('Rascunho sintético preservado');
+    const historico = page.getByRole('button', { name: 'Histórico de versões', exact: true });
+    await historico.click();
+    const tentar = page.getByRole('button', { name: 'Tentar novamente', exact: true });
+    await expect(tentar).toBeVisible();
+    await expect(page.getByText('Não foi possível carregar o histórico de versões. Tente novamente.', { exact: true })).toBeVisible();
+    await expect(tentar.locator('..')).not.toContainText('Falha sintética no histórico.');
+    await tentar.locator('..').screenshot({ path: test.info().outputPath('qpro07-erro.png') });
+    await tentar.focus();
+    await page.keyboard.press('Enter');
+    await expect.poll(() => chamadas).toBe(2);
+    await expect(historico).toHaveAttribute('aria-expanded', 'true');
+    await expect(historico).toBeFocused();
+    await expect(page.getByRole('status').filter({ hasText: 'Carregando histórico de versões...' })).toBeVisible();
+    await expect(tentar).toHaveCount(0);
+    liberar();
+    await expect(page.getByRole('button', { name: /^Versão 1/ })).toBeVisible();
+    await expect(historico).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.getByLabel('Selecionar', { exact: true })).toHaveValue('q-1');
+    await expect(page.getByLabel('Título', { exact: true })).toHaveValue('Rascunho sintético preservado');
+    await page.getByRole('button', { name: /^Versão 1/ }).locator('..').screenshot({ path: test.info().outputPath('qpro07-recuperado.png') });
+    expect(chamadas).toBe(2);
+  });
+
+  test('QPRO-07 nova falha mantém histórico aberto e permite outra tentativa', async ({ page }) => {
+    await criarSessao(page);
+    await mockarBff(page);
+    let chamadas = 0;
+    await page.route('**/api/questionarios/q-1/versoes', route => {
+      chamadas++;
+      return route.fulfill({ status: chamadas < 3 ? 500 : 200, contentType: 'application/json',
+        body: JSON.stringify(chamadas < 3 ? { mensagem: 'Falha sintética no histórico.' } : []) });
+    });
+    await page.goto('/questionarios');
+    const historico = page.getByRole('button', { name: 'Histórico de versões', exact: true });
+    await historico.click();
+    await page.getByRole('button', { name: 'Tentar novamente', exact: true }).click();
+    await expect.poll(() => chamadas).toBe(2);
+    await expect(historico).toHaveAttribute('aria-expanded', 'true');
+    await page.getByRole('button', { name: 'Tentar novamente', exact: true }).click();
+    await expect(page.getByText('Nenhuma versão anterior registrada ainda.')).toBeVisible();
+    expect(chamadas).toBe(3);
+    await expect(page.getByLabel('Selecionar', { exact: true })).toHaveValue('q-1');
+  });
   test('P04 amplia uma única prévia e informa larguras efetivas sem habilitar envio', async ({page})=>{
     await criarSessao(page);await mockarBff(page);await page.goto('/questionarios');
     await page.getByRole('tab',{name:'Editor',exact:true}).click();
