@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Archive, BookOpen, ChevronDown, ChevronRight, Copy, History, RefreshCcw, Save, Search, Wand2 } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { Etiqueta } from '@/components/ui/etiqueta';
@@ -18,10 +18,11 @@ export function AreaFormularios({ workspace }: { workspace: WorkspaceQuestionari
     titulo, setTitulo, setAlteracoesQuestionarioPendentes,
     descricao, setDescricao, setStatus, perguntas, scoreTotal,
     confirmandoArquivarQuestionario, arquivarQuestionario,
-    versoes, carregandoVersoes, erroVersoes, historicoVersoesAberto, alternarHistoricoVersoes
+    versoes, carregandoVersoes, erroVersoes, historicoVersoesAberto, alternarHistoricoVersoes, carregarVersoes
   } = workspace;
   const totalPaginas = Math.max(1, Math.ceil(totalQuestionarios / 25));
   const [versaoExpandidaIndice, setVersaoExpandidaIndice] = useState<number | null>(null);
+  const botaoHistoricoRef = useRef<HTMLButtonElement>(null);
 
   function formatarDataVersao(valor?: string) {
     if (!valor) return null;
@@ -63,6 +64,7 @@ export function AreaFormularios({ workspace }: { workspace: WorkspaceQuestionari
             <span className="text-xs text-texto-suave">Versão {questionarioAtual?.versao ?? 1}</span>
             <Etiqueta variante={status === 'publicado' ? 'sucesso' : status === 'arquivado' ? 'neutra' : 'alerta'}>{status}</Etiqueta>
             <Botao
+              ref={botaoHistoricoRef}
               type="button"
               variante="fantasma"
               className="h-8 px-2 text-xs"
@@ -78,11 +80,14 @@ export function AreaFormularios({ workspace }: { workspace: WorkspaceQuestionari
         {historicoVersoesAberto ? (
           <CartaoConteudo className="border-b border-linha pb-4">
             {carregandoVersoes ? (
-              <p className="text-sm text-texto-suave">Carregando histórico de versões...</p>
+              <p role="status" className="text-sm text-texto-suave">Carregando histórico de versões...</p>
             ) : erroVersoes ? (
               <div className="flex items-center gap-2 border border-perigo-borda bg-perigo-suave px-3 py-2 text-sm text-perigo" role="alert">
                 <span>{erroVersoes}</span>
-                <Botao type="button" variante="secundario" className="h-8 px-2 text-xs" onClick={() => void alternarHistoricoVersoes()}>Tentar novamente</Botao>
+                <Botao type="button" variante="secundario" className="h-8 px-2 text-xs" onClick={() => {
+                  botaoHistoricoRef.current?.focus();
+                  void carregarVersoes();
+                }}>Tentar novamente</Botao>
               </div>
             ) : versoes.length === 0 ? (
               <p className="text-sm text-texto-suave">Nenhuma versão anterior registrada ainda.</p>
