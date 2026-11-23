@@ -207,3 +207,39 @@ CI consultado20SUCCESS/1SKIPPED(SBOM)/Demoemexecução, sem falha naqueleinstant
 08preparada em/workspace/qst10-08-paginacao-exportacoes, base39f1a92,
 apenas leitura, sem código novo. AntesC1 fazerFF explícito só do C4documental
 07.09/10NOTRUN. Sem merge, deploy, operação externa ou mudançasClaude/FOOD06.
+
+## PR lógica08 — checkpoint backend, implementação em andamento
+
+Worktree própria `qst10-08-paginacao-exportacoes`, branch
+`feat/qst10-08-paginacao-exportacoes`, base07 `87dbeeaf`. R4: leitura clínica,
+autorização e migration somente de índices. Nenhum trabalho FOOD06 integrado.
+A indisponibilidade/reinicialização desta rodada preservou arquivos e logs.
+
+C1/C2: normalizador estrito de período/paciente/25–50–100; cursor opaco cifrado
+com o provider AES-GCM existente, vinculado a tenant/ator/questionário/filtros/fuso.
+Keyset conserva microssegundos PostgreSQL e ordena dataDESC NULLSLAST/idDESC.
+Consulta metadata+LIMIT antes dos valores; locks questionário→profissional→
+pacientes→envios→respostas, carteira novamente autorizada antes dos valores.
+Nova API privada e três escopos explícitos de CSV; >1000 rejeitado sem truncar;
+projeção/volume limitados. Reutilizados guardas, ExecutorTenant, fuso clínico,
+CSV canônico e resumo extraído sem alterar o comportamento legado. No resumo
+novo, null/vazio/booleano não viram zero; definições históricas incompatíveis
+não geram média. Leitores integrais legados não montam a página/exportação nova.
+Migration1087 registrada: dois índices aditivos, rollback remove só os índices.
+Não aplicada fora de PostgreSQL Testcontainers descartável owner/runtime.
+
+RED funcional:20falhas/1PASS em filtros/cursor;6falhas de banco;5falhasHTTP/1PASS;
+2falhas de médias históricas com67regressões e1compatibilidadePASS;1falhaíndices.
+GREEN:119/119 em5suítes backend (domínio/serviço/HTTP/registroTypeORM);
+44/44 PostgreSQL15descartável, runtimeNOBYPASSRLS/FORCERLS, incluindo37regressões
++7cenáriosnovos. Não somar reexecuções. Typecheckbackend Node22.21.1 PASS,
+diffcheck e scannerlocal de segredosPASS. Erro intermediário TS de indexsignature
+corrigido: erro de compilação não contado comoRED. Buildglobal NOTRUN nestaetapa.
+
+API/BFF/console/Playwright/UXB-C/R4independente/CI do delta continuam pendentes;
+esta é uma etapa segura de backup, não conclusão da08. Próxima ação: BFF
+allowlist e integração de filtros/páginas/3CSV no console; depois regressões,
+R4 ePRDraft08sobre07.09–10NOTRUN. Sem merge/deploy/migrationexterna.
+
+Leitura GitHub desta rodada: #588HEAD8d06cf24 com21SUCCESS e1SKIPPED(SBOM),
+semfalhas; #589OPEN/Draft87dbeeaf. Resultados dos pais não validam08.

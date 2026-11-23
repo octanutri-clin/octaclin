@@ -1,3 +1,6 @@
+import { IndicesConsultaRespostasQuestionario1720000001087 } from '../../../infraestrutura/banco-dados/migracoes/1720000001087-IndicesConsultaRespostasQuestionario';
+import { ServicoRespostasPaginadas } from './servico-respostas-paginadas';
+import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { RespostaCheckinOrm } from '../infraestrutura/resposta-checkin.orm';
 import { RespostaValorOrm } from '../infraestrutura/resposta-valor.orm';
@@ -77,11 +80,12 @@ suite('QST-P05 — PostgreSQL descartável, runtime e FORCE RLS', () => {
         envio_questionario_id uuid NOT NULL, finalizado_em timestamptz, criado_em timestamptz DEFAULT now(), score_final numeric(8,2));
       CREATE TABLE resposta_valores(id uuid PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id uuid NOT NULL,
         resposta_checkin_id uuid NOT NULL, pergunta_id uuid NOT NULL, valor jsonb NOT NULL, score_ponderado numeric(8,2));
+      CREATE TABLE tenant_configuracoes(tenant_id uuid NOT NULL, chave text NOT NULL, valor jsonb NOT NULL);
       CREATE ROLE qst_runtime LOGIN PASSWORD 'runtime-test-only' NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS;
       GRANT USAGE ON SCHEMA public TO qst_runtime;
       GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA public TO qst_runtime;
     `);
-    for (const tabela of ['questionarios', 'perguntas', 'opcoes_pergunta', 'usuarios', 'sessoes_usuario', 'profissionais', 'envios_questionario', 'pacientes', 'respostas_checkin', 'resposta_valores']) {
+    for (const tabela of ['questionarios', 'perguntas', 'opcoes_pergunta', 'usuarios', 'sessoes_usuario', 'profissionais', 'envios_questionario', 'pacientes', 'respostas_checkin', 'resposta_valores', 'tenant_configuracoes']) {
       await admin.query(`ALTER TABLE ${tabela} ENABLE ROW LEVEL SECURITY; ALTER TABLE ${tabela} FORCE ROW LEVEL SECURITY;
         CREATE POLICY tenant_isolado ON ${tabela} USING (tenant_id = current_setting('app.tenant_id', true)::uuid)
         WITH CHECK (tenant_id = current_setting('app.tenant_id', true)::uuid);`);
@@ -94,7 +98,7 @@ suite('QST-P05 — PostgreSQL descartável, runtime e FORCE RLS', () => {
   }, 90_000);
 
   beforeEach(async () => {
-    await admin.query('TRUNCATE opcoes_pergunta,perguntas,questionarios,usuarios,sessoes_usuario,profissionais,envios_questionario,pacientes,respostas_checkin,resposta_valores CASCADE');
+    await admin.query('TRUNCATE tenant_configuracoes,opcoes_pergunta,perguntas,questionarios,usuarios,sessoes_usuario,profissionais,envios_questionario,pacientes,respostas_checkin,resposta_valores CASCADE');
     await admin.query(`INSERT INTO questionarios(id,tenant_id,profissional_id,titulo,status,versao) VALUES($1,$2,$3,'Rascunho sintético','rascunho',4)`, [questionarioId, tenant, profissionalId]);
     await admin.query(`INSERT INTO perguntas(id,tenant_id,questionario_id,categoria_id,tipo,enunciado,peso,obrigatoria,configuracao,ordem,chave_clinica,visivel_biblioteca)
       VALUES($1,$3,$4,$5,'multipla_escolha','Pergunta sintética salva',1.5,false,'{"secao":"Rotina","multipla":true}',1,'comparacao-original',true),
@@ -488,6 +492,81 @@ suite('QST-P05 — PostgreSQL descartável, runtime e FORCE RLS', () => {
     expect((await sut().obterCompletudeHistorica(tenant,questionarioId,resposta,ator)).completude).toMatchObject({estado:'disponivel',totalPerguntas:2,respondidas:2});
     expect((await admin.query('SELECT finalizado_em FROM respostas_checkin WHERE id=$1',[resposta])).rows[0].finalizado_em).toBeNull();
     expect((await admin.query('SELECT snapshot_estrutura FROM envios_questionario WHERE id=$1',[envioId])).rows).toEqual(snapshotAntes);
+  });
+
+  describe('QST10-08 paginação real antes dos valores', () => {
+    const paginado = () => new ServicoRespostasPaginadas(servico, new CriptografiaDadosSensiveis());
+    async function popular(total = 32) {
+      const paciente = randomUUID();
+      await admin.query('INSERT INTO pacientes(id,tenant_id,profissional_responsavel_id) VALUES($1,$2,$3)', [paciente,tenant,profissionalId]);
+      await admin.query(`UPDATE envios_questionario SET paciente_id=$1,status='respondido',snapshot_estrutura=$2 WHERE id=$3`, [paciente,JSON.stringify({versaoQuestionario:1,titulo:'Histórico',perguntas:[{id:origemId,tipo:'metrica',enunciado:'Valor congelado',configuracao:{unidade:'kg'}}]}),envioId]);
+      await admin.query(`INSERT INTO respostas_checkin(id,tenant_id,paciente_id,envio_questionario_id,finalizado_em)
+        SELECT md5(n::text)::uuid,$1,$2,$3,'2026-11-23 12:00:00+00'::timestamptz + n*interval '1 microsecond' FROM generate_series(1,$4::int) n`,[tenant,paciente,envioId,total]);
+      await admin.query(`INSERT INTO resposta_valores(tenant_id,resposta_checkin_id,pergunta_id,valor) SELECT tenant_id,id,$2,'0'::jsonb FROM respostas_checkin WHERE tenant_id=$1`,[tenant,origemId]);
+      return paciente;
+    }
+    it('ensaia índices aditivos e rollback sem alterar dados nem RLS', async () => {
+      await popular(3); const q = runtime.createQueryRunner();
+      // Migration is deliberately owner-only, never run by the runtime role.
+      const executar = {query:(sql:string)=>admin.query(sql)} as unknown as import('typeorm').QueryRunner;
+      const migration = new IndicesConsultaRespostasQuestionario1720000001087();
+      try {
+        await migration.up(executar);
+        const indices = (await admin.query("SELECT indexname,indexdef FROM pg_indexes WHERE indexname IN ('idx_qst_respostas_pagina','idx_qst_envios_respondidos') ORDER BY indexname")).rows;
+        expect(indices).toHaveLength(2); expect(indices[1].indexdef).toContain('finalizado_em DESC NULLS LAST');
+        expect(Number((await admin.query('SELECT count(*) FROM respostas_checkin')).rows[0].count)).toBe(3);
+        const tabelas = (await admin.query("SELECT relrowsecurity,relforcerowsecurity FROM pg_class WHERE relname IN ('respostas_checkin','envios_questionario')")).rows;
+        expect(tabelas.every(t=>t.relrowsecurity && t.relforcerowsecurity)).toBe(true);
+        await migration.down(executar);
+        expect((await admin.query("SELECT indexname FROM pg_indexes WHERE indexname IN ('idx_qst_respostas_pagina','idx_qst_envios_respondidos')")).rows).toHaveLength(0);
+      } finally {await q.release();await migration.down(executar);}
+    });
+    it('pagina com microssegundos sem perder ou repetir e não usa leitor integral', async () => {
+      await popular(); const legado = jest.spyOn(servico,'listarRespostasQuestionario');
+      try {
+        const a = await paginado().consultar(tenant,questionarioId,ator,{});
+        expect(a.respostas).toHaveLength(25); expect(a.totalConsulta).toBe(32); expect(a.timezone).toBe('America/Sao_Paulo');
+        expect(a.respostas[0].respostas[0]).toMatchObject({enunciado:'Valor congelado',valor:0});
+        const b = await paginado().consultar(tenant,questionarioId,ator,{cursor:a.proximoCursor});
+        expect(b.respostas).toHaveLength(7); expect(b.proximoCursor).toBeNull();
+        expect(new Set([...a.respostas,...b.respostas].map((r:any)=>r.respostaId)).size).toBe(32);
+        expect(legado).not.toHaveBeenCalled();
+      } finally { legado.mockRestore(); }
+    });
+    it('mantém datas ausentes no fim e trata dia final inclusivo no fuso da clínica', async () => {
+      await popular(4);
+      await admin.query(`UPDATE respostas_checkin SET finalizado_em = CASE id WHEN md5('1')::uuid THEN NULL WHEN md5('2')::uuid THEN '2026-11-24 02:59:59.999999+00'::timestamptz WHEN md5('3')::uuid THEN '2026-11-24 03:00:00+00'::timestamptz ELSE '2026-11-23 03:00:00+00'::timestamptz END`);
+      const dia = await paginado().consultar(tenant,questionarioId,ator,{inicio:'2026-11-23',fim:'2026-11-23'});
+      expect(dia.totalConsulta).toBe(2); expect(dia.respostas).toHaveLength(2);
+      const todos = await paginado().consultar(tenant,questionarioId,ator,{});
+      expect(todos.respostas[3].finalizadoEm).toBeUndefined();
+    });
+    it('reautoriza carteira e tenant em cada página e exportação', async () => {
+      const paciente = await popular(); const a = await paginado().consultar(tenant,questionarioId,ator,{});
+      await admin.query('UPDATE pacientes SET profissional_responsavel_id=$1 WHERE id=$2',[randomUUID(),paciente]);
+      await expect(paginado().consultar(tenant,questionarioId,ator,{pacienteId:paciente})).rejects.toThrow();
+      expect((await paginado().consultar(tenant,questionarioId,ator,{cursor:a.proximoCursor})).respostas).toEqual([]);
+      await expect(paginado().exportar(tenant,questionarioId,ator,{},[a.respostas[0].respostaId])).rejects.toThrow();
+      await expect(paginado().consultar(outroTenant,questionarioId,{...ator,tenantId:outroTenant},{})).rejects.toThrow();
+    });
+    it('exporta consulta e visíveis sem confundir busca local com filtro global', async () => {
+      const paciente = await popular(3); const a = await paginado().consultar(tenant,questionarioId,ator,{});
+      const csv = await paginado().exportar(tenant,questionarioId,ator,{pacienteId:paciente});
+      expect(csv).toContain('Valor congelado'); expect(csv.trim().split('\n')).toHaveLength(4);
+      const visiveis = await paginado().exportar(tenant,questionarioId,ator,{},[a.respostas[0].respostaId]);
+      expect(visiveis.trim().split('\n')).toHaveLength(2);
+    });
+    it('rejeita mais de mil antes de ler valores, sem truncar silenciosamente', async () => {
+      await popular(1001);
+      await expect(paginado().exportar(tenant,questionarioId,ator,{})).rejects.toThrow(/1000/);
+      expect((await paginado().consultar(tenant,questionarioId,ator,{tamanho:'100'})).respostas).toHaveLength(100);
+    });
+    it('rejeita cursor adulterado e não altera snapshots ou respostas', async () => {
+      await popular(); const antes = (await admin.query('SELECT * FROM envios_questionario ORDER BY id')).rows;
+      await expect(paginado().consultar(tenant,questionarioId,ator,{cursor:'invalido'})).rejects.toThrow(/Cursor/);
+      await paginado().exportar(tenant,questionarioId,ator,{});
+      expect((await admin.query('SELECT * FROM envios_questionario ORDER BY id')).rows).toEqual(antes);
+    });
   });
 
 });
