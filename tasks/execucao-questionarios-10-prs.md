@@ -28,3 +28,13 @@ Next16.3.8 versus manifesto^16.4.5: CI canônico pendente. Banco/RLS/build
 completo local SKIPPED, fronteiras não alteradas. UXA aprovado no plano;
 B/C e revisão estática final do lote pendentes, sem declaração de aceite.
 PR01 mantém Draft e não herda PASS de outro commit.
+
+## PR lógica02 — organização da leitura
+
+Base19c94939, branchfeat/qst10-02-organizar-leitura; dependência explícita da01.
+RED: abaEnvios ausente. GREEN4/4 desktop/mobile, contexto/filtros/leitura/foco,
+axe200% PASS. Código9285ce6d congelado; typecheck/lint PASS. Regressão74casos
+em execução, NÃO PASS até resultado. Nenhuma alteração de API/storage.
+Ruling: preparar próxima worktree enquanto regressão do pai roda, sem alterar
+código do pai; só publicar pai após resultado. Se falhar, corrigir e propagar
+explicitamente a dependência, revalidando filhos. Custo: eventual retrabalho.
