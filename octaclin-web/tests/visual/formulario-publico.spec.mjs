@@ -357,3 +357,29 @@ test('QST10-03 limpar número não inventa zero; erro não rouba foco durante ed
   const axe = await new AxeBuilder({ page }).include('[aria-labelledby="titulo-pendencias"]').analyze();
   expect(axe.violations).toEqual([]);
 });
+
+test('QST10-04 índice navega na mesma página e preserva respostas e todas as perguntas', async ({ page }) => {
+  await prepararPendencias(page);
+  await page.getByLabel('Pergunta de texto', { exact: true }).fill('Texto antes de navegar');
+  const endereco = page.url();
+  const indice = page.getByRole('navigation', { name: 'Seções do formulário', exact: true });
+  await expect(indice.getByRole('link')).toHaveCount(2);
+  await indice.getByRole('link', { name: 'Observações', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Observações', exact: true })).toBeFocused();
+  await expect(page.getByLabel('Pergunta de texto', { exact: true })).toHaveValue('Texto antes de navegar');
+  await expect(page.getByRole('spinbutton', { name: 'Pergunta numérica', exact: true })).toBeVisible();
+  await indice.getByRole('link', { name: 'Rotina', exact: true }).focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('heading', { name: 'Rotina', exact: true })).toBeFocused();
+  expect(page.url()).toBe(endereco);
+  await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
+  expect(await indice.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+  const axe = await new AxeBuilder({ page }).include('nav[aria-label="Seções do formulário"]').analyze();
+  expect(axe.violations).toEqual([]);
+});
+
+test('QST10-04 formulário com uma seção não apresenta navegação desnecessária', async ({ page }) => {
+  await prepararFormulario(page); await page.goto('/formularios/token-publico');
+  await expect(page.getByRole('button', { name: 'Sim', exact: true })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Seções do formulário', exact: true })).toHaveCount(0);
+});
