@@ -66,3 +66,43 @@ Não iniciada neste incremento. Sem merge, deploy ou migrations.
 CI do novo HEAD: pendente após publicação, não herda o PASS de outra PR.
 Mudanças geradas por Next em `next-env.d.ts` removidas somente desta worktree.
 Sem alteração da main ou de arquivos de outras worktrees.
+
+## Retomada de CI — 23/11/2026
+
+HEAD inicial `b47132d814c7b2b41ec88cc2d1cf7f8dcbc43e66`, run
+[45089637299](https://github.com/octanutri-clin/octaclin/actions/runs/45089637299):
+Backend, Web (incluindo build canônico), Mobile, governança e scanners PASS;
+Demo local smoke FAIL e PR Gate FAIL por consequência. Nos logs do job
+137419718203, o smoke visual terminou com **6 falhas, 1 flaky, 10 skipped e
+1439 passed**. Não é PASS global. Etapas posteriores de estados, densidade,
+linguagem e jornada de microcopy SKIPPED após essa falha.
+
+Causa das seis falhas: três seletores de aba ainda procuravam “Distribuicoes”
+em `tests/visual/acessibilidade.spec.mjs`: distribuição (1597), alternância de
+áreas por teclado (1631) e criação/distribuição integral por teclado (5926).
+Os três cenários falharam nos dois projetos, inclusive retry. O delta anterior
+omitiu esse consumidor do nome acessível. Correção estrita dos três nomes para
+“Distribuições”, sem alterar asserções de foco, heading, payload, axe ou timeout.
+Logs do CI são RED funcional existente; nenhuma necessidade de forçar nova falha.
+
+Há ainda um resultado intermitente no P05 “cópia aguarda ACK da reordenação por
+teclado” mobile: o anúncio de destino p-2 não apareceu na primeira tentativa;
+retry passou. Não atribuído ao rótulo sem reprodução. Verificação específica
+registrada abaixo; sem relaxar asserts nem aumentar timeout.
+
+Validação da retomada em Node 22.21.1:
+
+- **18/18 PASS**: gate de acessibilidade de questionários e jornada completa de
+  criação/distribuição por teclado, desktop/mobile (1,1 min), com asserts
+  originais de foco, axe, heading e payload.
+- **6/6 PASS**, três execuções por projeto do mesmo teste P05 de ACK/reordenação
+  (20,7 s), sem retries configurados localmente. A falha intermitente do CI
+  não se reproduziu; não declarar causa corrigida nem garantia de estabilidade.
+- Gate de linguagem, `git diff --check` e scanner local de segredos: **PASS**.
+- Sem alterações de código funcional, timeouts, asserções ou workflows.
+- CI final: **PENDING** após envio do delta. Run anterior continua FAIL histórico;
+  não substituído por um rerun sem correção.
+
+Os 118 testes anteriores seguem evidência histórica do mesmo código funcional;
+esta retomada muda somente seletores de teste e documentação. Sem reexecução
+redundante de build/typecheck para mudança sem TypeScript funcional.
