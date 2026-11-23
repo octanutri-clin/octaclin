@@ -1,0 +1,35 @@
+{
+  "tarefa": "QPRO-15-A",
+  "base": "65ec84192745ca21eb5c2951383281396fa09a51",
+  "data": "2026-11-23",
+  "modalidade": "subagente runtime com papel explícito; TOML nativo não comprovado",
+  "instancia": "/root/qst_auditoria_nutri",
+  "etapas": [
+    "A",
+    "D",
+    "B",
+    "C"
+  ],
+  "inicio": null,
+  "fim": null,
+  "nota_tempos": "não capturados; ver trilha real do runtime",
+  "papel": {
+    "arquivo": ".codex/agents/octaclin-nutricionista-ux.toml",
+    "sha256": "6259b40a98e2c49053cbc6adbc0c59d0312b14e191b228ab73de2f2eac53af6d"
+  },
+  "arquivos_sha256": {
+    "brief.md": "09b4e466e5e8760b558176a5c7451cd249e88874868cfe22bb7f7d1785063e14",
+    "consolidado.md": "cafc0d88a9e833b2c1a90cb26f1399941ff54e6207ec7f9741efaabb1355944a",
+    "desktop.png": "91883d5d89c11424043311b72af672437dc9e8998b2db46e529a4fecbbb7ac23",
+    "mobile.png": "86f8c9dc0151bad1a34ccfff971669a721da6829a99d033e10c0e5cfe8bab14f"
+  },
+  "ferramentas_persona": [],
+  "evidencia_coordenador": "Chromium real desktop e Pixel 5; Next local e BFF simulado; capturas inspecionadas pelo coordenador",
+  "paciente": "N/A: mudança editorial somente no console profissional",
+  "limitacoes": [
+    "persona recebeu descrição e não viu imagens",
+    "não é R4 nem pesquisa com pessoas reais",
+    "regressões em curso no momento do retorno da persona",
+    "sem seleção nativa comprovada nem sandbox independente"
+  ]
+}

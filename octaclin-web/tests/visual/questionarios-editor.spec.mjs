@@ -140,7 +140,7 @@ test.describe('Editor de questionarios', () => {
     });
     await page.goto('/questionarios');
 
-    await page.getByRole('tab', { name: 'Distribuicoes' }).click();
+    await page.getByRole('tab', { name: 'Distribuições' }).click();
     await expect(page.getByText('Cron', { exact: true })).toHaveCount(0);
 
     await page.getByLabel('Paciente do retorno de avaliação recorrente').selectOption('paciente-1');

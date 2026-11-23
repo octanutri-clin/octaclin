@@ -21,10 +21,10 @@ import type { WorkspaceQuestionarios } from './usar-workspace-questionarios';
 
 const tipos: { valor: TipoPergunta; rotulo: string }[] = [
   { valor: 'likert', rotulo: 'Likert 1-5' },
-  { valor: 'multipla_escolha', rotulo: 'Multipla escolha' },
+  { valor: 'multipla_escolha', rotulo: 'Múltipla escolha' },
   { valor: 'linear', rotulo: 'Slider linear' },
-  { valor: 'metrica', rotulo: 'Metrica' },
-  { valor: 'upload_midia', rotulo: 'Upload de midia' },
+  { valor: 'metrica', rotulo: 'Métrica' },
+  { valor: 'upload_midia', rotulo: 'Upload de mídia' },
   { valor: 'texto_longo', rotulo: 'Texto aberto' },
   { valor: 'sim_nao', rotulo: 'Sim/Não' }
 ];
@@ -177,7 +177,7 @@ export function AreaEditor({ workspace }: { workspace: WorkspaceQuestionarios })
                 <div className="grid gap-3">
                   <div className="grid grid-cols-2 gap-3">
                     <label className="space-y-1.5">
-                      <Rotulo>Escala minima</Rotulo>
+                      <Rotulo>Escala mínima</Rotulo>
                       <Campo
                         type="number"
                         value={numeroConfig(perguntaSelecionada.configuracao, 'escalaMin', 1)}
@@ -185,7 +185,7 @@ export function AreaEditor({ workspace }: { workspace: WorkspaceQuestionarios })
                       />
                     </label>
                     <label className="space-y-1.5">
-                      <Rotulo>Escala maxima</Rotulo>
+                      <Rotulo>Escala máxima</Rotulo>
                       <Campo
                         type="number"
                         value={numeroConfig(perguntaSelecionada.configuracao, 'escalaMax', 5)}
@@ -194,14 +194,14 @@ export function AreaEditor({ workspace }: { workspace: WorkspaceQuestionarios })
                     </label>
                   </div>
                   <label className="space-y-1.5">
-                    <Rotulo>Rótulo minimo</Rotulo>
+                    <Rotulo>Rótulo mínimo</Rotulo>
                     <Campo
                       value={textoConfig(perguntaSelecionada.configuracao, 'rotuloMin', 'Discordo totalmente')}
                       onChange={(event) => atualizarConfiguracao('rotuloMin', event.target.value)}
                     />
                   </label>
                   <label className="space-y-1.5">
-                    <Rotulo>Rótulo maximo</Rotulo>
+                    <Rotulo>Rótulo máximo</Rotulo>
                     <Campo
                       value={textoConfig(perguntaSelecionada.configuracao, 'rotuloMax', 'Concordo totalmente')}
                       onChange={(event) => atualizarConfiguracao('rotuloMax', event.target.value)}
@@ -213,7 +213,7 @@ export function AreaEditor({ workspace }: { workspace: WorkspaceQuestionarios })
               {perguntaSelecionada.tipo === 'multipla_escolha' ? (
                 <div className="grid gap-3">
                   <label className="flex items-center justify-between rounded-md border border-linha bg-white px-3 py-2">
-                    <span className="text-sm font-medium text-tinta">Permitir varias respostas</span>
+                    <span className="text-sm font-medium text-tinta">Permitir várias respostas</span>
                     <input
                       type="checkbox"
                       checked={booleanoConfig(perguntaSelecionada.configuracao, 'multipla')}
@@ -294,14 +294,14 @@ export function AreaEditor({ workspace }: { workspace: WorkspaceQuestionarios })
                   {perguntaSelecionada.tipo === 'linear' ? (
                     <div className="grid grid-cols-2 gap-2">
                       <label className="space-y-1.5">
-                        <Rotulo>Rótulo minimo</Rotulo>
+                        <Rotulo>Rótulo mínimo</Rotulo>
                         <Campo
                           value={textoConfig(perguntaSelecionada.configuracao, 'rotuloMin')}
                           onChange={(event) => atualizarConfiguracao('rotuloMin', event.target.value)}
                         />
                       </label>
                       <label className="space-y-1.5">
-                        <Rotulo>Rótulo maximo</Rotulo>
+                        <Rotulo>Rótulo máximo</Rotulo>
                         <Campo
                           value={textoConfig(perguntaSelecionada.configuracao, 'rotuloMax')}
                           onChange={(event) => atualizarConfiguracao('rotuloMax', event.target.value)}
