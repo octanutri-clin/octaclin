@@ -15,6 +15,7 @@ import {
 import { assinarOperacoesSincronizadas, ehFalhaDeRede } from '@/lib/pwa-private-queue';
 import { Botao } from '@/components/ui/botao';
 import { Campo } from '@/components/ui/campo';
+import { Modal } from '@/components/ui/modal';
 
 interface Props {
   token: string;
@@ -56,6 +57,21 @@ function formatarExpiracao(valor: string) {
   }).format(data);
 }
 
+function focarPergunta(id: string) {
+  const grupo = document.getElementById(`formulario-pergunta-${id}`);
+  const campo = grupo?.querySelector<HTMLElement>('input:not(:disabled), textarea:not(:disabled), select:not(:disabled), button:not(:disabled)');
+  (campo ?? grupo)?.focus(); grupo?.scrollIntoView({ block: 'center' });
+}
+
+function respostaParaConferencia(pergunta: PerguntaFormularioPublico, valor: ValorResposta | undefined) {
+  if (!valorPreenchido(valor)) return 'Sem resposta';
+  if (pergunta.tipo === 'upload_midia' && Array.isArray(valor)) return `${valor.length} ${valor.length === 1 ? 'arquivo anexado' : 'arquivos anexados'}`;
+  if (typeof valor === 'boolean') return texto(pergunta.configuracao, valor ? 'rotuloSim' : 'rotuloNao', valor ? 'Sim' : 'Não');
+  if (pergunta.tipo === 'multipla_escolha') return (Array.isArray(valor) ? valor : [String(valor)]).map(item => pergunta.opcoes.find(opcao => opcao.valor === item)?.rotulo ?? 'Opção indisponível').join(', ');
+  if (typeof valor === 'number') return Number.isFinite(valor) ? `${new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 20 }).format(valor)}${texto(pergunta.configuracao, 'unidade') ? ` ${texto(pergunta.configuracao, 'unidade')}` : ''}` : 'Valor indisponível';
+  return String(valor);
+}
+
 export function FormularioPacientePublico({ token }: Props) {
   const secoesId = useId();
   const [formulario, setFormulario] = useState<FormularioPublico | null>(null);
@@ -67,6 +83,14 @@ export function FormularioPacientePublico({ token }: Props) {
   useEffect(() => { if (pedidoFoco) resumoPendenciasRef.current?.focus(); }, [pedidoFoco]);
   const [mensagemErroCarregamento, setMensagemErroCarregamento] = useState<string | null>(null);
   const [enviado, setEnviado] = useState(false);
+  const [revisando, setRevisando] = useState(false);
+  const destinoEdicaoRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!revisando && destinoEdicaoRef.current) {
+      focarPergunta(destinoEdicaoRef.current);
+      destinoEdicaoRef.current = null;
+    }
+  }, [revisando]);
   const [envioPendente, setEnvioPendente] = useState(false);
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
@@ -126,12 +150,6 @@ export function FormularioPacientePublico({ token }: Props) {
   const obrigatoriasRespondidas = perguntasObrigatorias.filter((pergunta) => valorPreenchido(respostas[pergunta.id])).length;
   const pendencias = tentouEnviar ? perguntasObrigatorias.filter(pergunta => !valorPreenchido(respostas[pergunta.id])) : [];
 
-  function focarPergunta(id: string) {
-    const grupo = document.getElementById(`formulario-pergunta-${id}`);
-    const campo = grupo?.querySelector<HTMLElement>('input:not(:disabled), textarea:not(:disabled), select:not(:disabled), button:not(:disabled)');
-    (campo ?? grupo)?.focus();
-    grupo?.scrollIntoView({ block: 'center' });
-  }
 
   const montarRespostas = useCallback((valores: Record<string, ValorResposta>) => (
     (formulario?.perguntas ?? [])
@@ -379,12 +397,29 @@ export function FormularioPacientePublico({ token }: Props) {
             </div>
           ))}
 
+          <p className="text-xs text-texto-suave">Você pode revisar suas respostas antes de enviar. A revisão é opcional.</p>
+          <Botao type="button" onClick={() => setRevisando(true)} disabled={salvando}>Revisar respostas</Botao>
           <Botao type="button" variante="primario" className="h-11" onClick={() => void enviar()} disabled={salvando}>
             <Send className="h-4 w-4" />
             {salvando ? 'Enviando' : 'Enviar respostas'}
           </Botao>
         </section>
       </section>
+      <Modal aberto={revisando} aoFechar={() => { if (!salvando) setRevisando(false); }} titulo="Conferir respostas" descricao="Confira e, se precisar, volte para editar. Suas respostas ainda não foram enviadas.">
+        <div className="grid min-w-0 gap-3">
+          {formulario.perguntas.map(pergunta => (
+            <section key={pergunta.id} className="min-w-0 rounded-md border border-linha p-3">
+              <h3 className="font-semibold">{pergunta.enunciado}</h3>
+              <p className="whitespace-pre-wrap text-sm [overflow-wrap:anywhere]">{respostaParaConferencia(pergunta, respostas[pergunta.id])}</p>
+              <Botao type="button" tamanho="sm" aria-label={`Editar: ${pergunta.enunciado}`} onClick={() => { destinoEdicaoRef.current = pergunta.id; setRevisando(false); }}>Editar</Botao>
+            </section>
+          ))}
+          <div className="flex flex-wrap gap-2">
+            <Botao type="button" onClick={() => setRevisando(false)} disabled={salvando}>Voltar ao formulário</Botao>
+            <Botao type="button" variante="primario" onClick={() => { setRevisando(false); void enviar(); }} disabled={salvando}>Confirmar envio</Botao>
+          </div>
+        </div>
+      </Modal>
     </main>
   );
 }
