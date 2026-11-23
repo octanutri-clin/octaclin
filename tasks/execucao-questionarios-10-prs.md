@@ -75,3 +75,22 @@ antigos deixam de existir; código/evidências permanecem noGit/PRs.
 04 ganha commitdocumental adicional por essa recuperação/evidências finais.
 Fonte/código permanecem inalterados; diretóriosClaude e arquivos históricos
 alheios não foram removidos. Espaço livre169MiB após recuperação.
+
+## PR lógica05 — conferência opcional
+
+Base937c8e4c, branchfeat/qst10-05-conferencia-paciente. C1 1004fa81 RED
+conferência ausente; C2 8e14905b GREEN4/4. RED adicional2casos reproduziu
+camposeditáveis duranteACK e ações habilitadas emupload. C3 4d9fb765 corrige
+somente essasproteções. Final28/28 PASS(26formulário+2PWA desktop/mobile,
+1,4min), lasteditantes800ms, zero/falso, foco, upload, cancelamento, ACK e
+reconexão. Typecheck/linguagem PASS, lint0erros+mesmo warningpreexistente.
+Sem alteraçãoAPI/backend/storage. Node22.21.1; Nextlocal16.3.8 diverge do
+manifesto^16.4.5, CI/buildcanônico pendente. Banco/RLS e screenreadermanual
+SKIPPED: fronteira não alterada/sem execução manual.
+
+UX B/C01–05 e revisão técnica estática independente favoráveis, limitadas ao
+material descrito/inspecionado: [relatório](../docs/agents/ux/reports/QST10-01-05-BC-2026-11-23/consolidado.md).
+Substitui pendência histórica B/C/revisão01–05; não cobre06–10 nem confirmaCI.
+CapturasChromium sintéticas preservadas; personas não interagiram com UI.
+Sem novo requisito inferido das personas. PRs01#583/02#584/03#585/04#586Draft.
+05 aguarda push/PR;06–10 ainda não implementadas.

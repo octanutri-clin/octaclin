@@ -1,0 +1,33 @@
+{
+  "codigo": "4d9fb765",
+  "modalidade": "subagentes runtime com papel explícito; descrição somente, não TOML nativo",
+  "instancias": [
+    "/root/qst10_profissional",
+    "/root/qst10_paciente"
+  ],
+  "inicio": null,
+  "fim": null,
+  "datas": "2026-11-23; horários individuais não capturados",
+  "ferramentas_personas": [],
+  "limites": "Saídas em síntese editorial; atividade runtime distingue instâncias; sem usuários reais, interação ou testes pelas personas",
+  "hashes": {
+    "docs/agents/ux/reports/QST10-01-05-BC-2026-11-23/nutricionista.md": "30907594bad746277ee712635a8da1c0556311fb4a9a1f9d7de203b68513e758",
+    "docs/agents/ux/reports/QST10-01-05-BC-2026-11-23/qst10-indice-desktop.png": "ae5d81d6d6037353e49e67cff190ce55fcb772e3b412e74e381e28a7f281b00e",
+    "docs/agents/ux/reports/QST10-01-05-BC-2026-11-23/qst10-pendencias-desktop.png": "76b12f30ad1a81c6e96b0fb57ed71d094f0abf9ebce225cf398f7fdbfa2d8c77",
+    "docs/agents/ux/reports/QST10-01-05-BC-2026-11-23/qst10-revisao-mobile.png": "afed7feb9ab9726852b645189ee5d5b7e946ba6ee580e6083411185f13b9a647",
+    "docs/agents/ux/reports/QST10-01-05-BC-2026-11-23/qst10-delta-desktop.png": "d309fee66eae55d4354b0f8a0eb582e4a7749c1e6a95fc08c7e3049f2b0dba5b",
+    "docs/agents/ux/reports/QST10-01-05-BC-2026-11-23/brief.md": "76d8b47cb308047df80f0c5a2533f38482f9302cc6a34ca822d8b4700ed8e95f",
+    "docs/agents/ux/reports/QST10-01-05-BC-2026-11-23/qst10-delta-mobile.png": "8fc383e5755e67b9d19f1270a9b5525e2e84e1d387d11b7d55fe4422e36a2b49",
+    "docs/agents/ux/reports/QST10-01-05-BC-2026-11-23/qst10-paineis-mobile.png": "9b5e9212cf99027e9d1f106616bac0ef423e6447f22298f6f08cf0091e1794cb",
+    "docs/agents/ux/reports/QST10-01-05-BC-2026-11-23/qst10-paineis-desktop.png": "d34fab833892325a05c34c01844e01735507d9bb03875f7454d81fb049320a2d",
+    "docs/agents/ux/reports/QST10-01-05-BC-2026-11-23/qst10-pendencias-mobile.png": "67a32e038195d6d99127356c9899d1f0aea15f07cf7af4d0ae6c186e401db4d3",
+    "docs/agents/ux/reports/QST10-01-05-BC-2026-11-23/paciente.md": "219a3bc94d9ebedc22421976bb4a6fdb02e3fb4f59be969fc4e957655c6a7a0e",
+    "docs/agents/ux/reports/QST10-01-05-BC-2026-11-23/consolidado.md": "ba0b84e12ad24f5d768189bca62d4b9dab9752a4a736ce461b0c145f5d74e64a",
+    "docs/agents/ux/reports/QST10-01-05-BC-2026-11-23/qst10-indice-mobile.png": "78dd21ac84cf65c8bfd08e114e049ee1d00ba3183f708c5cea09ea75bee18bce",
+    "docs/agents/ux/reports/QST10-01-05-BC-2026-11-23/qst10-revisao-desktop.png": "c6ec38a6835feb1a82ac83cdd2f2cfdc309c1f11b3588c01ad8dac195a633d59"
+  },
+  "papeis": {
+    ".codex/agents/octaclin-paciente-ux.toml": "a40b1ded5e47739a2710caa5ec9a9a7871b57be7efc11deefaae0515028ff7d7",
+    ".codex/agents/octaclin-nutricionista-ux.toml": "6259b40a98e2c49053cbc6adbc0c59d0312b14e191b228ab73de2f2eac53af6d"
+  }
+}
