@@ -94,3 +94,21 @@ Substitui pendência histórica B/C/revisão01–05; não cobre06–10 nem confi
 CapturasChromium sintéticas preservadas; personas não interagiram com UI.
 Sem novo requisito inferido das personas. PRs01#583/02#584/03#585/04#586Draft.
 05 aguarda push/PR;06–10 ainda não implementadas.
+
+## Recuperação de executor — 23/11/2026
+
+O executor anterior ficou inacessível e o novo /workspace não tinha repositório,
+worktrees ou /tmp anterior. Após aguardar statusready, confirmou-se isso por
+listagem e ausência do objeto b674350f. Não é prova de apagamento do provider;
+é perda de acesso neste ambiente. GitHub preserva01–05 (#583–#587),05HEAD
+1b06fafb38e67e0aabbe1a7b5606c1b35ddb24a6. Branch06 não existia no remoto.
+Clone novo filtrado da05, sem main/Claude/produção tocados; nova06 sobre05.
+Reconstruir somente delta06 conforme registro da sessão. SHAs886d69eb/b674350f
+e logs anteriores são históricos inacessíveis, não aprovação desta reconstrução.
+Anteriormente: HTTP12PASS, serviço+HTTP61PASS após correção de projeção em memória,
+BFF14PASS, navegador4PASS e PostgreSQL2PASS/31SKIPPED por filtro. Regressão do
+editor e revalidações estavam em andamento: resultado perdido, NÃO PASS.
+Revisão independente06 estava pendente. Reexecutar gates no novo código.
+Node22.21.1 obtido de nodejs.org com SHA256 verificado; instalação inicial de
+pacotes começou com Node24 antes da extração, não é validação suportada;
+verificar frozeninstall e todos os testes com Node22, sem mudar lock/engines.

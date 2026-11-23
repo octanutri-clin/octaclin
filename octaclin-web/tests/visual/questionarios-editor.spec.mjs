@@ -482,3 +482,43 @@ test('P05 leitura antiga do seletor não remove cópia após A-B-A',async({page}
   await expect(page.getByRole('button',{name:'Reordenar pergunta',exact:true})).toHaveCount(3);
   await expect(page.getByLabel('Enunciado',{exact:true})).toHaveValue('Pergunta salva');
 });
+
+test('QST10-06 checklist usa edição local sem salvar e ignora resposta após nova edição', async ({ page }) => {
+  await criarSessao(page); await mockarBff(page); let entrada, liberar, chamadas = 0;
+  const espera = new Promise(resolve => { liberar = resolve; });
+  await page.route('**/api/questionarios/q-1/validacao', async route => {
+    chamadas++; entrada = route.request().postDataJSON(); if (chamadas === 2) await espera;
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ versao: 1, problemas: [{ perguntaId: 'p-1', campo: 'configuracao', codigo: 'configuracao_invalida' }] }) });
+  });
+  let escritas = 0; page.on('request', r => { if (/api\/questionarios/.test(r.url()) && ['PATCH', 'PUT', 'DELETE'].includes(r.method())) escritas++; });
+  await page.goto('/questionarios'); await page.getByRole('tab', { name: 'Editor', exact: true }).click();
+  await page.getByLabel('Enunciado', { exact: true }).fill('Edição local ainda não salva');
+  await page.getByRole('button', { name: 'Conferir questionário', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Checklist do questionário' })).toContainText('Revise os limites e a configuração desta pergunta.');
+  expect(entrada.perguntas[0].dados.enunciado).toBe('Edição local ainda não salva'); expect(entrada.versaoEsperada).toBe(1); expect(escritas).toBe(0);
+  await page.getByRole('button', { name: 'Corrigir pergunta 1: configuração', exact: true }).click();
+  await expect(page.locator('#configuracao-pergunta')).toBeFocused();
+  await page.getByRole('button', { name: 'Conferir questionário', exact: true }).click(); await expect.poll(() => chamadas).toBe(2);
+  await page.getByLabel('Enunciado', { exact: true }).fill('Edição mais recente'); liberar();
+  await expect(page.getByRole('region', { name: 'Checklist do questionário' })).toHaveCount(0);
+  await expect(page.getByLabel('Enunciado', { exact: true })).toHaveValue('Edição mais recente');
+});
+
+test('QST10-06 conflito preserva rascunho e nova conferência exige ação explícita', async ({ page }) => {
+  await criarSessao(page); await mockarBff(page); let chamadas = 0, consultas = 0;
+  await page.route('**/api/questionarios/q-1/validacao', route => {
+    if (route.request().method() === 'GET') { consultas++; return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ versao: 2 }) }); }
+    chamadas++; const entrada = route.request().postDataJSON();
+    return route.fulfill({ status: entrada.versaoEsperada === 1 ? 409 : 200, contentType: 'application/json', body: JSON.stringify(entrada.versaoEsperada === 1 ? { message: 'Confira novamente.' } : { versao: 2, problemas: [] }) });
+  });
+  await page.goto('/questionarios'); await page.getByRole('tab', { name: 'Editor', exact: true }).click();
+  await page.getByLabel('Enunciado', { exact: true }).fill('Rascunho preservado');
+  await page.getByRole('button', { name: 'Conferir questionário', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Checklist do questionário' })).toContainText('Não foi possível concluir a conferência');
+  expect(chamadas).toBe(1); expect(consultas).toBe(0); await expect(page.getByLabel('Enunciado', { exact: true })).toHaveValue('Rascunho preservado');
+  await page.getByRole('button', { name: 'Conferir com a versão salva atual', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Checklist do questionário' })).toContainText('Nenhuma pendência nas regras verificadas');
+  expect(chamadas).toBe(2); expect(consultas).toBe(1); await expect(page.getByLabel('Enunciado', { exact: true })).toHaveValue('Rascunho preservado');
+  await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
+  const resultado = await new AxeBuilder({ page }).include('[data-qst10-checklist]').analyze(); expect(resultado.violations).toEqual([]);
+});
