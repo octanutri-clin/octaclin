@@ -57,3 +57,10 @@ carregamento original(sem alteração desse efeito), não escondido. Segredos/
 diff PASS. Commits40a50dd6(C1)/4748893f(C2). Sem prova de banco/RLS/build
 completo local ou leitor de tela manual(SKIPPED, fronteiras não alteradas).
 UX B/C e revisão final do lote pendentes; nenhuma declaração de aceite final.
+
+## PR lógica04 — índice de seções
+
+Based68607e8. RED: navSeções inexistente. Implementação usa IDs gerados,
+nunca nomes livres; foco noheading e URL preservada, só se maisde1seção.
+Caso desktopdeíndice PASS; regressão20casos e typecheck ainda em execução,
+sem declaração de PASS até resultado. Código congelado para preparar05.
