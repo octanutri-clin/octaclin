@@ -94,6 +94,7 @@ export function FormularioPacientePublico({ token }: Props) {
   const [envioPendente, setEnvioPendente] = useState(false);
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
+  const [uploadsPendentes, setUploadsPendentes] = useState<Set<string>>(() => new Set());
   const [estadoRascunho, setEstadoRascunho] = useState<'inativo' | 'salvando' | 'salvo' | 'offline' | 'erro'>('inativo');
   const [houveEdicao, setHouveEdicao] = useState(false);
   const versaoRascunhoRef = useRef(0);
@@ -230,7 +231,7 @@ export function FormularioPacientePublico({ token }: Props) {
   }
 
   async function enviar() {
-    if (!formulario) return;
+    if (!formulario || salvando || uploadsPendentes.size > 0) return;
 
     const obrigatoriaPendente = formulario.perguntas.find((pergunta) => pergunta.obrigatoria && !valorPreenchido(respostas[pergunta.id]));
     if (obrigatoriaPendente) {
@@ -386,6 +387,12 @@ export function FormularioPacientePublico({ token }: Props) {
                 <CampoPergunta
                   key={pergunta.id}
                   pergunta={pergunta}
+                  bloqueado={salvando}
+                  aoEstadoUpload={pendente => setUploadsPendentes(atuais => {
+                    const proximos = new Set(atuais);
+                    if (pendente) proximos.add(pergunta.id); else proximos.delete(pergunta.id);
+                    return proximos;
+                  })}
                   pendente={pendencias.some(item => item.id === pergunta.id)}
                   valor={respostas[pergunta.id]}
                   aoAlterar={(valor) => atualizarResposta(pergunta.id, valor)}
@@ -398,8 +405,8 @@ export function FormularioPacientePublico({ token }: Props) {
           ))}
 
           <p className="text-xs text-texto-suave">Você pode revisar suas respostas antes de enviar. A revisão é opcional.</p>
-          <Botao type="button" onClick={() => setRevisando(true)} disabled={salvando}>Revisar respostas</Botao>
-          <Botao type="button" variante="primario" className="h-11" onClick={() => void enviar()} disabled={salvando}>
+          <Botao type="button" onClick={() => setRevisando(true)} disabled={salvando || uploadsPendentes.size > 0}>Revisar respostas</Botao>
+          <Botao type="button" variante="primario" className="h-11" onClick={() => void enviar()} disabled={salvando || uploadsPendentes.size > 0}>
             <Send className="h-4 w-4" />
             {salvando ? 'Enviando' : 'Enviar respostas'}
           </Botao>
@@ -416,7 +423,7 @@ export function FormularioPacientePublico({ token }: Props) {
           ))}
           <div className="flex flex-wrap gap-2">
             <Botao type="button" onClick={() => setRevisando(false)} disabled={salvando}>Voltar ao formulário</Botao>
-            <Botao type="button" variante="primario" onClick={() => { setRevisando(false); void enviar(); }} disabled={salvando}>Confirmar envio</Botao>
+            <Botao type="button" variante="primario" onClick={() => { setRevisando(false); void enviar(); }} disabled={salvando || uploadsPendentes.size > 0}>Confirmar envio</Botao>
           </div>
         </div>
       </Modal>
@@ -427,6 +434,8 @@ export function FormularioPacientePublico({ token }: Props) {
 function CampoPergunta({
   pergunta,
   pendente,
+  bloqueado,
+  aoEstadoUpload,
   valor,
   aoAlterar,
   aoAlternarCheckbox,
@@ -435,6 +444,8 @@ function CampoPergunta({
 }: {
   pergunta: PerguntaFormularioPublico;
   pendente?: boolean;
+  bloqueado?: boolean;
+  aoEstadoUpload: (pendente: boolean) => void;
   valor?: ValorResposta;
   aoAlterar: (valor: ValorResposta) => void;
   aoAlternarCheckbox: (valor: string) => void;
@@ -445,7 +456,7 @@ function CampoPergunta({
   const [enviandoArquivos, setEnviandoArquivos] = useState(false);
 
   return (
-    <fieldset id={`formulario-pergunta-${pergunta.id}`} tabIndex={-1} aria-invalid={pendente || undefined} aria-describedby={pendente ? `pendencia-${pergunta.id}` : undefined} className="grid gap-3 rounded-md border border-linha bg-superficie p-4">
+    <fieldset id={`formulario-pergunta-${pergunta.id}`} disabled={bloqueado} tabIndex={-1} aria-invalid={pendente || undefined} aria-describedby={pendente ? `pendencia-${pergunta.id}` : undefined} className="grid gap-3 rounded-md border border-linha bg-superficie p-4">
       <legend className="text-base font-semibold text-tinta">
         {pergunta.enunciado}
         {pergunta.obrigatoria ? <span className="ml-1 text-perigo">*</span> : null}
@@ -556,6 +567,7 @@ function CampoPergunta({
               const arquivos = Array.from(event.target.files ?? []);
               if (!arquivos.length) return;
               setEnviandoArquivos(true);
+              aoEstadoUpload(true);
               aoErro(null);
               try {
                 aoAlterar(await aoEnviarArquivos(arquivos));
@@ -564,6 +576,7 @@ function CampoPergunta({
                 aoErro(mensagemSeguraOuGenerica(erroAtual, 'Não foi possível enviar o arquivo agora. Tente novamente.'));
               } finally {
                 setEnviandoArquivos(false);
+                aoEstadoUpload(false);
               }
             }}
             className="min-h-11 w-full rounded-md border border-linha bg-white px-3 py-2 text-sm"
