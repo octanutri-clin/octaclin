@@ -1594,7 +1594,7 @@ test.describe('gate de acessibilidade - questionarios (PR 20)', () => {
   test('distribuicao - paciente sintetico disponivel para envio', async ({ page }) => {
     await prepararQuestionarios(page);
     await page.goto('/questionarios');
-    await page.getByRole('tab', { name: 'Distribuicoes' }).click();
+    await page.getByRole('tab', { name: 'Distribuições' }).click();
     await expect(page.getByRole('heading', { name: 'Distribuição do formulário' })).toBeVisible();
     await expect(page.getByLabel('Paciente do retorno de avaliação recorrente')).toBeVisible();
     await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
@@ -1628,7 +1628,7 @@ test.describe('gate de acessibilidade - questionarios (PR 20)', () => {
     await expect(page.getByRole('heading', { name: 'Biblioteca de perguntas' })).toBeVisible();
 
     await page.keyboard.press('ArrowRight');
-    await expect(page.getByRole('tab', { name: 'Distribuicoes' })).toBeFocused();
+    await expect(page.getByRole('tab', { name: 'Distribuições' })).toBeFocused();
     await expect(page.getByRole('heading', { name: 'Distribuição do formulário' })).toBeVisible();
 
     await page.keyboard.press('ArrowRight');
@@ -5923,7 +5923,7 @@ test.describe('jornadas completas por teclado (PR 30)', () => {
     await page.keyboard.press('ArrowRight');
     await page.keyboard.press('ArrowRight');
     await page.keyboard.press('ArrowRight');
-    await expect(page.getByRole('tab', { name: 'Distribuicoes' })).toBeFocused();
+    await expect(page.getByRole('tab', { name: 'Distribuições' })).toBeFocused();
 
     const paciente = page.getByLabel('Paciente do retorno de avaliação recorrente');
     await alcancarComTab(page, paciente, 'Paciente do retorno de avaliação recorrente');

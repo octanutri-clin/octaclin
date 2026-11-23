@@ -227,10 +227,10 @@ test.describe('QPRO-02 — contexto de leitura', () => {
         })
       }));
       await page.getByRole('button', { name: 'Atualizar matriz', exact: true }).click();
-      await expect(page.getByText('0 indicadores comparaveis em 0 respostas.', { exact: true })).toBeVisible();
+      await expect(page.getByText('0 indicadores comparáveis em 0 respostas.', { exact: true })).toBeVisible();
       if (filtro[0].includes('inicio') || filtro[0].includes('fim')) await page.locator(filtro[0]).fill(filtro[1]);
       else await page.locator(filtro[0]).selectOption(filtro[1]);
-      await expect(page.getByText('0 indicadores comparaveis em 0 respostas.', { exact: true })).toHaveCount(0);
+      await expect(page.getByText('0 indicadores comparáveis em 0 respostas.', { exact: true })).toHaveCount(0);
       await expect(page.getByText('Escolha os filtros e atualize para comparar as duas respostas mais recentes de cada indicador.')).toBeVisible();
     });
   }
@@ -286,7 +286,7 @@ test.describe('QPRO-02 — contexto de leitura', () => {
       await expect(page.getByRole('button', { name: 'Atualizando matriz', exact: true })).toBeDisabled();
       await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toHaveCount(0);
       await entregarRespostaAntiga(page, controles['paciente-b'].liberar, 'pacienteId=paciente-b');
-      await expect(page.getByText('0 indicadores comparaveis em 0 respostas.', { exact: true })).toBeVisible();
+      await expect(page.getByText('0 indicadores comparáveis em 0 respostas.', { exact: true })).toBeVisible();
     });
   }
 });

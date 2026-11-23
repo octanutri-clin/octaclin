@@ -17,7 +17,7 @@ const areasQuestionarios: { id: AreaQuestionarios; rotulo: string }[] = [
   { id: 'formularios', rotulo: 'Formulários' },
   { id: 'editor', rotulo: 'Editor' },
   { id: 'biblioteca', rotulo: 'Biblioteca' },
-  { id: 'distribuicao', rotulo: 'Distribuicoes' },
+  { id: 'distribuicao', rotulo: 'Distribuições' },
   { id: 'respostas', rotulo: 'Respostas' }
 ];
 
