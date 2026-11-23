@@ -12,7 +12,7 @@
 # gerenciador de pacotes do runtime, mantendo o comportamento do Next atual.
 # A base compartilhada corrige zlib tambem nos estagios de build. O runtime
 # herda o artefato pronto e continua sem instalacao de pacotes no estagio final.
-FROM node:22.23.4-alpine3.24@sha256:0e1754758c2df4cfa3e68d59e2e1b7374bb7fd9ea6328eaaacf15cc934af8202 AS base
+FROM node:22.23.5-alpine3.24@sha256:1314fb30ec37592d5845e5a160d522c0e680972aa534549940b8d73bde88481a AS base
 RUN apk add --no-cache --upgrade zlib=1.4-r0
 
 FROM base AS deps
