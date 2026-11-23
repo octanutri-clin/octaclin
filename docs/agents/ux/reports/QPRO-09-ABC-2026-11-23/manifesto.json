@@ -1,0 +1,35 @@
+{
+  "tarefa": "QPRO-09",
+  "base": "989f4d5c3f02a79565034dd2cdad9093095f4ad0",
+  "data": "2026-11-23",
+  "etapas": [
+    "A",
+    "D",
+    "B",
+    "C"
+  ],
+  "modalidade": "subagente runtime com papel explícito; TOML nativo não comprovado",
+  "instancia": "/root/qpro09_ux",
+  "inicio": null,
+  "fim": null,
+  "nota_tempos": "não capturados; ver trilha real do runtime",
+  "papel": {
+    "arquivo": ".codex/agents/octaclin-nutricionista-ux.toml",
+    "sha256": "6259b40a98e2c49053cbc6adbc0c59d0312b14e191b228ab73de2f2eac53af6d"
+  },
+  "arquivos_sha256": {
+    "brief.md": "091b0f28311bfde57bb15030a69538e65c036f90a5b3837dcbc0b52446508b88",
+    "consolidado.md": "f2c07656f326365fa0e65e955ec9da41e907dca98c4875a117afe93e64bfa4dd",
+    "desktop.png": "cf2e2a0753956d6fea596e9d99998d1dc1976cf25f8eac7361900766140d2b85",
+    "mobile.png": "6d5e1e427723968b6b912fc477523261c72bc73e1f1a5480f9ac312178f42990"
+  },
+  "ferramentas_persona": [],
+  "paciente": "N/A: só apresentação profissional, sem conteúdo enviado",
+  "evidencias_coordenador": "Next/Chromium real, BFF sintético; 94 testes desktop/mobile PASS; capturas inspecionadas pelo coordenador",
+  "limitacoes": [
+    "persona avaliou relato e não imagens/interação própria",
+    "sem seleção nativa comprovada nem isolamento técnico independente",
+    "sem pesquisa com pessoas reais, leitor de tela manual ou R4",
+    "CI do novo HEAD pendente"
+  ]
+}
