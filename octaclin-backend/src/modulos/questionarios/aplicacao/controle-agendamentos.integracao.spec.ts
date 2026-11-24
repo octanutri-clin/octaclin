@@ -108,23 +108,32 @@ suite('QST10-09: comandos e gerações autorizadas em PostgreSQL', () => {
     await admin.query("insert into agendamentos_questionario(id,tenant_id,questionario_id,paciente_id,regra_cron,proxima_execucao_em) values($1,$2,$3,$4,'0 8 * * *',$5)",[agendamentoId,tenant,questionarioId,pacienteId,new Date('2026-11-23T11:00:00Z')]);
   });
   afterAll(async()=>{if(runtime?.isInitialized)await runtime.destroy();await admin?.end();await container?.stop();},30000);
-  const comando=(acao:'pausar'|'retomar'|'reconfirmar',revisao=1,usuario=ator)=>servico.comandarAgendamento(tenant,questionarioId,pacienteId,agendamentoId,acao,revisao,true,usuario);
+  const pendentes=new Set<Promise<unknown>>();
+  function rastrear<T>(p:Promise<T>):Promise<T>{
+    pendentes.add(p);void p.then(()=>pendentes.delete(p),()=>pendentes.delete(p));return p;
+  }
+  afterEach(async()=>{
+    // Mesmo se o teste falhar, liberar a barreira e drenar antes do próximo TRUNCATE.
+    await admin.query('rollback');await Promise.allSettled([...pendentes]);jest.restoreAllMocks();
+  });
+  const comando=(acao:'pausar'|'retomar'|'reconfirmar',revisao=1,usuario=ator)=>rastrear(servico.comandarAgendamento(tenant,questionarioId,pacienteId,agendamentoId,acao,revisao,true,usuario));
+  const gerar=()=>rastrear(servico.processarAgendamentosVencidos(tenant,agora));
   const registro=async()=>(await admin.query('select * from agendamentos_questionario where id=$1',[agendamentoId])).rows[0];
   const envios=async()=>(await admin.query('select * from envios_questionario order by id')).rows;
 
   it('legado sem ator não gera novo envio nem inventa autoria',async()=>{
-    expect(await servico.processarAgendamentosVencidos(tenant,agora)).toBe(0);
+    expect(await gerar()).toBe(0);
     expect(await envios()).toHaveLength(0);expect((await registro()).autorizado_por_usuario_id).toBeNull();
   });
   it('ator inativado não gera mesmo com referência anterior válida',async()=>{
     await admin.query('update agendamentos_questionario set autorizado_por_usuario_id=$1',[usuarioId]);
     await admin.query('update usuarios set ativo=false where id=$1',[usuarioId]);
-    expect(await servico.processarAgendamentosVencidos(tenant,agora)).toBe(0);expect(await envios()).toHaveLength(0);
+    expect(await gerar()).toBe(0);expect(await envios()).toHaveLength(0);
   });
   it('transferência da carteira bloqueia geração pelo ator anterior',async()=>{
     await admin.query('update agendamentos_questionario set autorizado_por_usuario_id=$1',[usuarioId]);
     await admin.query('update pacientes set profissional_responsavel_id=$1',[randomUUID()]);
-    expect(await servico.processarAgendamentosVencidos(tenant,agora)).toBe(0);expect(await envios()).toHaveLength(0);
+    expect(await gerar()).toBe(0);expect(await envios()).toHaveLength(0);
   });
   it('criação registra ator atual e projeção não revela referências internas',async()=>{
     const a=await servico.criarAgendamento(tenant,{questionarioId,pacienteId,regraCron:'0 8 * * *'},ator);
@@ -212,7 +221,7 @@ suite('QST10-09: comandos e gerações autorizadas em PostgreSQL', () => {
   async function autorizarFixture(){await admin.query('update agendamentos_questionario set autorizado_por_usuario_id=$1',[usuarioId]);}
   it('dois workers com candidatos simultâneos geram uma única ocorrência e uma auditoria',async()=>{
     await autorizarFixture();await bloquearAgenda();
-    const a=servico.processarAgendamentosVencidos(tenant,agora);const b=servico.processarAgendamentosVencidos(tenant,agora);
+    const a=gerar();const b=gerar();
     try{await aguardarBloqueados(2);}finally{await admin.query('commit');}
     expect((await Promise.all([a,b])).sort()).toEqual([0,1]);
     expect(await envios()).toHaveLength(1);expect((await registro()).revisao).toBe(2);
@@ -222,13 +231,13 @@ suite('QST10-09: comandos e gerações autorizadas em PostgreSQL', () => {
   it('pausa confirmada primeiro impede worker que aguardava a mesma agenda',async()=>{
     await autorizarFixture();await bloquearAgenda();
     const pausa=comando('pausar');await aguardarBloqueados(1);
-    const worker=servico.processarAgendamentosVencidos(tenant,agora);
+    const worker=gerar();
     try{await aguardarBloqueados(2);}finally{await admin.query('commit');}
     expect(await pausa).toMatchObject({estado:'pausado',revisao:2});expect(await worker).toBe(0);expect(await envios()).toHaveLength(0);
   });
   it('worker que confirma primeiro invalida revisão da pausa posterior sem duplicar envio',async()=>{
     await autorizarFixture();await bloquearAgenda();
-    const worker=servico.processarAgendamentosVencidos(tenant,agora);await aguardarBloqueados(1);
+    const worker=gerar();await aguardarBloqueados(1);
     // Capturar a rejeição imediatamente evita unhandled rejection enquanto a barreira está fechada.
     const pausa=comando('pausar').then(v=>({valor:v,erro:undefined}),erro=>({valor:undefined,erro}));
     try{await aguardarBloqueados(2);}finally{await admin.query('commit');}
@@ -238,7 +247,7 @@ suite('QST10-09: comandos e gerações autorizadas em PostgreSQL', () => {
     await autorizarFixture();await admin.query('begin');
     if(tipo==='carteira')await admin.query('update pacientes set profissional_responsavel_id=$1 where id=$2',[randomUUID(),pacienteId]);
     else await admin.query('update usuarios set ativo=false where id=$1',[usuarioId]);
-    const worker=servico.processarAgendamentosVencidos(tenant,agora);
+    const worker=gerar();
     try{await aguardarBloqueados(1);}finally{await admin.query('commit');}
     expect(await worker).toBe(0);expect(await envios()).toHaveLength(0);expect((await registro()).revisao).toBe(2);expect((await registro()).autorizado_por_usuario_id).toBeNull();
   });
@@ -247,7 +256,7 @@ suite('QST10-09: comandos e gerações autorizadas em PostgreSQL', () => {
     await admin.query(`create function falha_geracao_qst09() returns trigger language plpgsql as $$ begin raise exception 'falha geracao sintética'; end $$;
       create trigger falha_geracao before insert on user_action_logs for each row execute function falha_geracao_qst09();`);
     try{
-      await expect(servico.processarAgendamentosVencidos(tenant,agora)).rejects.toThrow('falha geracao sintética');
+      await expect(gerar()).rejects.toThrow('falha geracao sintética');
       expect(await envios()).toHaveLength(0);expect(await registro()).toEqual(antes);
     }finally{await admin.query('drop trigger falha_geracao on user_action_logs;drop function falha_geracao_qst09()');}
   });
@@ -255,7 +264,7 @@ suite('QST10-09: comandos e gerações autorizadas em PostgreSQL', () => {
   it('espera pelo lock não grava próxima ocorrência já vencida nem recupera minutos perdidos',async()=>{
     await autorizarFixture();await admin.query("update agendamentos_questionario set regra_cron='* * * * *'");
     await bloquearAgenda();const clock=jest.spyOn(Date,'now').mockReturnValue(agora.getTime());
-    const worker=servico.processarAgendamentosVencidos(tenant,agora);
+    const worker=gerar();
     try{
       await aguardarBloqueados(1);clock.mockReturnValue(new Date('2026-11-24T12:03:30Z').getTime());
       await admin.query('commit');expect(await worker).toBe(1);

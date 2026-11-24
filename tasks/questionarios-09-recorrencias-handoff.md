@@ -111,3 +111,15 @@ ocorrência informativa (RED3/3 antes). O console recebe data futura calculada p
 mesmo motor ou ausência explícita; envio único vencido/encerrado não recebe data
 inventada. Conferência informativa não é reserva nem substitui a revisão CAS ou
 a revalidação ao confirmar. Rechecagem independente do delta ainda pendente.
+
+## C3b — limpeza do harness após falha sob carga
+
+Preservada tentativa independente5PASS/2FAIL/20SKIPPED: timeoutJest no cenário
+worker×worker e TRUNCATE seguinte aguardando operação anterior pendente. A
+limpeza agora rastreia workers/comandos, libera barreiras e aguarda as promessas
+antes do próximo teste; sem aumentar timeouts, enfraquecer asserts ou transformar
+falhas emPASS. Nova execução autoral limpa35/35PASS (24PGcontrole+8PGmigration+
+3projeção), Node22/PostgreSQL15/runtimeFORCERLS. Rechecagem independente do
+harness/entrega integral continua pendente. Backend completo no código f0d9769:
+5645PASS,420SKIPPED,0FAIL (6065total,477suítesPASS/20SKIP). Não repetir integral
+por ajuste exclusivo no harness ignorado pelo perfil padrão.
