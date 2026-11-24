@@ -154,3 +154,16 @@ alteração de serviço,main,Neon,Render,cobrança ou produção.
 
 Próximo: DraftPR09 sobre08 e CI doHEAD, depois entrega10 conforme plano já
 aprovado, mantendo09Draft até gates finais e autorização específica de integração.
+
+## Gate oficial PG — lacuna de seleção corrigida após abrirDraft591
+
+A inspeção do runner existente mostrou seleção explícita sem as novas suítes.
+Acrescentadas somente controle-agendamentos.integracao e migration1088.integracao
+na lista do mesmo runner test:rls:testcontainers, sem workflow/dependência/gate
+alterado. RED1 de registro confirmou ausência; GREEN do registro e sintaxeJS
+verificados após inclusão. As32provas reais já passaram separadamente, não são
+aprovadas pelo teste estático de seleção. OCI do novoHEAD deve executá-las no
+step oficial; o resultado de9513c77 não comprova essa seleção posterior.
+
+Este push adicional é necessário para eliminar um falso verde possível; não é
+reenvio cosmético. Runtime permanecef945fd3, sem nova alteração funcional.

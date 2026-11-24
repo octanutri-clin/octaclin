@@ -37,6 +37,8 @@ const argumentosJest = [
   'src/modulos/gamificacao/aplicacao/piloto-gamificacao.integracao.spec.ts',
   'src/modulos/questionarios/aplicacao/copia-pergunta.integracao.spec.ts',
   'src/modulos/questionarios/aplicacao/exportacao-respostas.integracao.spec.ts',
+  'src/modulos/questionarios/aplicacao/controle-agendamentos.integracao.spec.ts',
+  'src/infraestrutura/banco-dados/migracoes/1720000001088-ControleAgendamentosQuestionario.integracao.spec.ts',
   'src/infraestrutura/banco-dados/migracoes/1720000001078-GruposSubstituicoes.integracao.spec.ts',
   'src/infraestrutura/banco-dados/migracoes/1720000001080-MetadadosReceitasNutricionais.integracao.spec.ts',
   'src/infraestrutura/banco-dados/migracoes/1720000001081-RegistrosAnalisesFactuais.integracao.spec.ts',
