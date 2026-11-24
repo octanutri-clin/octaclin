@@ -42,8 +42,8 @@ function TextoComRealce({ texto, busca }: { texto: string; busca: string }) {
 }
 
 function ListaRespostas({
-  respostasVisiveis, pacientesPorId, carregandoRespostas, buscaRespostas
-}: Pick<WorkspaceQuestionarios, 'respostasVisiveis' | 'pacientesPorId' | 'carregandoRespostas' | 'buscaRespostas'>) {
+  respostasVisiveis, pacientesPorId, carregandoRespostas, buscaRespostas, timezone
+}: Pick<WorkspaceQuestionarios, 'respostasVisiveis' | 'pacientesPorId' | 'carregandoRespostas' | 'buscaRespostas'> & {timezone?:string}) {
   const idLista = useId();
   const [recolhidas, setRecolhidas] = useState<Set<string>>(() => new Set());
 
@@ -103,7 +103,7 @@ function ListaRespostas({
               <div role="status" aria-live="polite" aria-atomic="true" className="min-w-0 break-words text-sm text-tinta">
                 <p>{carregandoRespostas ? 'Atualizando envios...' : `Envio ${indiceLeitura + 1} de ${respostasVisiveis.length}`}</p>
                 <p>{pacientesPorId.get(respostaLeitura.pacienteId)?.nome ?? 'Paciente não identificado'}</p>
-                <p>Finalizado em {formatarDataResposta(respostaLeitura.finalizadoEm)}</p>
+                <p>Finalizado em {formatarDataResposta(respostaLeitura.finalizadoEm,timezone)}</p>
               </div>
               <div role="group" aria-label="Navegação entre envios" className="flex flex-wrap gap-2">
                 <Botao type="button" disabled={carregandoRespostas || indiceLeitura === 0} onClick={() => setLeituraId(respostasVisiveis[indiceLeitura - 1].respostaId)}>Anterior</Botao>
@@ -128,7 +128,7 @@ function ListaRespostas({
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0 break-words">
                     <p className="text-sm font-semibold text-tinta"><TextoComRealce texto={paciente?.nome ?? 'Paciente não identificado'} busca={buscaRespostas} /></p>
-                    <p className="text-xs text-texto-suave">Finalizado em {formatarDataResposta(resposta.finalizadoEm)}</p>
+                    <p className="text-xs text-texto-suave">Finalizado em {formatarDataResposta(resposta.finalizadoEm,timezone)}</p>
                   </div>
                   <span className="rounded-full border border-linha bg-white px-3 py-1 text-xs font-semibold text-texto-suave">
                     {resposta.totalRespostas} {resposta.totalRespostas === 1 ? 'resposta' : 'respostas'}
@@ -174,12 +174,14 @@ function ListaRespostas({
 export function AreaRespostas({ workspace }: { workspace: WorkspaceQuestionarios }) {
   const buscaRef = useRef<HTMLInputElement>(null);
   const abasId = useId();
+  const paginaStatusRef=useRef<HTMLParagraphElement>(null);
   const contexto = JSON.stringify([workspace.questionarioAtual?.id, workspace.pacienteFiltroRespostas]);
   const [visualizacao, setVisualizacao] = useState({ contexto, aba: 'envios' });
   if (visualizacao.contexto !== contexto) setVisualizacao({ contexto, aba: 'envios' });
   const aba = visualizacao.contexto === contexto ? visualizacao.aba : 'envios';
   const {
     respostasVisiveis, leituraClinica, carregandoRespostas, pacienteFiltroRespostas,
+    inicioRespostas,setInicioRespostas,fimRespostas,setFimRespostas,tamanhoRespostas,setTamanhoRespostas,paginaRespostas,cursoresRespostas,
     setPacienteFiltroRespostas, carregarRespostas, questionarioAtual, buscaRespostas,
     setBuscaRespostas, perguntasLeituraFiltradas, matrizLongitudinal, carregandoMatriz,
     carregarMatrizLongitudinal, pacienteFiltroMatriz, setPacienteFiltroMatriz,
@@ -188,9 +190,11 @@ export function AreaRespostas({ workspace }: { workspace: WorkspaceQuestionarios
     setFimFiltroMatriz, pacientes, pacientesPorId, questionarios, categorias
   } = workspace;
 
+  const filtrosAplicados = leituraClinica ? { ...(leituraClinica.filtros.pacienteId?{pacienteId:leituraClinica.filtros.pacienteId}:{}),
+    ...(leituraClinica.filtros.inicio?{inicio:leituraClinica.filtros.inicio}:{}),...(leituraClinica.filtros.fim?{fim:leituraClinica.filtros.fim}:{}) } : {};
   return (
     <>
-      <Cartao className="overflow-hidden">
+      <Cartao className="overflow-hidden" data-qst10-paginacao>
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-linha px-4 py-3">
           <div className="flex items-center gap-2">
             <ClipboardList className="h-4 w-4 text-texto-suave" />
@@ -207,8 +211,8 @@ export function AreaRespostas({ workspace }: { workspace: WorkspaceQuestionarios
             </Botao>
             {questionarioAtual ? (
               <ExportacaoRespostas
-                key={JSON.stringify([questionarioAtual.id, pacienteFiltroRespostas, buscaRespostas, respostasVisiveis.map(r => r.respostaId)])}
-                questionarioId={questionarioAtual.id} respostaIds={respostasVisiveis.map(r => r.respostaId)} carregando={carregandoRespostas}
+                key={JSON.stringify([questionarioAtual.id, filtrosAplicados, paginaRespostas, buscaRespostas, respostasVisiveis.map(r => r.respostaId)])}
+                questionarioId={questionarioAtual.id} respostaIds={respostasVisiveis.map(r => r.respostaId)} carregando={carregandoRespostas || !leituraClinica} filtros={filtrosAplicados}
               />
             ) : null}
           </div>
@@ -255,18 +259,30 @@ export function AreaRespostas({ workspace }: { workspace: WorkspaceQuestionarios
             </div>
           </div>
 
+          <div className="grid gap-3 sm:grid-cols-3">
+            <label className="space-y-1.5"><Rotulo htmlFor="qst-inicio">Início do período</Rotulo><Campo id="qst-inicio" type="date" value={inicioRespostas} onChange={e=>setInicioRespostas(e.target.value)} disabled={!questionarioAtual}/></label>
+            <label className="space-y-1.5"><Rotulo htmlFor="qst-fim">Fim do período</Rotulo><Campo id="qst-fim" type="date" value={fimRespostas} onChange={e=>setFimRespostas(e.target.value)} disabled={!questionarioAtual}/></label>
+            <label className="space-y-1.5"><Rotulo htmlFor="qst-tamanho">Respostas por página</Rotulo><Selecao id="qst-tamanho" value={tamanhoRespostas} disabled={!questionarioAtual||carregandoRespostas} onChange={e=>{const tamanho=Number(e.target.value) as 25|50|100;setTamanhoRespostas(tamanho);void carregarRespostas(questionarioAtual?.id,pacienteFiltroRespostas,{tamanho});}}>{[25,50,100].map(n=><option key={n} value={n}>{n}</option>)}</Selecao></label>
+          </div>
+          {leituraClinica?<p className="text-xs text-texto-suave">Fuso do período: {leituraClinica.timezone}. O dia final é incluído.</p>:<p className="text-xs text-texto-suave">Atualize as respostas para aplicar o paciente e o período. A busca local vale somente para a página carregada.</p>}
+          <div className="flex flex-wrap items-center gap-3" role="group" aria-label="Paginação das respostas">
+            <Botao type="button" disabled={carregandoRespostas||!leituraClinica||paginaRespostas===0} onClick={async()=>{if(await carregarRespostas(questionarioAtual?.id,pacienteFiltroRespostas,{cursor:cursoresRespostas[paginaRespostas-1],indice:paginaRespostas-1}))paginaStatusRef.current?.focus();}}>Página anterior</Botao>
+            <p ref={paginaStatusRef} tabIndex={-1} role="status" aria-live="polite" className="text-sm text-texto-suave focus-visible:outline-2 focus-visible:outline-offset-2">{leituraClinica?`Página ${paginaRespostas+1} · ${leituraClinica.totalConsulta} respostas na consulta`:'Consulta não carregada'}</p>
+            <Botao type="button" disabled={carregandoRespostas||!leituraClinica?.proximoCursor} onClick={async()=>{if(await carregarRespostas(questionarioAtual?.id,pacienteFiltroRespostas,{cursor:leituraClinica?.proximoCursor??undefined,indice:paginaRespostas+1}))paginaStatusRef.current?.focus();}}>Próxima página</Botao>
+          </div>
+
           <div data-qst-p01-contagem>
             <p role="status" aria-live="polite" aria-atomic="true" className="text-sm text-texto-suave">
               {carregandoRespostas ? 'Atualizando envios...' : `${respostasVisiveis.length} ${respostasVisiveis.length === 1 ? 'envio exibido' : 'envios exibidos'}`}
             </p>
-            <p className="text-xs text-texto-suave">A contagem considera apenas a lista carregada.</p>
+            <p className="text-xs text-texto-suave">A contagem considera apenas os envios visíveis desta página.</p>
           </div>
 
           <div data-qst10-leitura>
           <Abas identificador={abasId} abas={[{ id: 'envios', rotulo: 'Envios' }, { id: 'resumo', rotulo: 'Resumo por pergunta' }]} ativaId={aba} aoMudar={id => setVisualizacao({ contexto, aba: id })} rotulo="Visualização das respostas" />
           <div id={`${abasId}-resumo-painel`} role="tabpanel" aria-labelledby={`${abasId}-resumo-aba`} hidden={aba !== 'resumo'} className="space-y-4 pt-3">
-            <p className="text-sm font-semibold text-tinta">Resumo da consulta</p>
-            <p className="text-xs text-texto-suave">Os totais consideram os envios da consulta. A busca apenas localiza perguntas e respostas.</p>
+            <p className="text-sm font-semibold text-tinta">Resumo da página</p>
+            <p className="text-xs text-texto-suave">Os totais consideram somente os envios desta página, antes da busca local. Médias ficam indisponíveis quando as definições históricas são incompatíveis.</p>
           {leituraClinica ? (
             <div className="grid gap-3 md:grid-cols-4">
               <div className="rounded-md border border-linha bg-superficie p-3">
@@ -283,7 +299,7 @@ export function AreaRespostas({ workspace }: { workspace: WorkspaceQuestionarios
               </div>
               <div className="rounded-md border border-linha bg-superficie p-3">
                 <p className="text-xs text-texto-suave">Última resposta</p>
-                <p className="text-base font-semibold text-tinta">{formatarDataResposta(leituraClinica.resumo.ultimaRespostaEm)}</p>
+                <p className="text-base font-semibold text-tinta">{formatarDataResposta(leituraClinica.resumo.ultimaRespostaEm,leituraClinica.timezone)}</p>
               </div>
             </div>
           ) : null}
@@ -338,6 +354,7 @@ export function AreaRespostas({ workspace }: { workspace: WorkspaceQuestionarios
             pacientesPorId={pacientesPorId}
             buscaRespostas={buscaRespostas}
             carregandoRespostas={carregandoRespostas}
+            timezone={leituraClinica?.timezone}
           />
           </div>
           </div>

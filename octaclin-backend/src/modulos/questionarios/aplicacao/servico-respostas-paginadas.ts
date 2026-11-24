@@ -13,7 +13,7 @@ import { validarTipoPergunta } from '../dominio/tipos-pergunta';
 import { formatarCsvRespostas } from './csv-respostas';
 
 interface MetadadoResposta extends PosicaoResposta { pacienteId: string; envioId: string }
-interface EnvioBloqueado extends MetadadoResposta { snapshot: { perguntas?: PerguntaSnapshotQuestionario[] } | null }
+interface EnvioBloqueado { id:string; snapshot: { perguntas?: PerguntaSnapshotQuestionario[] } | null }
 export interface PaginaRespostasQuestionario extends LeituraClinicaQuestionario {
   questionarioId: string;
   filtros: Omit<FiltrosPaginaRespostas, 'cursor'>;
@@ -109,17 +109,22 @@ export class ServicoRespostasPaginadas {
     const envios = [...new Set(pagina.map(r => r.envioId))].sort();
     await m.query('SELECT id FROM envios_questionario WHERE tenant_id=$1 AND id=ANY($2::uuid[]) ORDER BY id FOR SHARE', [tenantId,envios]);
     const ids = pagina.map(r => r.id).sort();
-    const bloqueados: EnvioBloqueado[] = await m.query(`SELECT r.id,r.paciente_id AS "pacienteId",r.envio_questionario_id AS "envioId",
-      r.finalizado_em::text AS "finalizadoEm",e.snapshot_estrutura AS snapshot
+    const bloqueados: MetadadoResposta[] = await m.query(`SELECT r.id,r.paciente_id AS "pacienteId",r.envio_questionario_id AS "envioId",
+      r.finalizado_em::text AS "finalizadoEm"
       FROM respostas_checkin r JOIN envios_questionario e ON e.id=r.envio_questionario_id AND e.tenant_id=r.tenant_id AND e.paciente_id=r.paciente_id
       WHERE r.tenant_id=$1 AND r.id=ANY($2::uuid[]) AND e.questionario_id=$3 AND e.status='respondido' ORDER BY r.id FOR SHARE OF r`, [tenantId,ids,questionarioId]);
     const porId = new Map(bloqueados.map(r => [r.id,r]));
     if (pagina.some(r => { const atual=porId.get(r.id); return !atual || atual.pacienteId!==r.pacienteId || atual.envioId!==r.envioId || atual.finalizadoEm!==r.finalizadoEm; })) throw new ConflictException('A consulta mudou. Atualize antes de continuar.');
-    const [volume] = await m.query('SELECT COALESCE(sum(octet_length(valor::text)),0)::text AS bytes FROM resposta_valores WHERE tenant_id=$1 AND resposta_checkin_id=ANY($2::uuid[])', [tenantId,ids]);
+    const [volume] = await m.query(`SELECT (
+      (SELECT COALESCE(sum(octet_length(valor::text)),0) FROM resposta_valores WHERE tenant_id=$1 AND resposta_checkin_id=ANY($2::uuid[])) +
+      (SELECT COALESCE(sum(octet_length(snapshot_estrutura::text)),0) FROM envios_questionario WHERE tenant_id=$1 AND id=ANY($3::uuid[]))
+    )::text AS bytes`, [tenantId,ids,envios]);
     if (Number(volume.bytes)>LIMITE_BYTES) throw new BadRequestException('Consulta muito grande. Refine os filtros.');
+    const historicos: EnvioBloqueado[] = await m.query('SELECT id,snapshot_estrutura AS snapshot FROM envios_questionario WHERE tenant_id=$1 AND id=ANY($2::uuid[]) ORDER BY id', [tenantId,envios]);
+    const historicosPorId=new Map(historicos.map(e=>[e.id,e]));
     const valores = await m.getRepository(RespostaValorOrm).find({where:{tenantId,respostaCheckinId:In(ids)}, select:{respostaCheckinId:true,perguntaId:true,valor:true},order:{id:'ASC'}});
     // Preserve the existing legacy fallback only for labels, never for historical completeness.
-    const legadas = bloqueados.some(r=>!Array.isArray(r.snapshot?.perguntas));
+    const legadas = historicos.some(r=>!Array.isArray(r.snapshot?.perguntas));
     const atuais = legadas ? await m.getRepository(PerguntaOrm).find({where:{tenantId,questionarioId},select:{id:true,enunciado:true,tipo:true},order:{ordem:'ASC',id:'ASC'}}) : [];
     const porResposta = new Map<string, typeof valores>();
     for (const valor of valores) { const lista=porResposta.get(valor.respostaCheckinId) ?? []; lista.push(valor); porResposta.set(valor.respostaCheckinId,lista); }
@@ -127,7 +132,7 @@ export class ServicoRespostasPaginadas {
     const assinaturas = new Map<string,string>();
     const incompativeis = new Set<string>();
     const respostas = pagina.map(r=>{
-      const envio=porId.get(r.id)!;
+      const envio=historicosPorId.get(r.envioId)!;
       const perguntas = Array.isArray(envio.snapshot?.perguntas) ? envio.snapshot.perguntas : atuais;
       const mapa = new Map(perguntas.map(p=>[p.id,p]));
       const respostas=(porResposta.get(r.id) ?? []).flatMap(v=>{

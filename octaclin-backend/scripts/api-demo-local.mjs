@@ -1049,6 +1049,17 @@ const servidor = http.createServer(async (requisicao, resposta) => {
 
     if (requisicao.method === 'GET' && url.pathname === '/questionarios') return json(resposta, 200, paginar(estado.questionarios));
 
+    // Empty synthetic dataset only; auth/RLS and keyset correctness are tested against the real service.
+    if (requisicao.method === 'GET' && partes[0] === 'questionarios' && partes[2] === 'respostas' && partes[3] === 'pagina' && partes.length === 4) {
+      if (!estado.questionarios.some(q=>q.id===partes[1])) return json(resposta,404,{mensagem:'Questionário indisponível.'});
+      const tamanho=Number(url.searchParams.get('tamanho')??25);
+      if (![25,50,100].includes(tamanho)) return json(resposta,400,{mensagem:'Página inválida.'});
+      const filtros={tamanho};for(const campo of ['pacienteId','inicio','fim'])if(url.searchParams.has(campo))filtros[campo]=url.searchParams.get(campo);
+      resposta.setHeader('Cache-Control','private, no-store');
+      return json(resposta,200,{questionarioId:partes[1],filtroPacienteId:filtros.pacienteId,filtros,timezone:'America/Sao_Paulo',totalConsulta:0,proximoCursor:null,
+        resumo:{totalRespostas:0,totalPacientes:0,totalPerguntas:0,mediaRespostasPorEnvio:0},pacientes:[],perguntas:[],respostas:[]});
+    }
+
     if (requisicao.method === 'POST' && url.pathname === '/questionarios') {
       const body = await lerJson(requisicao);
       const questionario = {

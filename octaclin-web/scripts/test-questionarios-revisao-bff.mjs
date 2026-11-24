@@ -9,6 +9,8 @@ const pastaTemporaria = mkdtempSync(join(tmpdir(), 'octaclin-questionarios-revis
 const tsconfigTemporario = join(pastaTemporaria, 'tsconfig.json');
 const arquivos = [
   'scripts/questionarios-revisao-bff.spec.ts',
+  'app/api/questionarios/[id]/respostas/pagina/route.ts',
+  'app/api/questionarios/[id]/respostas/exportacao.csv/route.ts',
   'app/api/questionarios/[id]/respostas/exportar.csv/route.ts',
   'app/api/questionarios/[id]/validacao/route.ts',
   'app/api/questionarios/[id]/respostas/[respostaId]/completude/route.ts',

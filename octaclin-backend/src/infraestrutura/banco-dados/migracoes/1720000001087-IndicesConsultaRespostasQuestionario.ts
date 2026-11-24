@@ -1,5 +1,8 @@
 import type { MigrationInterface, QueryRunner } from 'typeorm';
-/** Index-only migration. Apply out of band with owner after an authorized deployment rehearsal. */
+/**
+ * Index-only migration; owner execution after an authorized rehearsal.
+ * @aplicacao fora-de-banda
+ */
 export class IndicesConsultaRespostasQuestionario1720000001087 implements MigrationInterface {
   name = 'IndicesConsultaRespostasQuestionario1720000001087';
   async up(q: QueryRunner): Promise<void> {

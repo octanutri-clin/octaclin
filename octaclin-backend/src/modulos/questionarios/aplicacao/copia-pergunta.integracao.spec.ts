@@ -8,7 +8,7 @@ import 'reflect-metadata';
 import { randomUUID } from 'node:crypto';
 import { BadRequestException, ConflictException, ForbiddenException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { Client } from 'pg';
-import { DataSource } from 'typeorm';
+import { DataSource, EntityManager } from 'typeorm';
 import { GenericContainer, StartedTestContainer, Wait } from 'testcontainers';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
@@ -533,6 +533,32 @@ suite('QST-P05 — PostgreSQL descartável, runtime e FORCE RLS', () => {
         expect(legado).not.toHaveBeenCalled();
       } finally { legado.mockRestore(); }
     });
+    it('pagina datas iguais e ausentes pelo ID estável sem fabricar data', async () => {
+      await popular(31);await admin.query('UPDATE respostas_checkin SET finalizado_em=NULL');
+      const a=await paginado().consultar(tenant,questionarioId,ator,{});
+      const b=await paginado().consultar(tenant,questionarioId,ator,{cursor:a.proximoCursor});
+      const esperado=(await admin.query('SELECT id FROM respostas_checkin ORDER BY id DESC')).rows.map(r=>r.id);
+      expect([...a.respostas,...b.respostas].map((r:any)=>r.respostaId)).toEqual(esperado);
+      expect([...a.respostas,...b.respostas].every((r:any)=>r.finalizadoEm===undefined)).toBe(true);
+      await admin.query("UPDATE respostas_checkin SET finalizado_em='2026-11-23 12:00:00+00'");
+      const c=await paginado().consultar(tenant,questionarioId,ator,{});
+      const d=await paginado().consultar(tenant,questionarioId,ator,{cursor:c.proximoCursor});
+      expect([...c.respostas,...d.respostas].map((r:any)=>r.respostaId)).toEqual(esperado);
+    });
+    it.each(['consulta','exportacao'])('transferência concorrente bloqueia %s antes de hidratar valores', async modo => {
+      const paciente=await popular(3);
+      const trava=runtime.createQueryRunner();await trava.connect();await trava.startTransaction();
+      let pendente:Promise<PromiseSettledResult<unknown>[]>|undefined;
+      const leitura=jest.spyOn(EntityManager.prototype,'getRepository');
+      try {
+        await trava.query("SELECT set_config('app.tenant_id',$1,true)",[tenant]);
+        await trava.query('UPDATE pacientes SET profissional_responsavel_id=$1 WHERE id=$2',[randomUUID(),paciente]);
+        pendente=Promise.allSettled([modo==='consulta'?paginado().consultar(tenant,questionarioId,ator,{}):paginado().exportar(tenant,questionarioId,ator,{})]);
+        await aguardarBloqueados(1);await trava.commitTransaction();
+        const [r]=await pendente;expect(r.status).toBe('rejected');if(r.status==='rejected')expect(r.reason).toBeInstanceOf(NotFoundException);
+        expect(leitura.mock.calls.some(([entidade])=>entidade===RespostaValorOrm)).toBe(false);
+      }finally{if(trava.isTransactionActive)await trava.rollbackTransaction();await trava.release();await pendente;leitura.mockRestore();}
+    });
     it('mantém datas ausentes no fim e trata dia final inclusivo no fuso da clínica', async () => {
       await popular(4);
       await admin.query(`UPDATE respostas_checkin SET finalizado_em = CASE id WHEN md5('1')::uuid THEN NULL WHEN md5('2')::uuid THEN '2026-11-24 02:59:59.999999+00'::timestamptz WHEN md5('3')::uuid THEN '2026-11-24 03:00:00+00'::timestamptz ELSE '2026-11-23 03:00:00+00'::timestamptz END`);
@@ -555,6 +581,12 @@ suite('QST-P05 — PostgreSQL descartável, runtime e FORCE RLS', () => {
       expect(csv).toContain('Valor congelado'); expect(csv.trim().split('\n')).toHaveLength(4);
       const visiveis = await paginado().exportar(tenant,questionarioId,ator,{},[a.respostas[0].respostaId]);
       expect(visiveis.trim().split('\n')).toHaveLength(2);
+    });
+    it('limita snapshot volumoso antes de materializar o conteúdo da página ou CSV', async () => {
+      await popular(1);
+      await admin.query("UPDATE envios_questionario SET snapshot_estrutura=snapshot_estrutura || jsonb_build_object('descricao',repeat('x',9*1024*1024)) WHERE id=$1",[envioId]);
+      await expect(paginado().consultar(tenant,questionarioId,ator,{})).rejects.toThrow(/grande/);
+      await expect(paginado().exportar(tenant,questionarioId,ator,{})).rejects.toThrow(/grande/);
     });
     it('rejeita mais de mil antes de ler valores, sem truncar silenciosamente', async () => {
       await popular(1001);

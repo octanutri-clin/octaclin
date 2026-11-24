@@ -243,3 +243,36 @@ R4 ePRDraft08sobre07.09–10NOTRUN. Sem merge/deploy/migrationexterna.
 
 Leitura GitHub desta rodada: #588HEAD8d06cf24 com21SUCCESS e1SKIPPED(SBOM),
 semfalhas; #589OPEN/Draft87dbeeaf. Resultados dos pais não validam08.
+
+### 08 C3 — integração utilizável, antes de revisão final
+
+BFF aditivo: valida sessão/permissão/origem, query sem duplicatas, escopos CSV
+não ambíguos, limites e allowlist das respostas; não repassa mensagens internas.
+Console usa só página nova, filtros aplicados de paciente/período, fuso servidor,
+25/50/100, cursores apenas em memória e três CSV explícitos. Busca e resumos
+somente da página. Exportação pendente é descartada ao mudar de contexto.
+Atualização da mesma página preserva leitura/recolhimentos; erro vigente limpa
+os fatos. Navegação por teclado leva foco ao estado da nova página somente se
+a resposta ainda for atual. Fonte atual não reinterpreta denominador histórico.
+
+Novas provas:18/18 BFF(15 regressões+3novos),10/10 navegador desktop/mobile
+(paginação,3CSV,respostas tardias,axe/zoom200%/teclado);4/4 regressõesP02 focadas.
+Uma regressão parcial foi interrompida após demonstrar2defeitos de fechar leitor
+na atualização; corrigidos sem reduzir asserts. Novo RED de foco reproduzido
+e corrigido.4falhas intermediárias dos novos testes tardios eram fixture com
+texto duplicado e seletor estrito, corrigida só a fixture, não contadascomoRED.
+
+Backend módulo+registro:220PASS/52SKIPPED, sendo48 de PostgreSQL executados
+separadamente e4 históricos de outro gate aindaSKIPPED nesta rodada. PostgreSQL
+final48/48:11casosnovos+37regressões, incluindo carteira concorrente e limites de
+snapshot/valores antes de materialização. RED adicional: snapshot9MiB era lido;
+agora rejeitado antes do conteúdo, sem regravar dados. Snapshot é carregado uma
+vez por envio, não uma cópia por resposta. Índices ensaiadosup/down sem alterarRLS.
+Demo sintética:1RED404→1GREEN; novo contrato vazio, não prova deautorização/banco.
+Typesbackend/Web,lintWebafetado,linguagem8+scanner,governance de migration e
+segredos/diffPASS Node22.21.1. Tagfora-de-banda adicionada após gate apontar ausência.
+Buildbackend+artefatoPASS antes do ajuste de limite; repetição do build final
+pendente. Regressão90casos navegador em andamento; globalauthz/buildWeb/R4/UX/CI
+pendentes. C3 não é aceite integral da08 e não permiteReady/merge.
+
+PR07#58987dbeeaf agora também21SUCCESS/1SKIPPED(SBOM) na consulta desta rodada.
