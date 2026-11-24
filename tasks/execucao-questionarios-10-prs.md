@@ -422,3 +422,13 @@ histórico. Alteração posterior de microcopy segura exige regressão dirigida 
 Gates de Webbuild/authz e revisão final em execução; não declararCIglobal verde.
 Próximo: fechar C4/C5 com revisão integral, evidênciasUXB/C e DraftPR própria
 sobre08; sem merge/deploy/DDL externa e sem tocar FOOD06/Claude.
+
+### Fechamento local09 — código f945fd3
+
+Webbuild final/TypeScriptNode22PASS, lint semavisos e linguagemPASS;16/16
+Playwright em build de produção (14novos+2legado).35/35PG/projeção no harness
+372c760. R4 integral independente estática favorável; UXB/C favoráveis, D
+registrado. Provas/falhas/limites em handoff09 e relatórioUXQST10-09-BC-2026-11-24.
+AuthzglobalWeb local em execução e CI/scannersnovoHEAD pendentes; nãoPASS. Sem
+leitor de tela manual/usuários reais/PowerShell:SKIPPED com motivo no handoff.
+Não classificar09concluída e validada até gates finais. PrepararDraftsobre08.

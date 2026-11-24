@@ -16,3 +16,13 @@ preferência estética. Aceite: repetição mobile200% com textos/ações acess�
 Na emissãoB a repetição estava pendente; resolução será registrada emC.
 
 Revisão de produto simulada, não validação clínica/R4 nem autorização operacional.
+
+## Adendo C — código f945fd3
+
+A mesma instância independente recebeu evidência final16/16PASS em build de
+produçãoNode22 e descrição da inspeção mobile200% pelo coordenador. NUX-B01
+considerado coberto/resolvido nos limites dessa evidência recebida. Microcopy
+esclarece que os prazos de links não mudam, e o sucesso depende deACK. Nenhum
+novo backlog/decisão de produto recomendado. Sem navegação ou imagem observada
+pela persona, sem pessoas reais; portal permaneceN/A direto no parecer paciente.
+CI/authzglobal/R4 pertencem aos seus gates próprios, não são aprovados pela persona.

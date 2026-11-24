@@ -16,3 +16,13 @@ legíveis e operáveis no mobile avaliado. Mesma dependência de NUX-B01, sem du
 tarefa. Dev overlay é limitação de execução, não defeito demonstrado do produto.
 
 Revisão simulada não é validação com pacientes reais nem aprovação de merge.
+
+## Adendo C — código f945fd3
+
+A mesma instância independente recebeu evidência final16/16PASS em build de
+produçãoNode22 e descrição da inspeção mobile200% pelo coordenador. PUX-B01
+considerado coberto/resolvido nos limites dessa evidência recebida. Microcopy
+esclarece que os prazos de links não mudam, e o sucesso depende deACK. Nenhum
+novo backlog/decisão de produto recomendado. Sem navegação ou imagem observada
+pela persona, sem pessoas reais; portal permaneceN/A direto no parecer paciente.
+CI/authzglobal/R4 pertencem aos seus gates próprios, não são aprovados pela persona.

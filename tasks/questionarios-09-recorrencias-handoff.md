@@ -2,8 +2,9 @@
 
 Branch `feat/qst10-09-recorrencias`, base08 atualizada por `5bacefc`; ainda sem PR09.
 
-Estado atual: C1/C2a implementados, C2b/C3 em validação local conforme checkpoint
-abaixo. Console/BFF, UXB/C, R4 final e CI continuam pendentes. Não concluída.
+Estado atual: implementação09 local concluída no código f945fd3, com R4 integral
+estática e UXB/C favoráveis. Gates locais abaixo; authzglobalWeb em execução e
+CI novoHEAD pendente. ManterDraft, sem aceite global/merge/deploy.
 
 ## Histórico C1 — substituído pelos checkpoints seguintes
 Plano canônico: [dez entregas](plan-questionarios-10-prs.md).
@@ -123,3 +124,33 @@ falhas emPASS. Nova execução autoral limpa35/35PASS (24PGcontrole+8PGmigration
 harness/entrega integral continua pendente. Backend completo no código f0d9769:
 5645PASS,420SKIPPED,0FAIL (6065total,477suítesPASS/20SKIP). Não repetir integral
 por ajuste exclusivo no harness ignorado pelo perfil padrão.
+
+## C4/C5 — estado vigente, substitui pendências locais já comprovadas acima
+
+Código f945fd3; testes/console e BFF versionados. Backend35/35PG/projeção no
+harness corrigido, suíte padrão5645PASS/420SKIP, build/artefato/typecheckPASS.
+Web: BFF22/22; build final de produção e TypeScriptNode22PASS; lint sem avisos,
+linguagemPASS. Playwright final16/16 no build de produção, desktop/mobile, inclui
+2casos de criação legada e14novos. Não herdar oPASS de runs anteriores.
+
+R4 integral independente favorável e UXB/C nos relatóriosQST10-09-BC-2026-11-24,
+com métodos, falhas anteriores e limitações preservados. Nenhum usuário real nem
+leitor de tela manual:SKIPPED, sem ambiente/pessoa de validação. PreflightPowerShell
+não executado neste ambienteLinux. CI/scannersnovoHEAD pendentes; authzglobalWeb
+iniciada localmente e ainda em execução, nãoPASS. Acompanhar sem alterar códigos
+ou configurações apenas para obter verde. Não iniciar liberação operacional.
+
+### Operação/rollback — proposta, nenhuma execução externa
+
+Migration1088 é pré-requisito do runtime novo. SQL aditivo é compatível com
+leitores antigos, mas o worker antigo NÃO implementaD09-01; portanto rollback só
+de código para worker antigo não é estratégia segura de autorização. Antes de
+ativação/rollback externo, exigir autorização própria, contenção controlada do
+worker, conferência de schema/ledger/roles/RLS, backup/ensaio adequados, migration
+owner fora de banda e implantação coordenada backend/worker antes da interface.
+Preservar colunas/dados depois de uso; down recusa perda dos controles. Não
+prometer que reverter deploy restaura segurança/persistência. Não foi feita
+alteração de serviço,main,Neon,Render,cobrança ou produção.
+
+Próximo: DraftPR09 sobre08 e CI doHEAD, depois entrega10 conforme plano já
+aprovado, mantendo09Draft até gates finais e autorização específica de integração.
