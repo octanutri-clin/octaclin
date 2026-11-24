@@ -287,3 +287,30 @@ final, incluindo filtros/fuso/contagem/cursor. Não é bypass de limite nem nova
 capacidade.4/4PGlegadoCSV tambémPASS nesta rodada, completando os52cenários
 que ficaramSKIPPED na seleção unitária; sem somar reexecuções. Re-review estática
 da correção e gates globais ainda pendentes neste checkpoint.
+
+### 08 C5 — regressões, reflow e limites das evidências
+
+R4re-revisão0794da6..92821c7 favorável: P2 resolvido tecnicamente, sem novos
+achados; estática, sem testes próprios. Types/buildbackend+artefato pósP2PASS.
+Regressão local completa90casos terminou89PASS/1FAIL: a única divergência era
+GETperiódico do sino de notificações (5s) na lista de requisições do questionário,
+sem regressão de consultas clínicas. Fixtureagora isola somente esseGET externo,
+respondendo vazio; todos os demaisGETs e TODAS as mutações continuam registrados.
+Asserções de ausência de consultas/mutações clínicas foram preservadas.8/8casos
+afetadosP01/P02/abas passaram após o isolamento. Não declarar90/90localnesteHEAD.
+
+Inspeção visual real200% revelou clipping interno não captado por largura global.
+NovoRED confirmou campo início além do cartão e busca comprimida. Grid explícito
+minmax0/colunaúnica e busca empilhada no mobile corrigiram sem mudar contratos.
+20/20testes dirigidos desktop/mobile apósCSS (10novos+10regressões pertinentes),
+incluindo caixa dos controles, busca legível, axe/zoom/teclado/respostas tardias.
+Capturas atualizadas e observadas pelo coordenador; persona só recebeu brief.
+TypesWeb/lintafetadoPASS. Revisão estática dirigida desteCSS/fixture ainda pendente.
+
+Reinício do executor preservou arquivos e logs, mas interrompeu `test:authz`
+global: INCONCLUSIVO, nãoPASS.18/18BFFquestionários separados continuam válidos
+para código inalterado. BuildWebfinal e suíte90integral do HEAD ficam gates a
+comprovar (buildlocal será tentado; CIoficial deve executar tudo). Não aumentar
+timeouts nem modificar segurança/dependências/workflows para contornar ambiente.
+Nenhum lockfile/dependência alterado. Main inspecionada só em leitura aindaaté1086,
+sem colisão observada de1087. Sem PR08 duplicada, merge, deploy ou DDLexterno.
