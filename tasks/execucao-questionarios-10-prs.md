@@ -28,3 +28,20 @@ Next16.3.8 versus manifesto^16.4.5: CI canônico pendente. Banco/RLS/build
 completo local SKIPPED, fronteiras não alteradas. UXA aprovado no plano;
 B/C e revisão estática final do lote pendentes, sem declaração de aceite.
 PR01 mantém Draft e não herda PASS de outro commit.
+
+## PR01 #583 — atualização da base e resolução de conflito
+
+Integração explícita de main00810d9 na branch da própriaPR, mantendoHEADanterior
+19c94939 como ancestral, sem rebase/forcepush ou alteração de outrasworktrees.
+Conflito único: ambas as branches acrescentaram testes no final do mesmoarquivo.
+Preservados integralmente o arquivo de testes da main(QPRO09distribuições) e o
+bloco originalQST10-01, sem reduzir assertions. Produção conciliada automaticamente;
+a diferença funcional diante da main permanece somente a variação neutra.
+
+Validação local Node22.21.1:10/10Playwright desktop/mobile(QPRO09+QST10-01),
+typecheckWeb,lintafetado,sintaxe,diffcheck e scannerlocal de segredosPASS.
+Sem novos comportamentos ou testes inventados comoRED. Buildglobal/suíteintegral
+localNOTRUN: checks oficiais do novoHEAD devem validar a integração completa.
+Arquivos gerados pelo Next no ambiente local restaurados à versão do índice;
+regras AGENTS intactas. Nenhuma migration, merge da PR, deploy ou escrita emmain.
+CI anterior19c94939 é evidência histórica; novoHEAD aguardará seus próprioschecks.
