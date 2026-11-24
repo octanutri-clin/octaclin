@@ -349,3 +349,28 @@ Sem Readyautomático/merge/deploy, sem alterações de produção ouFOOD06.
 a decisão explícita sobre autoria/reconfirmação de agendamentos antigos; ver
 `tasks/questionarios-09-recorrencias-handoff.md` nessa branch.10nãoiniciada,
 respeitando a base dependente planejada. Não inferir resposta por tempo decorrido.
+
+### 08 C7 — corrigir falha do Backend no CI
+
+CI45298755171/job138125746097, HEAD250edd2: únicoFAIL na suíte completa era o
+spec1086 exigir que a1086 fosse a última migration. A inclusão legítima1087
+invalidou essa hipótese; a aplicação de migrations no PostgreSQL deCI passou,
+mas o gate Testcontainers/RLS posterior foiSKIPPED pela falha da suíte.
+
+RED local Node22.21.1:1FAIL/4PASS reproduziu a mesma linha doCI antes da correção.
+Teste1086 agora exige existência única de1085/1086 e a ordem imediata1085→1086;
+não fixa o fim da lista. Novo spec1087 protege sua unicidade e ordem1086→1087,
+sem proibir próximas migrations. Assertivas de RLS, duplicatas, transação e
+rollback da1086 foram mantidas. Nenhuma migration, configuração, workflow,
+dependência, permissão ou código de produção foi alterado para obter verde.
+
+GREEN focado:28/28 em1086/1087/registroTypeORM. Suíte completa local:471suítesPASS,
+18SKIPPED;5603testesPASS,388SKIPPED,0FAIL (5991total,188,988s). Gates condicionais
+não habilitados no perfil local não contam como validação; oCI tem suas próprias
+configurações de integração. Não somar28novamente nem herdar oPASS de um commit
+anterior. Typecheckbackend,diffcheck e scannerlocal de segredosPASS.
+
+A correção é restrita a testes/registro de evidências. Runtime permanece o de
+1f490be; provas PostgreSQL/R4 anteriores mantêm seus escopos e limitações, não
+substituem oCI do novoHEAD. Enviar uma vez e manterPR590Draft; aguardarBackend,
+Testcontainers/RLS e demais checks do novoHEAD, semmerge/deploy/migrationexterna.
