@@ -96,3 +96,18 @@ Buildbackend e gate de redação de auditoriaPASS. Typecheck e artefato de produ
 registrados após a execução final. R4 ainda não executada para este checkpoint;
 UI/BFF e UXB/C NOTRUN, CI novoHEAD NOTRUN. Sem migration externa ou merge.
 Próximo: revisão independente do backend e C4(console/BFF/testesdesktop-mobile).
+
+## Rechecagem R4 do backend — correção do relógio e conferência de futuro
+
+Revisor independente `/root/qst09_backend_r4` examinou976bd1d, executou30/30
+PG (22controle+8migration) e confirmou1P2: cron de minuto após espera usava o
+horário inicial e podia gravar próxima já vencida. RED real adicional com barreira:
+início12h, liberação12h03m30s, próximo12h01 (inválido). Correção usa relógio depois
+da espera/escrita para última/próxima execução, sem catch-up. Observação de fuso
+null preexistente corrigida normalizando uma vez antes de calcular e persistir.
+
+GREEN91/91 (24PGcontrole+67serviço) após correção; GREEN3/3 da projeção de próxima
+ocorrência informativa (RED3/3 antes). O console recebe data futura calculada pelo
+mesmo motor ou ausência explícita; envio único vencido/encerrado não recebe data
+inventada. Conferência informativa não é reserva nem substitui a revisão CAS ou
+a revalidação ao confirmar. Rechecagem independente do delta ainda pendente.

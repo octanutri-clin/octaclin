@@ -399,7 +399,9 @@ describe('ServicoQuestionarios', () => {
       pacientes: [{ id: 'paciente-alvo', tenantId: 'tenant-1', arquivadoEm: undefined }]
     });
 
-    await servico.processarAgendamentosVencidos('tenant-1', new Date('2026-08-19T12:00:00.000Z'));
+    const relogio=jest.spyOn(Date,'now').mockReturnValue(new Date('2026-08-19T12:00:00.000Z').getTime());
+    try { await servico.processarAgendamentosVencidos('tenant-1', new Date('2026-08-19T12:00:00.000Z')); }
+    finally { relogio.mockRestore(); }
 
     expect(dados.agendamentos[0].proximaExecucaoEm).toEqual(new Date('2026-08-24T11:00:00.000Z'));
     expect(dados.agendamentos[0].ultimaExecucaoEm).toEqual(new Date('2026-08-19T12:00:00.000Z'));

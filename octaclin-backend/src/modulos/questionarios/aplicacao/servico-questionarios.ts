@@ -747,12 +747,13 @@ export class ServicoQuestionarios {
       await autorizarContextoAgendamento(m, tenantId, dados.questionarioId, dados.pacienteId, usuario.usuarioId, usuario);
       // Relógio depois dos locks: nunca iniciar uma execução única já vencida.
       const agora = new Date();
-      const proximaExecucaoEm = this.calcularProximaExecucao(dados.regraCron, dados.dataFixa, dados.timezone, agora);
+      const timezone = dados.timezone ?? 'America/Sao_Paulo';
+      const proximaExecucaoEm = this.calcularProximaExecucao(dados.regraCron, dados.dataFixa, timezone, agora);
       if (!Number.isFinite(proximaExecucaoEm.getTime()) || proximaExecucaoEm <= agora) throw new BadRequestException('Informe uma ocorrência futura.');
       const repo = m.getRepository(AgendamentoQuestionarioOrm);
       const a = await repo.save(repo.create({tenantId,questionarioId:dados.questionarioId,pacienteId:dados.pacienteId,
         regraCron:dados.regraCron,dataFixa:dados.dataFixa ? new Date(dados.dataFixa) : undefined,
-        timezone:dados.timezone??'America/Sao_Paulo',ativo:true,proximaExecucaoEm,revisao:1,autorizadoPorUsuarioId:usuario.usuarioId}));
+        timezone,ativo:true,proximaExecucaoEm,revisao:1,autorizadoPorUsuarioId:usuario.usuarioId}));
       await registrarAuditoriaNaTransacao(m,{tenantId,usuarioId:usuario.usuarioId,acao:'questionarios.agendamento.criar',recursoTipo:'agendamento_questionario',recursoId:a.id});
       return projetarAgendamento(a);
     });
@@ -1571,8 +1572,9 @@ export class ServicoQuestionarios {
           const envios=m.getRepository(EnvioQuestionarioOrm);
           await envios.save(envios.create({tenantId,questionarioId:a.questionarioId,pacienteId:a.pacienteId,
             agendamentoId:a.id,status:'pendente',snapshotEstrutura}));
-          const proxima=a.regraCron ? this.calcularProximaExecucao(a.regraCron,undefined,a.timezone,agora) : null;
-          const {affected}=await repo.update({id:a.id,tenantId,revisao:a.revisao},{ultimaExecucaoEm:agora,
+          const efetivadaEm=new Date(Math.max(agora.getTime(),Date.now()));
+          const proxima=a.regraCron ? this.calcularProximaExecucao(a.regraCron,undefined,a.timezone,efetivadaEm) : null;
+          const {affected}=await repo.update({id:a.id,tenantId,revisao:a.revisao},{ultimaExecucaoEm:efetivadaEm,
             proximaExecucaoEm:proxima,ativo:!!proxima,revisao:a.revisao+1});
           if(affected!==1)throw new ConflictException('Agendamento alterado.');
           await registrarAuditoriaNaTransacao(m,{tenantId,usuarioId:a.autorizadoPorUsuarioId!,acao:'questionarios.agendamento.gerar',recursoTipo:'agendamento_questionario',recursoId:a.id});

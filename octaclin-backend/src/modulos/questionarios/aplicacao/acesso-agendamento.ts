@@ -1,3 +1,4 @@
+import { resolverProximaExecucao } from '../dominio/proxima-execucao';
 import { ForbiddenException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { EntityManager, IsNull } from 'typeorm';
 import { possuiPermissao } from '../../auth/dominio/permissoes';
@@ -50,8 +51,16 @@ export async function autorizarContextoAgendamento(
 
 /** Allowlist: sem identidade interna do autorizador, sessão, paciente cifrado ou tokens. */
 export function projetarAgendamento(a: AgendamentoQuestionarioOrm) {
+  const estado=estadoAgendamento(a);
+  let proximaOcorrenciaFutura: Date | null=null;
+  if(estado==='ativo'||estado==='pausado'){
+    try{
+      const agora=new Date();const d=resolverProximaExecucao(a.regraCron??undefined,a.dataFixa?.toISOString(),a.timezone,agora);
+      if(Number.isFinite(d.getTime())&&d>agora)proximaOcorrenciaFutura=d;
+    }catch{ /* Agenda legada inválida não recebe data presumida. */ }
+  }
   return {id:a.id,questionarioId:a.questionarioId,pacienteId:a.pacienteId,regraCron:a.regraCron??null,
-    dataFixa:a.dataFixa??null,timezone:a.timezone,ativo:a.ativo,estado:estadoAgendamento(a),
+    dataFixa:a.dataFixa??null,timezone:a.timezone,ativo:a.ativo,estado,proximaOcorrenciaFutura,
     revisao:a.revisao,pausadoEm:a.pausadoEm??null,ultimaExecucaoEm:a.ultimaExecucaoEm??null,
     proximaExecucaoEm:a.proximaExecucaoEm??null,reconfirmacaoNecessaria:!a.autorizadoPorUsuarioId};
 }

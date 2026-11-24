@@ -198,8 +198,8 @@ suite('QST10-09: comandos e gerações autorizadas em PostgreSQL', () => {
   });
 
   async function aguardarBloqueados(minimo:number){
-    const prazo=Date.now()+5000;
-    while(Date.now()<prazo){
+    const prazo=performance.now()+5000;
+    while(performance.now()<prazo){
       const n=(await admin.query("select count(*)::int n from pg_stat_activity where application_name='qst09_runtime' and wait_event_type='Lock'")).rows[0].n;
       if(n>=minimo)return;
       await new Promise(r=>setTimeout(r,10));
@@ -250,6 +250,25 @@ suite('QST10-09: comandos e gerações autorizadas em PostgreSQL', () => {
       await expect(servico.processarAgendamentosVencidos(tenant,agora)).rejects.toThrow('falha geracao sintética');
       expect(await envios()).toHaveLength(0);expect(await registro()).toEqual(antes);
     }finally{await admin.query('drop trigger falha_geracao on user_action_logs;drop function falha_geracao_qst09()');}
+  });
+
+  it('espera pelo lock não grava próxima ocorrência já vencida nem recupera minutos perdidos',async()=>{
+    await autorizarFixture();await admin.query("update agendamentos_questionario set regra_cron='* * * * *'");
+    await bloquearAgenda();const clock=jest.spyOn(Date,'now').mockReturnValue(agora.getTime());
+    const worker=servico.processarAgendamentosVencidos(tenant,agora);
+    try{
+      await aguardarBloqueados(1);clock.mockReturnValue(new Date('2026-11-24T12:03:30Z').getTime());
+      await admin.query('commit');expect(await worker).toBe(1);
+      expect((await registro()).proxima_execucao_em).toEqual(new Date('2026-11-24T12:04:00Z'));
+      expect((await registro()).ultima_execucao_em).toEqual(new Date('2026-11-24T12:03:30Z'));
+    }finally{clock.mockRestore();await admin.query('rollback');}
+  });
+
+  it('timezone ausente ou null usa a mesma normalização ao calcular e persistir',async()=>{
+    for(const timezone of [undefined,null]){
+      const a=await servico.criarAgendamento(tenant,{questionarioId,pacienteId,regraCron:'0 8 * * *',timezone:timezone as unknown as string},ator);
+      expect(a.timezone).toBe('America/Sao_Paulo');expect(a.proximaExecucaoEm!.getUTCHours()).toBe(11);
+    }
   });
 
 });
