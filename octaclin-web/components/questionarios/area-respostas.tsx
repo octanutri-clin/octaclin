@@ -218,9 +218,9 @@ export function AreaRespostas({ workspace }: { workspace: WorkspaceQuestionarios
           </div>
         </div>
 
-        <div className="grid gap-4 p-4">
-          <div className="grid gap-3 md:grid-cols-[minmax(220px,300px)_minmax(220px,1fr)]">
-            <label className="space-y-1.5">
+        <div className="grid min-w-0 grid-cols-1 gap-4 p-4">
+          <div className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-[minmax(220px,300px)_minmax(220px,1fr)]">
+            <label className="min-w-0 space-y-1.5">
               <Rotulo htmlFor="filtro-paciente-respostas">Paciente</Rotulo>
               <Selecao
                 id="filtro-paciente-respostas"
@@ -242,7 +242,7 @@ export function AreaRespostas({ workspace }: { workspace: WorkspaceQuestionarios
             </label>
             <div className="min-w-0 space-y-1.5" data-qst-p01-busca>
               <Rotulo htmlFor="busca-respostas">Busca</Rotulo>
-              <div className="flex min-w-0 flex-wrap gap-2">
+              <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap">
               <Campo
                 ref={buscaRef}
                 className="min-w-0 flex-1"
@@ -259,10 +259,10 @@ export function AreaRespostas({ workspace }: { workspace: WorkspaceQuestionarios
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-3">
-            <label className="space-y-1.5"><Rotulo htmlFor="qst-inicio">Início do período</Rotulo><Campo id="qst-inicio" type="date" value={inicioRespostas} onChange={e=>setInicioRespostas(e.target.value)} disabled={!questionarioAtual}/></label>
-            <label className="space-y-1.5"><Rotulo htmlFor="qst-fim">Fim do período</Rotulo><Campo id="qst-fim" type="date" value={fimRespostas} onChange={e=>setFimRespostas(e.target.value)} disabled={!questionarioAtual}/></label>
-            <label className="space-y-1.5"><Rotulo htmlFor="qst-tamanho">Respostas por página</Rotulo><Selecao id="qst-tamanho" value={tamanhoRespostas} disabled={!questionarioAtual||carregandoRespostas} onChange={e=>{const tamanho=Number(e.target.value) as 25|50|100;setTamanhoRespostas(tamanho);void carregarRespostas(questionarioAtual?.id,pacienteFiltroRespostas,{tamanho});}}>{[25,50,100].map(n=><option key={n} value={n}>{n}</option>)}</Selecao></label>
+          <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-3">
+            <label className="min-w-0 space-y-1.5"><Rotulo htmlFor="qst-inicio">Início do período</Rotulo><Campo className="min-w-0 max-w-full" id="qst-inicio" type="date" value={inicioRespostas} onChange={e=>setInicioRespostas(e.target.value)} disabled={!questionarioAtual}/></label>
+            <label className="min-w-0 space-y-1.5"><Rotulo htmlFor="qst-fim">Fim do período</Rotulo><Campo className="min-w-0 max-w-full" id="qst-fim" type="date" value={fimRespostas} onChange={e=>setFimRespostas(e.target.value)} disabled={!questionarioAtual}/></label>
+            <label className="min-w-0 space-y-1.5"><Rotulo htmlFor="qst-tamanho">Respostas por página</Rotulo><Selecao className="min-w-0 max-w-full" id="qst-tamanho" value={tamanhoRespostas} disabled={!questionarioAtual||carregandoRespostas} onChange={e=>{const tamanho=Number(e.target.value) as 25|50|100;setTamanhoRespostas(tamanho);void carregarRespostas(questionarioAtual?.id,pacienteFiltroRespostas,{tamanho});}}>{[25,50,100].map(n=><option key={n} value={n}>{n}</option>)}</Selecao></label>
           </div>
           {leituraClinica?<p className="text-xs text-texto-suave">Fuso do período: {leituraClinica.timezone}. O dia final é incluído.</p>:<p className="text-xs text-texto-suave">Atualize as respostas para aplicar o paciente e o período. A busca local vale somente para a página carregada.</p>}
           <div className="flex flex-wrap items-center gap-3" role="group" aria-label="Paginação das respostas">

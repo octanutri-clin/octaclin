@@ -41,6 +41,12 @@ async function preparar(page, respostasDaFixture = respostas, questionariosDaFix
   await page.route('**/api/**', async (route) => {
     const url = new URL(route.request().url());
     const caminho = url.pathname;
+    // The independent notification bell polls every 5s. Give it its own synthetic
+    // fixture, outside the questionnaire request invariant. All clinical reads
+    // and every mutation (including notification mutations) remain recorded.
+    if (caminho === '/api/notificacoes' && route.request().method() === 'GET') {
+      return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({naoLidas:0,itens:[],resumos:[]})});
+    }
     requisicoes.push({ caminho, metodo: route.request().method() });
     let corpo;
     if (caminho === '/api/auth/session') {
@@ -862,6 +868,13 @@ for(const erro of [false,true])test(`QST10-08 página tardia ${erro?'com erro':'
 test('QST10-08 filtros e páginas acessíveis com texto ampliado',async({page},info)=>{
  await preparar(page);await page.evaluate(()=>{document.documentElement.style.fontSize='200%';});
  const painel=page.locator('[data-qst10-paginacao]');
+ const borda=await painel.boundingBox();
+ for(const nome of ['Início do período','Fim do período','Respostas por página']){
+   const caixa=await page.getByLabel(nome,{exact:true}).boundingBox();
+   expect(caixa.x+caixa.width,`${nome} precisa caber dentro do cartão`).toBeLessThanOrEqual(borda.x+borda.width+1);
+ }
+ const busca=await page.getByLabel('Busca',{exact:true}).boundingBox();
+ expect(busca.width,'a busca não pode se reduzir a poucos caracteres').toBeGreaterThanOrEqual(Math.min(240,borda.width-32));
  expect((await new AxeBuilder({page}).include('[data-qst10-paginacao]').analyze()).violations).toEqual([]);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+1)).toBe(true);
  await page.getByLabel('Início do período',{exact:true}).focus();await expect(page.getByLabel('Início do período',{exact:true})).toBeFocused();

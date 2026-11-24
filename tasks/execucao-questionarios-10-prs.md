@@ -287,3 +287,90 @@ final, incluindo filtros/fuso/contagem/cursor. Não é bypass de limite nem nova
 capacidade.4/4PGlegadoCSV tambémPASS nesta rodada, completando os52cenários
 que ficaramSKIPPED na seleção unitária; sem somar reexecuções. Re-review estática
 da correção e gates globais ainda pendentes neste checkpoint.
+
+### 08 C5 — regressões, reflow e limites das evidências
+
+R4re-revisão0794da6..92821c7 favorável: P2 resolvido tecnicamente, sem novos
+achados; estática, sem testes próprios. Types/buildbackend+artefato pósP2PASS.
+Regressão local completa90casos terminou89PASS/1FAIL: a única divergência era
+GETperiódico do sino de notificações (5s) na lista de requisições do questionário,
+sem regressão de consultas clínicas. Fixtureagora isola somente esseGET externo,
+respondendo vazio; todos os demaisGETs e TODAS as mutações continuam registrados.
+Asserções de ausência de consultas/mutações clínicas foram preservadas.8/8casos
+afetadosP01/P02/abas passaram após o isolamento. Não declarar90/90localnesteHEAD.
+
+Inspeção visual real200% revelou clipping interno não captado por largura global.
+NovoRED confirmou campo início além do cartão e busca comprimida. Grid explícito
+minmax0/colunaúnica e busca empilhada no mobile corrigiram sem mudar contratos.
+20/20testes dirigidos desktop/mobile apósCSS (10novos+10regressões pertinentes),
+incluindo caixa dos controles, busca legível, axe/zoom/teclado/respostas tardias.
+Capturas atualizadas e observadas pelo coordenador; persona só recebeu brief.
+TypesWeb/lintafetadoPASS. Revisão estática dirigida desteCSS/fixture ainda pendente.
+
+Reinício do executor preservou arquivos e logs, mas interrompeu `test:authz`
+global: INCONCLUSIVO, nãoPASS.18/18BFFquestionários separados continuam válidos
+para código inalterado. BuildWebfinal e suíte90integral do HEAD ficam gates a
+comprovar (buildlocal será tentado; CIoficial deve executar tudo). Não aumentar
+timeouts nem modificar segurança/dependências/workflows para contornar ambiente.
+Nenhum lockfile/dependência alterado. Main inspecionada só em leitura aindaaté1086,
+sem colisão observada de1087. Sem PR08 duplicada, merge, deploy ou DDLexterno.
+
+### 08 C6 — checkpoint final local para PR Draft
+
+Código congelado `1f490bebe829bbe5945623b181d80e26a521dcc9`. BuildWeb otimizado
+Next16.4.5/Node22.21.1 terminouPASS, incluindoTypeScript; typecheck/lintWeb afetado
+PASS. Types/buildbackend+artefato no pósP2 tambémPASS. Re-reviewR4dirigida até
+1f490be favorável, sem novos achados: validou o reflow e o isolamento EXATO de
+GET/notificacoes, sem esconder leiturasclínicas/outrosGETs/mutações. R4 é estática,
+não execução independente de testes nem inspeção visual do revisor.
+
+|Gate|Evidência local válida e limite|
+|---|---|
+|Módulo backend/registroTypeORM|220PASS;52SKIPPED na execução unitária histórica0794da6; não somar119focados novamente|
+|PostgreSQL/RLS/runtime|49/49QSTP05 no92821c7 +4/4CSVlegado separado =53provas; incluiRED/GREENP2, concorrência, microssegundos, limites, histórico e rollbackdosíndices|
+|BFFquestionários|18/18 em código0794da6 inalteradoaté1f490be|
+|Browser integral|89/90 no código anterior aoCSS;1FAIL devido ao poll independente, não promover a90/90 por inferência|
+|Browser dirigido final|20/20 desktop/mobile apósCSS e isolamento do poll, incluindo10novos e10regressões;8/8invariantes do poll aprovadas antes e dentro desse escopo|
+|Authzglobal local|INCONCLUSIVO: reinício do executor encerrou o processo antes da conclusão; nãoPASS|
+|CI/scanners HEADfinal|PENDING: aguardar checks oficiais do HEAD documental enviado; sem herdar verde dos pais|
+|Builds/types/lint/linguagem/segredos|PASS nos respectivos escopos e código registrado; PowerShellpreflight/screenreadermanualSKIPPED (não executados neste ambiente)|
+|UXB/C/D|Papel profissional explícito somentebrief; pacienteN/Ajustificado; hipótesesP2 embacklog sem execução automática; capturas reais observadas pelo coordenador|
+
+Relatórios, manifesto, capturas eR4 em
+`docs/agents/ux/reports/QST10-08-BC-2026-11-23/`. Novas rotas registradas no mapa.
+Migration1087 só ensaiada em Testcontainers descartável, não aplicadaexternamente.
+Rollback de código não remove dados; eventualdown da1087 remove só índices e
+exige nova autorização de ambiente/owner. Não executar durante este trabalho.
+PR08 deve ficarDraft até CI/regressões integrais exigidos serem comprovados.
+Sem Readyautomático/merge/deploy, sem alterações de produção ouFOOD06.
+
+09:fundação independente em`feat/qst10-09-recorrencias`, commitdb4dbbc,
+9RED→76GREEN+types; auth/migration/worker/API/UI ainda não implementados. Falta
+a decisão explícita sobre autoria/reconfirmação de agendamentos antigos; ver
+`tasks/questionarios-09-recorrencias-handoff.md` nessa branch.10nãoiniciada,
+respeitando a base dependente planejada. Não inferir resposta por tempo decorrido.
+
+### 08 C7 — corrigir falha do Backend no CI
+
+CI45298755171/job138125746097, HEAD250edd2: únicoFAIL na suíte completa era o
+spec1086 exigir que a1086 fosse a última migration. A inclusão legítima1087
+invalidou essa hipótese; a aplicação de migrations no PostgreSQL deCI passou,
+mas o gate Testcontainers/RLS posterior foiSKIPPED pela falha da suíte.
+
+RED local Node22.21.1:1FAIL/4PASS reproduziu a mesma linha doCI antes da correção.
+Teste1086 agora exige existência única de1085/1086 e a ordem imediata1085→1086;
+não fixa o fim da lista. Novo spec1087 protege sua unicidade e ordem1086→1087,
+sem proibir próximas migrations. Assertivas de RLS, duplicatas, transação e
+rollback da1086 foram mantidas. Nenhuma migration, configuração, workflow,
+dependência, permissão ou código de produção foi alterado para obter verde.
+
+GREEN focado:28/28 em1086/1087/registroTypeORM. Suíte completa local:471suítesPASS,
+18SKIPPED;5603testesPASS,388SKIPPED,0FAIL (5991total,188,988s). Gates condicionais
+não habilitados no perfil local não contam como validação; oCI tem suas próprias
+configurações de integração. Não somar28novamente nem herdar oPASS de um commit
+anterior. Typecheckbackend,diffcheck e scannerlocal de segredosPASS.
+
+A correção é restrita a testes/registro de evidências. Runtime permanece o de
+1f490be; provas PostgreSQL/R4 anteriores mantêm seus escopos e limitações, não
+substituem oCI do novoHEAD. Enviar uma vez e manterPR590Draft; aguardarBackend,
+Testcontainers/RLS e demais checks do novoHEAD, semmerge/deploy/migrationexterna.
