@@ -35,3 +35,25 @@ externa, sem alterar trabalhos FOOD06 ou PRs já revisadas.
 Próximo: incorporar o checkpoint final08 explicitamente à base dependente;
 aplicar a decisão D09-01; TDD de schema/CAS/locks e reautorização antes de
 serviço/API/console. A04/FOOD06 e trabalhos de outras branches não são tocados.
+
+## C2a — estrutura aditiva implementada (checkpoint local)
+
+Base08 incorporada por merge normal `5bacefc`, preservando os commits e a
+correção do registro de migrations. Migration1088 livre na base inspecionada,
+registrada uma vez após1087; exige aplicação deliberada fora de banda, não foi
+executada em ambiente externo. Novos campos: revisão positiva, pausa explícita e
+referência opcional ao usuário da autorização atual. Legados continuam sem ator;
+não existe backfill de autoria. FK composta impede ator de outro tenant. Exclusão
+do usuário limpa apenas a referência (PostgreSQL15), preservando tenant e agenda;
+o worker deve bloquear ator ausente na C3. Isto não concede permissão nova.
+
+Rollback pré-uso transacional/READ COMMITTED, com lock exclusivo e leitura sem
+RLS para detectar qualquer uso; recusa remover controles após autorização,
+revisão alterada ou pausa. Não é um procedimento autorizado para banco externo.
+
+Node22.21.1: baseline10/10PASS; REDfuncional2/2 por ausência dos controles ORM;
+GREEN11/11:2ORM+1registro+8PostgreSQL15 descartável (runtimeNOBYPASSRLS,
+FORCERLS, FKtenant, legado, constraints, CAS, remoção do ator, rollback/up).
+A prova de CAS aqui é sequencial; concorrência controlada de worker/pausa fica
+NOTRUN até C3b. Não confundir o schema com entrega funcional da09. API, worker,
+console, UXB/C, R4 e CI do delta continuam pendentes. Próximo: C2b.
