@@ -314,3 +314,38 @@ comprovar (buildlocal será tentado; CIoficial deve executar tudo). Não aumenta
 timeouts nem modificar segurança/dependências/workflows para contornar ambiente.
 Nenhum lockfile/dependência alterado. Main inspecionada só em leitura aindaaté1086,
 sem colisão observada de1087. Sem PR08 duplicada, merge, deploy ou DDLexterno.
+
+### 08 C6 — checkpoint final local para PR Draft
+
+Código congelado `1f490bebe829bbe5945623b181d80e26a521dcc9`. BuildWeb otimizado
+Next16.4.5/Node22.21.1 terminouPASS, incluindoTypeScript; typecheck/lintWeb afetado
+PASS. Types/buildbackend+artefato no pósP2 tambémPASS. Re-reviewR4dirigida até
+1f490be favorável, sem novos achados: validou o reflow e o isolamento EXATO de
+GET/notificacoes, sem esconder leiturasclínicas/outrosGETs/mutações. R4 é estática,
+não execução independente de testes nem inspeção visual do revisor.
+
+|Gate|Evidência local válida e limite|
+|---|---|
+|Módulo backend/registroTypeORM|220PASS;52SKIPPED na execução unitária histórica0794da6; não somar119focados novamente|
+|PostgreSQL/RLS/runtime|49/49QSTP05 no92821c7 +4/4CSVlegado separado =53provas; incluiRED/GREENP2, concorrência, microssegundos, limites, histórico e rollbackdosíndices|
+|BFFquestionários|18/18 em código0794da6 inalteradoaté1f490be|
+|Browser integral|89/90 no código anterior aoCSS;1FAIL devido ao poll independente, não promover a90/90 por inferência|
+|Browser dirigido final|20/20 desktop/mobile apósCSS e isolamento do poll, incluindo10novos e10regressões;8/8invariantes do poll aprovadas antes e dentro desse escopo|
+|Authzglobal local|INCONCLUSIVO: reinício do executor encerrou o processo antes da conclusão; nãoPASS|
+|CI/scanners HEADfinal|PENDING: aguardar checks oficiais do HEAD documental enviado; sem herdar verde dos pais|
+|Builds/types/lint/linguagem/segredos|PASS nos respectivos escopos e código registrado; PowerShellpreflight/screenreadermanualSKIPPED (não executados neste ambiente)|
+|UXB/C/D|Papel profissional explícito somentebrief; pacienteN/Ajustificado; hipótesesP2 embacklog sem execução automática; capturas reais observadas pelo coordenador|
+
+Relatórios, manifesto, capturas eR4 em
+`docs/agents/ux/reports/QST10-08-BC-2026-11-23/`. Novas rotas registradas no mapa.
+Migration1087 só ensaiada em Testcontainers descartável, não aplicadaexternamente.
+Rollback de código não remove dados; eventualdown da1087 remove só índices e
+exige nova autorização de ambiente/owner. Não executar durante este trabalho.
+PR08 deve ficarDraft até CI/regressões integrais exigidos serem comprovados.
+Sem Readyautomático/merge/deploy, sem alterações de produção ouFOOD06.
+
+09:fundação independente em`feat/qst10-09-recorrencias`, commitdb4dbbc,
+9RED→76GREEN+types; auth/migration/worker/API/UI ainda não implementados. Falta
+a decisão explícita sobre autoria/reconfirmação de agendamentos antigos; ver
+`tasks/questionarios-09-recorrencias-handoff.md` nessa branch.10nãoiniciada,
+respeitando a base dependente planejada. Não inferir resposta por tempo decorrido.
