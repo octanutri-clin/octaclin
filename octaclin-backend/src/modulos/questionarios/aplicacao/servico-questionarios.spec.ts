@@ -1,3 +1,6 @@
+import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
+import { SessaoUsuarioOrm } from '../../auth/infraestrutura/sessao-usuario.orm';
+import { UserActionLogOrm } from '../../../infraestrutura/auditoria/user-action-log.orm';
 import { NotFoundException } from '@nestjs/common';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
@@ -45,7 +48,10 @@ function criarRepositorioFake(
     | 'paciente'
     | 'arquivoMidia'
     | 'profissional'
-    | 'regraAutomacao',
+    | 'regraAutomacao'
+    | 'usuario'
+    | 'sessao'
+    | 'log',
   dados: Record<string, any>
 ) {
   const itens = dados[`${nome}s`] as Record<string, any>[];
@@ -99,7 +105,10 @@ function criarRepositorioFake(
     return salvo;
   }
 
-  function corresponde(valorItem: unknown, valorConsulta: unknown) {
+  function corresponde(valorItem: unknown, valorConsulta: unknown): boolean {
+    if(valorConsulta && typeof valorConsulta==='object' && '_type' in valorConsulta && valorConsulta._type==='not') {
+      return !corresponde(valorItem,(valorConsulta as {_value?:unknown})._value);
+    }
     if (
       valorConsulta &&
       typeof valorConsulta === 'object' &&
@@ -153,6 +162,9 @@ function criarRepositorioFake(
 
 function criarServico(dados: Record<string, any>) {
   const repositorios = {
+    usuario: criarRepositorioFake('usuario', {usuarios:dados.usuarios??[]}),
+    sessao: criarRepositorioFake('sessao', {sessaos:dados.sessoes??[]}),
+    log: criarRepositorioFake('log', {logs:dados.logs??[]}),
     categoria: criarRepositorioFake('categoria', dados),
     questionario: criarRepositorioFake('questionario', dados),
     pergunta: criarRepositorioFake('pergunta', dados),
@@ -190,7 +202,9 @@ function criarServico(dados: Record<string, any>) {
       // Tenant sem usuario ativo: o formulario respondido nao tem destinatario e
       // o publicador da Fase 210 sai antes de escrever. O fan-out em si esta
       // coberto em registrar-notificacao.spec.ts.
-      if (entidade.name === 'UsuarioOrm') return { find: jest.fn(async () => []) };
+      if (entidade === UsuarioOrm) return repositorios.usuario;
+      if (entidade === SessaoUsuarioOrm) return repositorios.sessao;
+      if (entidade === UserActionLogOrm) return repositorios.log;
       if (entidade === WebhookAssinaturaOrm) return { find: jest.fn(async () => []) };
       throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
     }),
@@ -325,6 +339,8 @@ describe('ServicoQuestionarios', () => {
 
   it('deve gerar check-in recorrente apenas para o paciente vinculado ao agendamento', async () => {
     const { servico, dados } = criarServico({
+      usuarios:[{id:'ator-atual',tenantId:'tenant-1',role:'SuperAdmin',ativo:true}],
+      sessoes:[{id:'sessao-atual',tenantId:'tenant-1',usuarioId:'ator-atual',expiraEm:new Date('2099-01-01')}],
       categorias: [],
       questionarios: [{ id: 'q-1', tenantId: 'tenant-1', titulo: 'Check-in', versao: 1 }],
       perguntas: [],
@@ -336,6 +352,7 @@ describe('ServicoQuestionarios', () => {
           questionarioId: 'q-1',
           pacienteId: 'paciente-alvo',
           ativo: true,
+          revisao:1,autorizadoPorUsuarioId:'ator-atual',
           proximaExecucaoEm: new Date('2026-07-29T08:00:00.000Z')
         }
       ],
@@ -357,6 +374,8 @@ describe('ServicoQuestionarios', () => {
 
   it('fixa o proximo disparo do check-in recorrente no fuso do agendamento', async () => {
     const { servico, dados } = criarServico({
+      usuarios:[{id:'ator-atual',tenantId:'tenant-1',role:'SuperAdmin',ativo:true}],
+      sessoes:[{id:'sessao-atual',tenantId:'tenant-1',usuarioId:'ator-atual',expiraEm:new Date('2099-01-01')}],
       categorias: [],
       questionarios: [{ id: 'q-1', tenantId: 'tenant-1', titulo: 'Check-in', versao: 1 }],
       perguntas: [],
@@ -368,6 +387,7 @@ describe('ServicoQuestionarios', () => {
           questionarioId: 'q-1',
           pacienteId: 'paciente-alvo',
           ativo: true,
+          revisao:1,autorizadoPorUsuarioId:'ator-atual',
           regraCron: '0 8 * * 1',
           timezone: 'America/Sao_Paulo',
           proximaExecucaoEm: new Date('2026-08-17T11:00:00.000Z')
@@ -387,6 +407,8 @@ describe('ServicoQuestionarios', () => {
 
   it('deve persistir o paciente escolhido ao criar um check-in recorrente', async () => {
     const { servico } = criarServico({
+      usuarios:[{id:'ator-atual',tenantId:'tenant-1',role:'SuperAdmin',ativo:true}],
+      sessoes:[{id:'sessao-atual',tenantId:'tenant-1',usuarioId:'ator-atual',expiraEm:new Date('2099-01-01')}],
       categorias: [],
       questionarios: [{ id: 'q-1', tenantId: 'tenant-1', versao: 1 }],
       perguntas: [],
@@ -401,7 +423,7 @@ describe('ServicoQuestionarios', () => {
     const agendamento = await servico.criarAgendamento(
       'tenant-1',
       { questionarioId: 'q-1', pacienteId: 'paciente-1', regraCron: '0 8 * * 1' },
-      usuarioColaborador
+      {...usuarioColaborador,usuarioId:'ator-atual',papel:'SuperAdmin',sessaoId:'sessao-atual'}
     );
 
     expect(agendamento).toEqual(expect.objectContaining({ questionarioId: 'q-1', pacienteId: 'paciente-1', ativo: true }));

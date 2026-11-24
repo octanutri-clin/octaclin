@@ -27,6 +27,8 @@ import {
   AtualizarQuestionarioDto,
   AtualizarPerguntaDto,
   CriarAgendamentoQuestionarioDto,
+  ListarAgendamentosQuestionarioDto,
+  ComandarAgendamentoQuestionarioDto,
   CriarCategoriaPerguntaDto,
   CriarEnvioQuestionarioManualDto,
   CriarEnviosQuestionarioLoteDto,
@@ -473,13 +475,31 @@ export class ControladorQuestionarios {
     @Req() requisicao: Request,
     @Body() dados: CriarAgendamentoQuestionarioDto
   ) {
-    const agendamento = await this.servicoQuestionarios.criarAgendamento(usuario.tenantId, dados, usuario);
-    await this.registrarAuditoria(usuario, requisicao, 'questionarios.agendamento.criar', 'agendamento_questionario', agendamento.id, {
-      questionarioId: dados.questionarioId,
-      pacienteId: dados.pacienteId,
-      timezone: dados.timezone
-    });
-    return agendamento;
+    return this.servicoQuestionarios.criarAgendamento(usuario.tenantId, dados, usuario);
+  }
+
+  @Get('questionarios/:id/agendamentos')
+  @Header('Cache-Control', 'private, no-store')
+  @Permissoes('questionarios.gerenciar')
+  async listarAgendamentos(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Param('id',new ParseUUIDPipe()) questionarioId: string,
+    @Query() filtro: ListarAgendamentosQuestionarioDto,
+  ) {
+    return this.servicoQuestionarios.listarAgendamentos(usuario.tenantId,questionarioId,filtro.pacienteId,filtro.pagina,usuario);
+  }
+
+  @Post('questionarios/:id/agendamentos/:agendamentoId/comandos')
+  @Header('Cache-Control', 'private, no-store')
+  @Permissoes('questionarios.gerenciar')
+  async comandarAgendamento(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Param('id',new ParseUUIDPipe()) questionarioId: string,
+    @Param('agendamentoId',new ParseUUIDPipe()) agendamentoId: string,
+    @Body() dados: ComandarAgendamentoQuestionarioDto,
+  ) {
+    return this.servicoQuestionarios.comandarAgendamento(usuario.tenantId,questionarioId,dados.pacienteId,
+      agendamentoId,dados.acao,dados.revisaoEsperada,dados.confirmar,usuario);
   }
 
   private registrarAuditoria(

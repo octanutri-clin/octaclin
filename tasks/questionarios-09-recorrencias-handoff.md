@@ -1,6 +1,11 @@
-# PR lógica09 — domínio iniciado; planejamento liberado pela decisão D09-01
+# PR lógica09 — backend em validação; console e revisão final pendentes
 
-Branch `feat/qst10-09-recorrencias`, base08 `92821c7`; ainda sem PR09.
+Branch `feat/qst10-09-recorrencias`, base08 atualizada por `5bacefc`; ainda sem PR09.
+
+Estado atual: C1/C2a implementados, C2b/C3 em validação local conforme checkpoint
+abaixo. Console/BFF, UXB/C, R4 final e CI continuam pendentes. Não concluída.
+
+## Histórico C1 — substituído pelos checkpoints seguintes
 Plano canônico: [dez entregas](plan-questionarios-10-prs.md).
 
 C1: estados factual ativo/pausado/encerrado/inativo_legado; uma execução única
@@ -57,3 +62,37 @@ FORCERLS, FKtenant, legado, constraints, CAS, remoção do ator, rollback/up).
 A prova de CAS aqui é sequencial; concorrência controlada de worker/pausa fica
 NOTRUN até C3b. Não confundir o schema com entrega funcional da09. API, worker,
 console, UXB/C, R4 e CI do delta continuam pendentes. Próximo: C2b.
+
+## C2b/C3 — comandos e worker (checkpoint local posterior)
+
+Serviço/API adicionam lista por questionário+paciente, páginas de25, comandos
+pausar/retomar/reconfirmar com confirmação explícita e revisão CAS. A criação
+mantém cron/data única e registra o ator atual. Validar todos os campos fornecidos,
+mesmo quando cron e data coexistem; limites120/80 e fuso IANA. Resposta mínima
+não expõe ator interno nem tenant/sessão. Reconfirmação não retoma pausa, não
+reabre encerrado e não gera catch-up. Envios/rascunhos anteriores permanecem.
+
+Autorização atual na mesma transação: questionário→identidade ativa/permissão
+compartilhada por papel→sessão HTTP→profissional ativo→paciente/carteira→agenda.
+Worker não depende de sessão interativa. Lê no máximo100 candidatos por lote,
+sem acumular locks entre agendas, relê revisão/ator/estado/vencimento após espera.
+Envio+avanço+auditoria são atômicos. Conflitos recuperáveis não repetem cegamente.
+Ator ausente não gera. Acesso invalidado remove somente autorização atual por CAS
+exato e audita o bloqueio; assim agendas bloqueadas não monopolizam o lote. A
+reconfirmação concorrente não é sobrescrita. Autoria histórica não é preenchida.
+A expiração anterior é executada separadamente; não segura locks de envios durante
+locks de geração. Não é uma reescrita do fluxo público de respostas.
+
+Provas: RED funcional3/3 no worker anterior (legado, inativação, transferência
+produziam1envio); GREEN124/124 =22integraçãoPG+8migrationPG+67regressõesserviço+
+13domínio+14DTO. Barreiras reais observadas em pg_stat_activity:worker×worker,
+pausa×worker nas duas ordens, carteira/revogação antes do lock. Testes verificam
+persistência, auditoria única, revisão stale, preservação do rascunho e rollback
+após insert. Ambiente PostgreSQL15 descartável/runtimeNOBYPASSRLS/FORCERLS.
+REDDTO2/14 por campos mutuamente presentes sem validação/limites; GREEN14/14.
+Erros iniciais de fixture/compilação foram corrigidos e não contam como RED.
+
+Buildbackend e gate de redação de auditoriaPASS. Typecheck e artefato de produção
+registrados após a execução final. R4 ainda não executada para este checkpoint;
+UI/BFF e UXB/C NOTRUN, CI novoHEAD NOTRUN. Sem migration externa ou merge.
+Próximo: revisão independente do backend e C4(console/BFF/testesdesktop-mobile).

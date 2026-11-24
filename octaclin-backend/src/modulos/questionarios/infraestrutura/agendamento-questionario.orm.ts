@@ -30,7 +30,7 @@ export class AgendamentoQuestionarioOrm {
   ultimaExecucaoEm?: Date;
 
   @Column({ name: 'proxima_execucao_em', type: 'timestamptz', nullable: true })
-  proximaExecucaoEm?: Date;
+  proximaExecucaoEm?: Date | null;
 
   @Column({ type: 'integer', default: 1 })
   revisao: number;

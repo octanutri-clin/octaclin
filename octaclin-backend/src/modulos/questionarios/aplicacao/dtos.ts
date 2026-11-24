@@ -9,6 +9,7 @@ import {
   IsIn,
   IsInt,
   IsISO8601,
+  IsTimeZone,
   IsNumber,
   IsObject,
   IsOptional,
@@ -212,16 +213,19 @@ export class CriarAgendamentoQuestionarioDto {
   @IsUUID()
   pacienteId: string;
 
-  @ValidateIf((dados: CriarAgendamentoQuestionarioDto) => !dados.dataFixa)
+  @IsOptional()
   @IsString()
+  @MaxLength(120)
   regraCron?: string;
 
-  @ValidateIf((dados: CriarAgendamentoQuestionarioDto) => !dados.regraCron)
+  @IsOptional()
   @IsISO8601()
   dataFixa?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(80)
+  @IsTimeZone()
   timezone?: string;
 }
 
@@ -322,4 +326,32 @@ export class DuplicarPerguntaDto {
   @IsString()
   @Matches(/^[a-f0-9]{64}$/)
   revisaoEsperada: string;
+}
+
+export class ListarAgendamentosQuestionarioDto {
+  @IsUUID()
+  pacienteId: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(10000)
+  pagina = 1;
+}
+
+export class ComandarAgendamentoQuestionarioDto {
+  @IsUUID()
+  pacienteId: string;
+
+  @IsIn(['pausar', 'retomar', 'reconfirmar'])
+  acao: 'pausar' | 'retomar' | 'reconfirmar';
+
+  @IsInt()
+  @Min(1)
+  @Max(2147483646)
+  revisaoEsperada: number;
+
+  @IsIn([true])
+  confirmar: boolean;
 }
