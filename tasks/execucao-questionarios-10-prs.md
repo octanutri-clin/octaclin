@@ -276,3 +276,14 @@ pendente. Regressão90casos navegador em andamento; globalauthz/buildWeb/R4/UX/C
 pendentes. C3 não é aceite integral da08 e não permiteReady/merge.
 
 PR07#58987dbeeaf agora também21SUCCESS/1SKIPPED(SBOM) na consulta desta rodada.
+
+### 08 C4 — correção P2 da revisão R4
+
+R4 independente estática87dbeeaf..0794da6 (`/root/qst08_r4`) apontou umP2:
+backend media só leitura antes de montar envelope; BFF media corpo completo.
+RED real PostgreSQL com oráculo debytes: leitura isolada cabia em8MiB, envelope
+ultrapassava; backend indevidamente aceitava. GREEN49/49banco após medir payload
+final, incluindo filtros/fuso/contagem/cursor. Não é bypass de limite nem nova
+capacidade.4/4PGlegadoCSV tambémPASS nesta rodada, completando os52cenários
+que ficaramSKIPPED na seleção unitária; sem somar reexecuções. Re-review estática
+da correção e gates globais ainda pendentes neste checkpoint.

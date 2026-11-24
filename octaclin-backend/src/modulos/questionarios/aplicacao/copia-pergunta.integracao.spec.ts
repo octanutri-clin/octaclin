@@ -582,6 +582,25 @@ suite('QST-P05 — PostgreSQL descartável, runtime e FORCE RLS', () => {
       const visiveis = await paginado().exportar(tenant,questionarioId,ator,{},[a.respostas[0].respostaId]);
       expect(visiveis.trim().split('\n')).toHaveLength(2);
     });
+    it('limita o envelope final incluindo os metadados de paginação', async () => {
+      await popular(1);const limite=8*1024*1024;
+      const base=await paginado().consultar(tenant,questionarioId,ator,{});
+      const {filtros,timezone,totalConsulta,proximoCursor,...leitura}=base;
+      const bytesLeitura=Buffer.byteLength(JSON.stringify(leitura));
+      const overhead=Buffer.byteLength(JSON.stringify(base))-bytesLeitura;
+      expect(overhead).toBeGreaterThan(20);
+      const comprimento=Math.floor((limite-Math.floor(overhead/2)-bytesLeitura)/2)+'Valor congelado'.length;
+      await admin.query("UPDATE envios_questionario SET snapshot_estrutura=jsonb_set(snapshot_estrutura,'{perguntas,0,enunciado}',to_jsonb(repeat('x',$1::int))) WHERE id=$2",[comprimento,envioId]);
+      let rejeitou=false;
+      try {
+        const r=await paginado().consultar(tenant,questionarioId,ator,{});
+        const {filtros:f,timezone:t,totalConsulta:n,proximoCursor:c,...interna}=r;
+        // Independent byte oracle: the inner reading fits, but its actual HTTP payload does not.
+        expect(Buffer.byteLength(JSON.stringify(interna))).toBeLessThanOrEqual(limite);
+        expect(Buffer.byteLength(JSON.stringify(r))).toBeGreaterThan(limite);
+      } catch(e) {if(!(e instanceof BadRequestException))throw e;rejeitou=true;}
+      expect(rejeitou).toBe(true);
+    });
     it('limita snapshot volumoso antes de materializar o conteúdo da página ou CSV', async () => {
       await popular(1);
       await admin.query("UPDATE envios_questionario SET snapshot_estrutura=snapshot_estrutura || jsonb_build_object('descricao',repeat('x',9*1024*1024)) WHERE id=$1",[envioId]);

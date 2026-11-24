@@ -40,10 +40,11 @@ export class ServicoRespostasPaginadas {
       const pagina = resultado.dados.slice(0, filtros.tamanho);
       const dados = await this.hidratar(m, tenantId, questionarioId, profissionalId, pagina);
       const leitura = resumirRespostas(questionarioId,dados.respostas,dados.perguntas,filtros.pacienteId,true,dados.incompativeis);
-      if (Buffer.byteLength(JSON.stringify(leitura)) > LIMITE_BYTES) throw new BadRequestException('Consulta muito grande. Refine os filtros.');
-      return { ...leitura, filtros, timezone, totalConsulta: resultado.total,
+      const payload: PaginaRespostasQuestionario = { ...leitura, filtros, timezone, totalConsulta: resultado.total,
         proximoCursor: resultado.dados.length > filtros.tamanho && pagina.length ? codec.criar(contexto, {id: pagina[pagina.length - 1].id, finalizadoEm: pagina[pagina.length - 1].finalizadoEm}) : null,
         };
+      if (Buffer.byteLength(JSON.stringify(payload)) > LIMITE_BYTES) throw new BadRequestException('Consulta muito grande. Refine os filtros.');
+      return payload;
     });
   }
 
