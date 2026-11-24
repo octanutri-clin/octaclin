@@ -1,0 +1,34 @@
+{
+  "modalidade": "duas instâncias de runtime com papel explícito por prompt; não TOML nativo",
+  "instancias": [
+    "/root/qst09_10_nutricionista_a",
+    "/root/qst09_10_paciente_a"
+  ],
+  "etapas": [
+    "A",
+    "D"
+  ],
+  "codigo_base": "db4dbbc2ac63f969dcb8f43fb454d823bea585dc",
+  "referencia_08": "70deb066c95c213480e5fc0391b53d86a446db3e",
+  "inicio": null,
+  "fim": null,
+  "horarios": "instantes individuais não capturados",
+  "ferramentas_personas": [],
+  "entrada": "brief sintético comum e instrução da própria persona; sem parecer da outra antes da resposta",
+  "saidas": "sínteses editoriais, não transcrições literais",
+  "limitacoes": [
+    "sem UI/imagem/interação",
+    "sem dados ou usuários reais",
+    "sem teste clínico/legal/a11y/segurança",
+    "B/C e R4 ainda NOT RUN para09/10"
+  ],
+  "hashes": {
+    ".codex/agents/octaclin-nutricionista-ux.toml": "6259b40a98e2c49053cbc6adbc0c59d0312b14e191b228ab73de2f2eac53af6d",
+    ".codex/agents/octaclin-paciente-ux.toml": "a40b1ded5e47739a2710caa5ec9a9a7871b57be7efc11deefaae0515028ff7d7",
+    "docs/agents/ux/PROCEDIMENTO.md": "00ee799fa4435bbc1af022752fc1a9dbce4a3196cd1b188a9a4b6017c47bff29",
+    "docs/agents/ux/reports/QST10-09-10-AD-2026-11-23/brief.md": "698c95d1f5c289ad5a9368445663830273a68c8f6e4dcd3f9bcc0dee40ec27dc",
+    "docs/agents/ux/reports/QST10-09-10-AD-2026-11-23/consolidado.md": "10ed7272c64c1e4e0f4abd9bf7149c77a5336cafbd6679c9d93d0fabd818784b",
+    "docs/agents/ux/reports/QST10-09-10-AD-2026-11-23/nutricionista.md": "5d037b1a32c88eb193e593d7922b273eba7a1e0934d0a8c8b0c97b6a2ad74a3b",
+    "docs/agents/ux/reports/QST10-09-10-AD-2026-11-23/paciente.md": "2f10751b559843d6f60f22ac34669b65c8ff8bccff13fe5a40046ea959545463"
+  }
+}

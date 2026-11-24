@@ -1,4 +1,4 @@
-# PR lógica09 — domínio iniciado; execução de worker/API ainda bloqueada
+# PR lógica09 — domínio iniciado; planejamento liberado pela decisão D09-01
 
 Branch `feat/qst10-09-recorrencias`, base08 `92821c7`; ainda sem PR09.
 Plano canônico: [dez entregas](plan-questionarios-10-prs.md).
@@ -14,14 +14,24 @@ TDD Node22.21.1:9REDfuncionais;GREEN76/76 (9novos+67regressões do serviço).
 Typecheckbackend,diffcheck e scannerlocal de segredosPASS. Banco/CI/R4/UXB-C
 NOTRUN para09 (não houve alteração de fronteira nem persistência nestaetapa).
 
-Decisão de produto/segurança pendente enviada por pergunta: agendamentos antigos
-não preservam o criador. Guardar autor nos novos e exigir reconfirmação dos
-legados é recomendação, não regra implementada/autorizada por silêncio. Revalidar
-autor/carteira no worker depende desse contrato. Não atribuir autor retroativo
-nem trocar a política tenant-wide de equipe pela carteira do dono do questionário.
-Continuar itens independentes; não escrever migration/worker de autoria antes da
-resposta. Não merge/deploy/migrationexterna. Preservar FOOD06 do Claude.
+## Decisão vigente — D09-01 aprovada
+
+O proprietário escolheu **exigir reconfirmação dos antigos** após retirar
+expressamente a resposta anterior de adiamento. Antigos sem ator comprovável
+não geram novos envios até pessoa autorizada reconfirmar; envios, links, rascunhos
+e respostas existentes são preservados. Nos novos, registrar ator autorizado e
+revalidar acesso a cada geração. Não atribuir autoria retroativa.
+
+Reconfirmar autorização não desfaz pausa deliberada nem reativa envio encerrado.
+Não estreitar escopo de equipe à carteira do dono do questionário por inferência.
+A referência do ator atual não é um campo de criador histórico presumido.
+A política já está aprovada; não pedir a mesma confirmação novamente. Ver plano
+canônico para etapas/commits C2a–C5 e riscos de FKs/retenção/auditoria a mapear.
+
+A implementação de schema/API/worker/UI continuaNOTRUN, nãoBLOCKEDpor falta de
+resposta. Gates de segurança continuam obrigatórios. Sem merge/deploy ou migration
+externa, sem alterar trabalhos FOOD06 ou PRs já revisadas.
 
 Próximo: incorporar o checkpoint final08 explicitamente à base dependente;
-registrar a decisão recebida; TDD de schema/CAS/locks e reautorização antes de
+aplicar a decisão D09-01; TDD de schema/CAS/locks e reautorização antes de
 serviço/API/console. A04/FOOD06 e trabalhos de outras branches não são tocados.
