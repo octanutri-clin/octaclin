@@ -374,3 +374,51 @@ A correção é restrita a testes/registro de evidências. Runtime permanece o d
 1f490be; provas PostgreSQL/R4 anteriores mantêm seus escopos e limitações, não
 substituem oCI do novoHEAD. Enviar uma vez e manterPR590Draft; aguardarBackend,
 Testcontainers/RLS e demais checks do novoHEAD, semmerge/deploy/migrationexterna.
+
+## Entrega09 — implementação controlada após D09-01 (2026-11-24)
+
+Decisão aprovada: legados sem ator verificável exigem reconfirmação antes de novas
+gerações. Reconfirmar não retoma pausa/encerrado, nem inventa autoria retroativa.
+Base08 incorporada por merge normal5bacefc (não merge dePR/main). C2a f3477d0,
+C2b/C3 976bd1d, correção R4 f0d9769. Nenhuma migration externa executada.
+
+Schema1088 aditivo/registrado, ensaiado somente em PostgreSQL15 descartável:
+revisão, pausa e autorizador atual nullable; FKtenant/SETNULL de uma coluna, down
+pré-uso falha fechado. Backend usa política compartilhada de permissões,
+revalida carteira/identidade/sessão na mesma transação e aplica CAS. Worker
+serializa cada ocorrência, relê o candidato depois de esperar, grava envio,
+próxima execução e auditoria atomicamente. Autorização invalidada exige nova
+reconfirmação; candidatos inválidos não monopolizam o lote. Sem catch-up.
+
+RED:2controlesORM ausentes;3falhasPG de geração sem ator/inativado/carteira
+transferida;2falhasDTO de limites/validação;3falhas de projeção de futuro;
+1falhaPG de cron após espera (próximo já vencido). Erros de setup/compilação não
+contaram como RED. Prova original do domínio C1 continua histórica no handoff.
+
+GREEN funcional atual:24PGcontrole+8PGmigration; domain13+estados9+projeção3+
+DTO14+ORM2+registro1; regressão67serviço. Não somar seleções repetidas.
+Suíte completa backend sobre o código f0d9769:5645PASS/420SKIPPED/0FAIL,
+6065total;477suítesPASS/20SKIPPED (260,816s). Os32novos testesPG são parte dos
+420ignorados no perfil padrão, executados separadamente conforme acima.
+HarnessPG posterior passa a drenar operações antes do próximoTRUNCATE; a
+reexecução deste ajuste fica registrada no handoff (não presumirPASS).
+
+R4backend independente qst09_backend_r4:30/30PG no976bd1d;1P2 relógio
+reproduzido independentemente. Rechecagemf0d9769 favorável,5PASS/22SKIPPED por
+filtro (relógio,fuso,projeção). Preservar tentativa anterior5PASS/2FAIL/20SKIPPED:
+timeout sob carga no worker×worker, depoisTRUNCATE concorrente com promessa
+pendente. Não é comprovação de regressão do produto; motivou limpeza do harness,
+sem aumentar timeout ou reduzir asserts. Revisão integral09 ainda pendente.
+
+C4 local: BFF permissões/origem/limites/allowlist22/22PASS; console lista/estado,
+prévia e confirmação, reconfirmação separada de retomada, cancelamento semPOST,
+ACK e contexto. Browser12PASS no conjunto14 (2falhas de seletor de fixture),
+mais2/2ACK após corrigir jornada da fixture via abaFormulários: cobertura14/14
+sem atribuir14PASS ao run anterior. Falha real mobile200% corrigida com reflow;
+axe/teclado/zoom desktop+mobile aprovados nessa seleção. Outra tentativa teve
+1INCONCLUSIVOpor overlayNext de compilação e1FAILoverflow; preservados como
+histórico. Alteração posterior de microcopy segura exige regressão dirigida final.
+
+Gates de Webbuild/authz e revisão final em execução; não declararCIglobal verde.
+Próximo: fechar C4/C5 com revisão integral, evidênciasUXB/C e DraftPR própria
+sobre08; sem merge/deploy/DDL externa e sem tocar FOOD06/Claude.

@@ -1,0 +1,28 @@
+{
+  "registrado_em": "2026-11-24T12:55:16.973324+00:00",
+  "modalidade": "subagentes separados por prompt explícito, fork_turns=none; TOML nativo não comprovado",
+  "instancias": [
+    "/root/qst09_nutricionista_b",
+    "/root/qst09_paciente_b"
+  ],
+  "ferramentas_personas": "nenhuma; testes/captura pelo coordenador",
+  "etapas": "B registrada; C pendente",
+  "fontes_sha256": {
+    ".codex/agents/octaclin-nutricionista-ux.toml": "6259b40a98e2c49053cbc6adbc0c59d0312b14e191b228ab73de2f2eac53af6d",
+    ".codex/agents/octaclin-paciente-ux.toml": "a40b1ded5e47739a2710caa5ec9a9a7871b57be7efc11deefaae0515028ff7d7",
+    "octaclin-web/components/questionarios/controle-agendamentos.tsx": "32fa01f2d46339aa27477f1a46ad6920bf61824e5028dd25270744f4eea30b44",
+    "octaclin-web/lib/server/questionarios-agendamentos-bff.ts": "e94f6cb54f75f2ef765ddd20774e09c76ce43610c5ac90913f9c7a0898326389"
+  },
+  "relatorios_sha256": {
+    "brief.md": "9a29ccec0e3009a35cb12af79cf810aa9c2070242c8d8356fe7e10157da82057",
+    "paciente.md": "e8c5e298121b0be63190bf02e7cfd6b30532a1f01a68af7849a1487a3465520f",
+    "consolidado.md": "9a0aae4e0b9d4692ad9644204cc4d5912591403307a446619fedfe085e3183f8",
+    "nutricionista.md": "7a1b14eef9e6a0eae6b03d66625601792e31f5e58a53a1cc8230b836251e3da7"
+  },
+  "limitacoes": [
+    "Personas não operaram navegador nem examinaram imagem diretamente",
+    "Sem teste com pessoas reais ou leitor de tela manual",
+    "Sem seleção nativa TOML comprovada",
+    "Não é R4"
+  ]
+}

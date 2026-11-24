@@ -307,3 +307,10 @@ continua resolvido pelo contrato vigente do papel, nunca pelo cursor/filtro.
 Valores e snapshots brutos não aparecem na auditoria. Exportação mantém a ação
 `questionarios.respostas.exportar_csv` e só os metadados já permitidos de tipo/linhas.
 As rotas legadas permanecem compatíveis; a nova página não usa o leitor integral.
+
+## QST10-09 — controle de recorrências
+
+| BFF | Backend | Controles |
+| --- | --- | --- |
+| `GET /api/questionarios/[id]/agendamentos` | `GET /questionarios/:id/agendamentos` | Sessão e `questionarios.gerenciar`; paciente obrigatório, páginas25; backend revalida identidade/sessão/papel/questionário/carteira sob locks, allowlist sem ator interno; `private, no-store` |
+| `POST /api/questionarios/[id]/agendamentos/[agendamentoId]/comandos` | `POST /questionarios/:id/agendamentos/:agendamentoId/comandos` | Mesma permissão, origem própria, UUIDs e corpo limitado; pausar/retomar/reconfirmar com confirmação explícita e revisão esperada; CAS e auditoria transacional; não altera envios existentes nem concede acesso pelo ID |
