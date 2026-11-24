@@ -6,7 +6,7 @@ import { ValidarPreviaEditorDto, ProblemaEditor } from './dto-validacao-editor';
 import { BadRequestException, ConflictException, GoneException, Injectable, NotFoundException, ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { createHmac, randomUUID, timingSafeEqual } from 'crypto';
 import { EntityManager, ILike, In, IsNull, LessThanOrEqual } from 'typeorm';
-import { CronExpressionParser } from 'cron-parser';
+import { resolverProximaExecucao } from '../dominio/proxima-execucao';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { formatarCsvRespostas } from './csv-respostas';
 import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
@@ -1585,20 +1585,8 @@ export class ServicoQuestionarios {
     });
   }
 
-  private calcularProximaExecucao(
-    regraCron?: string,
-    dataFixa?: string,
-    timezone = 'America/Sao_Paulo',
-    base = new Date()
-  ): Date {
-    if (dataFixa) return new Date(dataFixa);
-    if (!regraCron) throw new BadRequestException('Regra cron ausente.');
-
-    try {
-      return CronExpressionParser.parse(regraCron, { currentDate: base, tz: timezone }).next().toDate();
-    } catch {
-      throw new BadRequestException('Regra cron invalida.');
-    }
+  private calcularProximaExecucao(regraCron?:string,dataFixa?:string,timezone='America/Sao_Paulo',base=new Date()):Date {
+    return resolverProximaExecucao(regraCron,dataFixa,timezone,base);
   }
 
   private validarOpcoes(tipo: TipoPergunta, opcoes?: { rotulo: string; valor: string }[], exigirQuandoMultipla = true) {
