@@ -723,5 +723,11 @@ suite('QST-P05 — PostgreSQL descartável, runtime e FORCE RLS', () => {
         expect(r.status).toBe('rejected');if(r.status==='rejected')expect(r.reason).toBeInstanceOf(UnauthorizedException);
       }finally{relogio?.mockRestore();if(trava.isTransactionActive)await trava.rollbackTransaction();await trava.release();await pendente;}
     });
+    it('QST10-10 informa o fuso clínico resolvido no servidor para as datas do par',async()=>{
+      const p=await par();
+      await admin.query(`insert into tenant_configuracoes(tenant_id,chave,valor) values($1,'conta_cliente','{"timezone":"Europe/Lisbon"}')`,[tenant]);
+      expect(await leitor().comparar(tenant,questionarioId,p.paciente,p.ids,ator)).toHaveProperty('timezone','Europe/Lisbon');
+    });
+
   });
 });

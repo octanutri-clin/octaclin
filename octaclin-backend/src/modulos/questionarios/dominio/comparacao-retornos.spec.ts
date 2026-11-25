@@ -103,4 +103,11 @@ describe('comparação factual por identidade e definição histórica',()=>{
     expect(Object.prototype).not.toHaveProperty('injetado');
   });
 
+  it.each([[{a:1},[['a',1]]],[{},[]]])('distingue objeto %j de array %j em configuração histórica', (objeto,array)=>{
+    const config={unidade:'kg',minimo:0,maximo:200,passo:0.1};
+    const r=compararRetornos(comPergunta('a',1,pergunta({configuracao:{...config,extra:objeto}})),
+      comPergunta('b',2,pergunta({configuracao:{...config,extra:array}})));
+    expect(r.itens[0]).toMatchObject({compativel:false,motivo:'definicao_alterada',delta:null});
+  });
+
 });

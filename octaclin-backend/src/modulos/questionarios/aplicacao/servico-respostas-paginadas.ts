@@ -30,7 +30,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export class ServicoRespostasPaginadas {
   constructor(private readonly questionarios: ServicoQuestionarios, private readonly cripto: CriptografiaDadosSensiveis) {}
 
-  async comparar(tenantId:string,questionarioId:string,pacienteId:string,ids:string[],usuario:UsuarioAutenticado):Promise<ComparacaoRetornos>{
+  async comparar(tenantId:string,questionarioId:string,pacienteId:string,ids:string[],usuario:UsuarioAutenticado):Promise<ComparacaoRetornos & {timezone:string}>{
     if(!UUID.test(pacienteId)||!Array.isArray(ids)||ids.length!==2||ids.some(id=>typeof id!=='string'||!UUID.test(id))
       ||new Set(ids.map(id=>id.toLowerCase())).size!==2)throw new BadRequestException('Selecione exatamente dois retornos válidos do mesmo paciente.');
     const selecionados=ids.map(id=>id.toLowerCase());
@@ -41,7 +41,7 @@ export class ServicoRespostasPaginadas {
       if(resultado.total!==2||resultado.dados.length!==2)throw new NotFoundException('Seleção indisponível. Atualize e selecione novamente.');
       const dados=await this.hidratar(m,tenantId,questionarioId,profissionalId,resultado.dados,{sessaoExpiraEm});
       const registros=new Map(dados.historicosComparacao!.map(r=>[r.respostaId,r]));
-      const comparacao=compararRetornos(registros.get(selecionados[0])!,registros.get(selecionados[1])!);
+      const comparacao={...compararRetornos(registros.get(selecionados[0])!,registros.get(selecionados[1])!),timezone};
       if(Buffer.byteLength(JSON.stringify(comparacao))>LIMITE_BYTES)throw new BadRequestException('Comparação muito grande.');
       return comparacao;
     },true);

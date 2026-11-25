@@ -49,8 +49,8 @@ function canonico(v:unknown,profundidade=0):unknown {
   if(profundidade>8)throw new Error('Estrutura profunda.');
   if(v===null||typeof v==='boolean'||typeof v==='string')return v;
   if(typeof v==='number'&&Number.isFinite(v))return v;
-  if(Array.isArray(v))return v.map(x=>canonico(x,profundidade+1));
-  if(objeto(v))return Object.keys(v).sort().map(k=>[k,canonico(v[k],profundidade+1)]);
+  if(Array.isArray(v))return {tipo:'array',itens:v.map(x=>canonico(x,profundidade+1))};
+  if(objeto(v))return {tipo:'objeto',campos:Object.keys(v).sort().map(k=>[k,canonico(v[k],profundidade+1)])};
   throw new Error('Configuração histórica inválida.');
 }
 function historico(snapshot:unknown):Historico {

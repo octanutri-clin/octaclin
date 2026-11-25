@@ -71,3 +71,18 @@ RLS/Testcontainers do run45399556076/job138464718545. PRbody atualizada somente,
 sem commit cosmético/restartCI; permaneceDraft, semmerge/deploy/operação externa.
 PróximoC3: BFF/seleção2 por contexto em memória e interface, sem modelo atual
 substituindo histórico, UXB/C sobre UI executada e R4 integral10 antes de concluir.
+
+## Correção P2 R4 e fuso de apresentação
+
+Revisor independente qst10_backend_r4 examinou61c5587 e reproduziu no próprio
+fonte a colisão de canonização: objeto{a:1} e array[[a,1]], ouobjeto{} earray[],
+viravam mesma assinatura e permitiamdelta. Não houve outro achado concreto no
+backend. Primeiro comando independente falhouTS5011; não conta como reprodução.
+Repetição comrootDir explícito confirmou. Autor reproduziu2REDfuncionais;
+canonização agora etiqueta objeto/array e conserva a distinção, sem modificar
+snapshots nem preencher defaults. Acrescentada prova do fuso clínico já resolvido
+no servidor:1RED por falta do campo na resposta, agora projetado e incluído no
+limite completo do envelope. Nenhum fuso é aceito do navegador.
+
+GREEN98/98 =35domínio+63PG(49regressões+14novas). RechecagemR4 pendente até commit
+corretivo; frontend/BFF aindaNOTRUN. Sem nova migration/dependência/operação externa.
