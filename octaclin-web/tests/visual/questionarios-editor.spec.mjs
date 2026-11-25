@@ -559,3 +559,110 @@ test('QST10-06 resposta tardia de A não é aceita após editar para B e voltar 
   await expect(page.getByRole('region', { name: 'Checklist do questionário' })).toHaveCount(0);
   await expect(enunciado).toHaveValue('Edição A');
 });
+
+test.describe('QST10-09 controle de recorrências',()=>{
+  const inicial=()=>({id:'agenda-1',questionarioId:'q-1',pacienteId:'paciente-1',revisao:1,ativo:true,estado:'ativo',
+    reconfirmacaoNecessaria:true,regraCron:'0 8 * * 1',timezone:'America/Sao_Paulo',dataFixa:null,pausadoEm:null,
+    ultimaExecucaoEm:null,proximaExecucaoEm:'2030-01-07T11:00:00Z',proximaOcorrenciaFutura:'2030-01-07T11:00:00Z'});
+  async function preparar(page,agenda=inicial(),statusComando=200){
+    await criarSessao(page);await mockarBff(page);const comandos=[];
+    await page.route('**/api/questionarios/*/respostas/pagina?*',route=>{
+      const questionarioId=new URL(route.request().url()).pathname.split('/')[3];
+      return route.fulfill({json:{questionarioId,filtros:{tamanho:25},timezone:'America/Sao_Paulo',totalConsulta:0,proximoCursor:null,
+        respostas:[],pacientes:[],perguntas:[],resumo:{totalRespostas:0,totalPacientes:0,totalPerguntas:0,mediaRespostasPorEnvio:0}}});
+    });
+    await page.route('**/api/questionarios/q-1/agendamentos?*',route=>route.fulfill({json:{itens:[agenda],pagina:1,temMais:false}}));
+    await page.route('**/api/questionarios/q-1/agendamentos/agenda-1/comandos',async route=>{
+      const d=route.request().postDataJSON();comandos.push(d);
+      if(statusComando!==200)return route.fulfill({status:statusComando,json:{mensagem:'O agendamento mudou. Atualize a lista e confirme novamente.'}});
+      agenda={...agenda,revisao:agenda.revisao+1};
+      if(d.acao==='pausar')agenda={...agenda,ativo:false,estado:'pausado',pausadoEm:'2026-11-24T12:00:00Z'};
+      if(d.acao==='reconfirmar')agenda={...agenda,reconfirmacaoNecessaria:false};
+      if(d.acao==='retomar')agenda={...agenda,ativo:true,estado:'ativo',pausadoEm:null};
+      return route.fulfill({json:agenda});
+    });
+    await page.goto('/questionarios');await page.getByRole('tab',{name:'Distribuicoes'}).click();
+    await page.getByLabel('Paciente do retorno de avaliação recorrente').selectOption('paciente-1');
+    const regiao=page.getByRole('region',{name:'Gerenciar retornos recorrentes'});
+    await regiao.getByRole('button',{name:'Atualizar agendamentos',exact:true}).click();
+    await expect(regiao.getByRole('article')).toHaveCount(1);return {regiao,comandos};
+  }
+  test('prévia, cancelamento e confirmação por teclado preservam links e requerem ACK',async({page})=>{
+    const {regiao,comandos}=await preparar(page);
+    await expect(regiao.getByText('Novos envios estão bloqueados',{exact:false})).toBeVisible();
+    await regiao.getByRole('button',{name:'Pausar',exact:true}).click();
+    await expect(regiao.getByText('Formulário: Check-in semanal. Paciente: Joana.')).toBeVisible();
+    await expect(regiao.getByRole('button',{name:'Confirmar alteração'})).toBeFocused();
+    await regiao.getByRole('button',{name:'Cancelar alteração'}).click();expect(comandos).toHaveLength(0);
+    await expect(regiao.getByRole('button',{name:'Atualizar agendamentos'})).toBeFocused();
+    await regiao.getByRole('button',{name:'Pausar',exact:true}).click();await page.keyboard.press('Enter');
+    await expect(regiao.getByRole('status')).toContainText('Envios e links anteriores foram preservados.');
+    expect(comandos).toEqual([{pacienteId:'paciente-1',acao:'pausar',revisaoEsperada:1,confirmar:true}]);
+    await expect(regiao.getByRole('article')).toContainText('Pausado');
+  });
+  test('reconfirmar pausa não retoma; retomada é outra confirmação e usa revisão nova',async({page})=>{
+    const {regiao,comandos}=await preparar(page,{...inicial(),ativo:false,estado:'pausado',pausadoEm:'2026-11-24T12:00:00Z'});
+    await expect(regiao.getByRole('button',{name:'Retomar',exact:true})).toBeDisabled();
+    await regiao.getByRole('button',{name:'Reconfirmar autorização',exact:true}).click();
+    await expect(regiao.getByText('A autorização será registrada. O agendamento continuará pausado.')).toBeVisible();
+    await regiao.getByRole('button',{name:'Confirmar alteração'}).click();
+    await expect(regiao.getByRole('button',{name:'Retomar',exact:true})).toBeEnabled();
+    await regiao.getByRole('button',{name:'Retomar',exact:true}).click();
+    await expect(regiao.getByText('Próxima ocorrência prevista:',{exact:false})).toBeVisible();
+    await expect(regiao.getByText('Ocorrências atrasadas não serão recuperadas.',{exact:false})).toBeVisible();
+    await regiao.getByRole('button',{name:'Confirmar alteração'}).click();
+    await expect(regiao.getByRole('article')).toContainText('Ativo');
+    expect(comandos.map(c=>[c.acao,c.revisaoEsperada])).toEqual([['reconfirmar',1],['retomar',2]]);
+  });
+  test('execução única vencida não oferece retomada nem inventa data',async({page})=>{
+    const {regiao}=await preparar(page,{...inicial(),ativo:false,estado:'pausado',reconfirmacaoNecessaria:false,regraCron:null,
+      pausadoEm:'2026-11-24T12:00:00Z',dataFixa:'2000-01-01T12:00:00Z',proximaExecucaoEm:null,proximaOcorrenciaFutura:null});
+    await expect(regiao.getByRole('button',{name:'Retomar',exact:true})).toBeDisabled();
+    await expect(regiao.getByText('Sem próxima ocorrência. Crie um novo agendamento para outro dia.')).toBeVisible();
+  });
+  test('conflito invalida prévia, não repete comando e exige nova consulta',async({page})=>{
+    const {regiao,comandos}=await preparar(page,inicial(),409);
+    await regiao.getByRole('button',{name:'Pausar',exact:true}).click();await regiao.getByRole('button',{name:'Confirmar alteração'}).click();
+    await expect(regiao.getByRole('alert')).toHaveText('O agendamento mudou. Atualize a lista e confirme novamente.');await expect(regiao.getByRole('article')).toHaveCount(0);
+    expect(comandos).toHaveLength(1);await expect(regiao.getByRole('button',{name:'Confirmar alteração'})).toHaveCount(0);
+  });
+  test('layout ampliado e auditoria axe do controle, sem dependência de cores',async({page})=>{
+    const {regiao}=await preparar(page);
+    await regiao.getByRole('button',{name:'Reconfirmar autorização',exact:true}).click();
+    await page.evaluate(()=>{document.documentElement.style.fontSize='200%';});
+    await expect(regiao.getByRole('button',{name:'Confirmar alteração'})).toBeVisible();
+    const horizontal=await regiao.evaluate(el=>el.scrollWidth>el.clientWidth+1);expect(horizontal).toBe(false);
+    const a11y=await new AxeBuilder({page}).include('[aria-label="Gerenciar retornos recorrentes"]').analyze();
+    expect(a11y.violations).toEqual([]);
+    await regiao.screenshot({path:test.info().outputPath('qst09-conferencia-ampliada.png')});
+  });
+  test('ACK tardio não altera outro formulário selecionado',async({page})=>{
+    const {regiao}=await preparar(page);let liberar;const espera=new Promise(r=>{liberar=r;});let iniciado=false;
+    await page.route('**/api/questionarios/q-1/agendamentos/agenda-1/comandos',async route=>{
+      iniciado=true;await espera;await route.fulfill({json:{...inicial(),revisao:2,ativo:false,estado:'pausado',pausadoEm:'2026-11-24T12:00:00Z'}});
+    });
+    try{
+      await regiao.getByRole('button',{name:'Pausar',exact:true}).click();await regiao.getByRole('button',{name:'Confirmar alteração'}).click();
+      await expect.poll(()=>iniciado).toBe(true);await page.getByRole('tab',{name:'Formulários',exact:true}).click();await page.getByLabel('Selecionar').selectOption('q-2');
+      await expect(page.getByLabel('Selecionar')).toHaveValue('q-2');
+      await page.getByRole('tab',{name:'Distribuicoes'}).click();
+      const resposta=page.waitForResponse(r=>r.url().includes('/agendamentos/agenda-1/comandos'));liberar();await resposta;
+      await expect(page.getByRole('status').filter({hasText:'Agendamento atualizado.'})).toHaveCount(0);
+      await expect(page.getByRole('region',{name:'Gerenciar retornos recorrentes'}).getByRole('article')).toHaveCount(0);
+    }finally{liberar();}
+  });
+  test('paginação consulta só a página solicitada e limpa prévia anterior',async({page})=>{
+    const {regiao}=await preparar(page);const paginas=[];
+    await page.route('**/api/questionarios/q-1/agendamentos?*',route=>{
+      const pagina=Number(new URL(route.request().url()).searchParams.get('pagina'));paginas.push(pagina);
+      return route.fulfill({json:{itens:pagina===1?Array.from({length:25},(_,i)=>({...inicial(),id:`agenda-${i+1}`})):[{...inicial(),id:'agenda-26',regraCron:null}],pagina,temMais:pagina===1}});
+    });
+    await regiao.getByRole('button',{name:'Atualizar agendamentos'}).click();await expect(regiao.getByRole('article')).toHaveCount(25);
+    await regiao.getByRole('article').first().getByRole('button',{name:'Pausar',exact:true}).click();
+    await regiao.getByRole('button',{name:'Próximos agendamentos',exact:true}).click();
+    await expect(regiao.getByRole('article')).toHaveCount(1);await expect(regiao.getByText('Página 2',{exact:true})).toBeVisible();
+    await expect(regiao.getByRole('button',{name:'Confirmar alteração'})).toHaveCount(0);
+    expect(paginas).toEqual([1,2]);await expect(regiao.getByRole('button',{name:'Próximos agendamentos',exact:true})).toBeDisabled();
+  });
+
+});

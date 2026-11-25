@@ -549,3 +549,14 @@ export interface CompletudeHistoricaApi {
 export async function obterCompletudeHistorica(questionarioId: string, respostaId: string, signal?: AbortSignal): Promise<CompletudeHistoricaApi> {
   return requisitar(`/api/questionarios/${questionarioId}/respostas/${respostaId}/completude`, { cache: 'no-store', signal });
 }
+
+export type AgendamentoQuestionarioApi = ReturnType<typeof import('./server/questionarios-agendamentos-bff').projetarAgendaQst>;
+export function listarAgendamentosQuestionario(questionarioId:string,pacienteId:string,pagina=1){
+  return requisitar<{itens:AgendamentoQuestionarioApi[];pagina:number;temMais:boolean}>(
+    `/api/questionarios/${encodeURIComponent(questionarioId)}/agendamentos?${new URLSearchParams({pacienteId,pagina:String(pagina)})}`);
+}
+export function comandarAgendamentoQuestionario(questionarioId:string,agendamento:AgendamentoQuestionarioApi,acao:'pausar'|'retomar'|'reconfirmar'){
+  return requisitar<AgendamentoQuestionarioApi>(`/api/questionarios/${encodeURIComponent(questionarioId)}/agendamentos/${encodeURIComponent(agendamento.id)}/comandos`,{
+    method:'POST',body:JSON.stringify({pacienteId:agendamento.pacienteId,acao,revisaoEsperada:agendamento.revisao,confirmar:true}),
+  });
+}

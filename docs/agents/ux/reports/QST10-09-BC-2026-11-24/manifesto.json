@@ -1,0 +1,36 @@
+{
+  "registrado_em": "2026-11-24T12:55:16.973324+00:00",
+  "modalidade": "subagentes separados por prompt explícito, fork_turns=none; TOML nativo não comprovado",
+  "instancias": [
+    "/root/qst09_nutricionista_b",
+    "/root/qst09_paciente_b"
+  ],
+  "ferramentas_personas": "nenhuma; testes/captura pelo coordenador",
+  "etapas": "B preservada; C emitida pelos mesmos dois revisores; D registrado",
+  "fontes_sha256": {
+    ".codex/agents/octaclin-nutricionista-ux.toml": "6259b40a98e2c49053cbc6adbc0c59d0312b14e191b228ab73de2f2eac53af6d",
+    ".codex/agents/octaclin-paciente-ux.toml": "a40b1ded5e47739a2710caa5ec9a9a7871b57be7efc11deefaae0515028ff7d7",
+    "octaclin-web/components/questionarios/controle-agendamentos.tsx": "32fa01f2d46339aa27477f1a46ad6920bf61824e5028dd25270744f4eea30b44",
+    "octaclin-web/lib/server/questionarios-agendamentos-bff.ts": "e94f6cb54f75f2ef765ddd20774e09c76ce43610c5ac90913f9c7a0898326389"
+  },
+  "relatorios_sha256": {
+    "brief.md": "9a29ccec0e3009a35cb12af79cf810aa9c2070242c8d8356fe7e10157da82057",
+    "r4.md": "691e8510ed9e78902778099786267c2ae3f39047e78d335646c198cf16463322",
+    "paciente.md": "bbf3bc26fdc204246b5d7bde66e25a6ca28bb613290464890df0da274d77670e",
+    "consolidado.md": "1bb16f0c1bfc1d4097409d7907b125006a8c54aadcd26644e3fc40cc730025da",
+    "nutricionista.md": "e0716baa5555c23f2c20f915e6e40564805c55a59a5d968418153dee75677a3c"
+  },
+  "limitacoes": [
+    "Personas não operaram navegador nem examinaram imagem diretamente",
+    "Sem teste com pessoas reais ou leitor de tela manual",
+    "Sem seleção nativa TOML comprovada",
+    "Não é R4"
+  ],
+  "codigo_avaliado": "f945fd3",
+  "resultado_C": "ambos favoráveis dentro do brief; nenhum teste próprio das personas",
+  "capturas_locais": {
+    "octaclin-web/test-results/visual/questionarios-editor-QST10-b4d96-le-sem-dependência-de-cores-desktop-chromium/qst09-conferencia-ampliada.png": "3db9eca1279a430ef6c5b28a44adfffe10990abfcbdd32da5d0998893e31100e",
+    "octaclin-web/test-results/visual/questionarios-editor-QST10-b4d96-le-sem-dependência-de-cores-mobile-chromium/qst09-conferencia-ampliada.png": "a3f03d9376dc723603ab4dda224b467e09f9f4881650c043003e944480394343"
+  },
+  "limite_capturas": "Artefatos locais ignorados peloGit; teste reproduzível noCI, não foram anexadas imagens aoPR."
+}

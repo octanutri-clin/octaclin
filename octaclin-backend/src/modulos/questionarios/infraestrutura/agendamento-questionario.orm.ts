@@ -30,7 +30,17 @@ export class AgendamentoQuestionarioOrm {
   ultimaExecucaoEm?: Date;
 
   @Column({ name: 'proxima_execucao_em', type: 'timestamptz', nullable: true })
-  proximaExecucaoEm?: Date;
+  proximaExecucaoEm?: Date | null;
+
+  @Column({ type: 'integer', default: 1 })
+  revisao: number;
+
+  @Column({ name: 'pausado_em', type: 'timestamptz', nullable: true })
+  pausadoEm?: Date | null;
+
+  // Ator da autorização atual; nunca preencher autoria histórica por inferência.
+  @Column({ name: 'autorizado_por_usuario_id', type: 'uuid', nullable: true })
+  autorizadoPorUsuarioId?: string | null;
 
   @CreateDateColumn({ name: 'criado_em', type: 'timestamptz' })
   criadoEm: Date;

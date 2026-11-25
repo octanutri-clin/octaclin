@@ -1,3 +1,6 @@
+import { autorizarContextoAgendamento, projetarAgendamento } from './acesso-agendamento';
+import { AcaoAgendamento, planejarComandoAgendamento } from '../dominio/estado-agendamento';
+import { registrarAuditoriaNaTransacao } from '../../../infraestrutura/auditoria/servico-auditoria';
 import { resumirRespostas } from './resumo-respostas';
 import { calcularCompletudeHistorica, completudeDesconhecida } from '../dominio/completude-historica';
 import { plainToInstance } from 'class-transformer';
@@ -5,8 +8,8 @@ import { validateSync } from 'class-validator';
 import { ValidarPreviaEditorDto, ProblemaEditor } from './dto-validacao-editor';
 import { BadRequestException, ConflictException, GoneException, Injectable, NotFoundException, ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { createHmac, randomUUID, timingSafeEqual } from 'crypto';
-import { EntityManager, ILike, In, IsNull, LessThanOrEqual } from 'typeorm';
-import { CronExpressionParser } from 'cron-parser';
+import { EntityManager, ILike, In, IsNull, LessThanOrEqual, Not } from 'typeorm';
+import { resolverProximaExecucao } from '../dominio/proxima-execucao';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { formatarCsvRespostas } from './csv-respostas';
 import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
@@ -738,33 +741,51 @@ export class ServicoQuestionarios {
     });
   }
 
-  async criarAgendamento(
-    tenantId: string,
-    dados: CriarAgendamentoQuestionarioDto,
-    usuario: UsuarioAutenticado
-  ): Promise<AgendamentoQuestionarioOrm> {
-    if (!dados.regraCron && !dados.dataFixa) {
-      throw new BadRequestException('Informe regraCron ou dataFixa.');
-    }
+  async criarAgendamento(tenantId: string, dados: CriarAgendamentoQuestionarioDto, usuario: UsuarioAutenticado) {
+    if (!dados.regraCron && !dados.dataFixa) throw new BadRequestException('Informe regraCron ou dataFixa.');
+    return this.executarComandoCopia(tenantId, async (m) => {
+      await autorizarContextoAgendamento(m, tenantId, dados.questionarioId, dados.pacienteId, usuario.usuarioId, usuario);
+      // Relógio depois dos locks: nunca iniciar uma execução única já vencida.
+      const agora = new Date();
+      const timezone = dados.timezone ?? 'America/Sao_Paulo';
+      const proximaExecucaoEm = this.calcularProximaExecucao(dados.regraCron, dados.dataFixa, timezone, agora);
+      if (!Number.isFinite(proximaExecucaoEm.getTime()) || proximaExecucaoEm <= agora) throw new BadRequestException('Informe uma ocorrência futura.');
+      const repo = m.getRepository(AgendamentoQuestionarioOrm);
+      const a = await repo.save(repo.create({tenantId,questionarioId:dados.questionarioId,pacienteId:dados.pacienteId,
+        regraCron:dados.regraCron,dataFixa:dados.dataFixa ? new Date(dados.dataFixa) : undefined,
+        timezone,ativo:true,proximaExecucaoEm,revisao:1,autorizadoPorUsuarioId:usuario.usuarioId}));
+      await registrarAuditoriaNaTransacao(m,{tenantId,usuarioId:usuario.usuarioId,acao:'questionarios.agendamento.criar',recursoTipo:'agendamento_questionario',recursoId:a.id});
+      return projetarAgendamento(a);
+    });
+  }
 
-    const proximaExecucaoEm = this.calcularProximaExecucao(dados.regraCron, dados.dataFixa, dados.timezone);
+  async listarAgendamentos(tenantId: string, questionarioId: string, pacienteId: string, pagina: number, usuario: UsuarioAutenticado) {
+    if (!Number.isSafeInteger(pagina) || pagina < 1 || pagina > 10000) throw new BadRequestException('Página inválida.');
+    return this.executarComandoCopia(tenantId, async m => {
+      await autorizarContextoAgendamento(m,tenantId,questionarioId,pacienteId,usuario.usuarioId,usuario);
+      const lista = await m.getRepository(AgendamentoQuestionarioOrm).find({where:{tenantId,questionarioId,pacienteId},
+        order:{criadoEm:'DESC',id:'DESC'},take:26,skip:(pagina-1)*25});
+      return {itens:lista.slice(0,25).map(projetarAgendamento),pagina,temMais:lista.length>25};
+    });
+  }
 
-    return this.executorTenant.executar(tenantId, async (gerenciador) => {
-      await this.garantirQuestionarioDoProfissional(gerenciador, tenantId, dados.questionarioId, usuario);
-      await this.garantirPacienteAtivoDoProfissional(gerenciador, tenantId, dados.pacienteId, usuario);
-
-      return gerenciador.getRepository(AgendamentoQuestionarioOrm).save(
-        gerenciador.getRepository(AgendamentoQuestionarioOrm).create({
-          tenantId,
-          questionarioId: dados.questionarioId,
-          pacienteId: dados.pacienteId,
-          regraCron: dados.regraCron,
-          dataFixa: dados.dataFixa ? new Date(dados.dataFixa) : undefined,
-          timezone: dados.timezone ?? 'America/Sao_Paulo',
-          ativo: true,
-          proximaExecucaoEm
-        })
-      );
+  async comandarAgendamento(tenantId: string, questionarioId: string, pacienteId: string, agendamentoId: string,
+    acao: AcaoAgendamento, revisaoEsperada: number, confirmar: boolean, usuario: UsuarioAutenticado) {
+    if (confirmar !== true) throw new BadRequestException('Confirme explicitamente a operação.');
+    return this.executarComandoCopia(tenantId, async m => {
+      await autorizarContextoAgendamento(m,tenantId,questionarioId,pacienteId,usuario.usuarioId,usuario);
+      const repo=m.getRepository(AgendamentoQuestionarioOrm);
+      const a=await repo.findOne({where:{id:agendamentoId,tenantId,questionarioId,pacienteId},lock:{mode:'pessimistic_write'}});
+      if (!a) throw new NotFoundException('Agendamento não disponível.');
+      const novo=planejarComandoAgendamento(a,acao,revisaoEsperada,usuario.usuarioId,new Date());
+      // A espera pela agenda pode ultrapassar a validade da sessão; não reler fora de ordem.
+      const sessao=await m.getRepository(SessaoUsuarioOrm).findOne({where:{id:usuario.sessaoId,tenantId,usuarioId:usuario.usuarioId},select:{id:true,expiraEm:true}});
+      if (!sessao || sessao.expiraEm.getTime()<=Date.now()) throw new UnauthorizedException('Sessão encerrada.');
+      const {affected}=await repo.update({id:a.id,tenantId,revisao:revisaoEsperada},{ativo:novo.ativo,pausadoEm:novo.pausadoEm,
+        proximaExecucaoEm:novo.proximaExecucaoEm,autorizadoPorUsuarioId:novo.autorizadoPorUsuarioId,revisao:novo.revisao});
+      if(affected!==1)throw new ConflictException('Agendamento alterado. Confira e confirme novamente.');
+      await registrarAuditoriaNaTransacao(m,{tenantId,usuarioId:usuario.usuarioId,acao:`questionarios.agendamento.${acao}`,recursoTipo:'agendamento_questionario',recursoId:a.id});
+      return projetarAgendamento(novo);
     });
   }
 
@@ -1519,86 +1540,69 @@ export class ServicoQuestionarios {
   }
 
   async processarAgendamentosVencidos(tenantId: string, agora = new Date()): Promise<number> {
-    return this.executorTenant.executar(tenantId, async (gerenciador) => {
-      const repositorioEnvios = gerenciador.getRepository(EnvioQuestionarioOrm);
-      const enviosExpirados = await repositorioEnvios.find({
-        where: {
-          tenantId,
-          status: In(['pendente', 'enviado']),
-          expiraEm: LessThanOrEqual(agora)
-        }
-      });
-      for (const envio of enviosExpirados) {
-        envio.status = 'expirado';
-        envio.respostasRascunho = undefined;
-        envio.rascunhoAtualizadoEm = undefined;
-        envio.rascunhoVersao = 0;
-      }
-      if (enviosExpirados.length) await repositorioEnvios.save(enviosExpirados);
-
-      const agendamentos = await gerenciador.getRepository(AgendamentoQuestionarioOrm).find({
-        where: {
-          tenantId,
-          ativo: true,
-          proximaExecucaoEm: LessThanOrEqual(agora)
-        }
-      });
-
-      let totalEnvios = 0;
-      agendamentos.sort((a, b) => a.questionarioId < b.questionarioId ? -1 : a.questionarioId > b.questionarioId ? 1 : 0);
-      for (const agendamento of agendamentos) {
-        const questionario = await gerenciador.getRepository(QuestionarioOrm).findOne({
-          where: { id: agendamento.questionarioId, tenantId }, lock: { mode: 'pessimistic_read' }
-        });
-        const snapshotEstrutura = questionario
-          ? await this.capturarSnapshotEstruturaQuestionario(gerenciador, tenantId, questionario)
-          : undefined;
-        const paciente = agendamento.pacienteId
-          ? await gerenciador.getRepository(PacienteOrm).findOne({
-              where: { id: agendamento.pacienteId, tenantId, arquivadoEm: IsNull() }
-            })
-          : null;
-
-        if (paciente) {
-          await gerenciador.getRepository(EnvioQuestionarioOrm).save(
-            gerenciador.getRepository(EnvioQuestionarioOrm).create({
-              tenantId,
-              questionarioId: agendamento.questionarioId,
-              pacienteId: paciente.id,
-              agendamentoId: agendamento.id,
-              status: 'pendente',
-              snapshotEstrutura
-            })
-          );
-          totalEnvios += 1;
-        }
-
-        agendamento.ultimaExecucaoEm = agora;
-        agendamento.proximaExecucaoEm = agendamento.regraCron
-          ? this.calcularProximaExecucao(agendamento.regraCron, undefined, agendamento.timezone, agora)
-          : undefined;
-        agendamento.ativo = Boolean(agendamento.regraCron && paciente);
-        await gerenciador.getRepository(AgendamentoQuestionarioOrm).save(agendamento);
-      }
-
-      return totalEnvios;
+    // Expiração independente: não segurar locks de envios enquanto adquire os de geração.
+    await this.executorTenant.executar(tenantId, async m => {
+      const repo=m.getRepository(EnvioQuestionarioOrm);
+      const expirados=await repo.find({where:{tenantId,status:In(['pendente','enviado']),expiraEm:LessThanOrEqual(agora)}});
+      for(const envio of expirados){envio.status='expirado';envio.respostasRascunho=undefined;envio.rascunhoAtualizadoEm=undefined;envio.rascunhoVersao=0;}
+      if(expirados.length)await repo.save(expirados);
     });
+    const candidatos=await this.executorTenant.executar(tenantId,m=>m.getRepository(AgendamentoQuestionarioOrm).find({
+      where:{tenantId,ativo:true,autorizadoPorUsuarioId:Not(IsNull()),pacienteId:Not(IsNull()),proximaExecucaoEm:LessThanOrEqual(agora)},
+      select:{id:true,questionarioId:true,pacienteId:true,autorizadoPorUsuarioId:true,revisao:true},
+      order:{proximaExecucaoEm:'ASC',id:'ASC'},take:100,
+    }));
+    let total=0;
+    for(const candidato of candidatos){
+      // Legados não têm autoridade presumida. Nenhum envio/link anterior é alterado.
+      if(!candidato.autorizadoPorUsuarioId || !candidato.pacienteId)continue;
+      try{
+        total+=await this.executorTenant.executar(tenantId,async m=>{
+          await autorizarContextoAgendamento(m,tenantId,candidato.questionarioId,candidato.pacienteId!,candidato.autorizadoPorUsuarioId!);
+          const repo=m.getRepository(AgendamentoQuestionarioOrm);
+          const a=await repo.findOne({where:{id:candidato.id,tenantId},lock:{mode:'pessimistic_write'}});
+          // Releitura depois da espera é obrigatória; candidato não é autorização nem reserva.
+          if(!a || a.revisao!==candidato.revisao || a.questionarioId!==candidato.questionarioId || a.pacienteId!==candidato.pacienteId
+            || a.autorizadoPorUsuarioId!==candidato.autorizadoPorUsuarioId || !a.ativo || a.pausadoEm
+            || !a.proximaExecucaoEm || a.proximaExecucaoEm>agora)return 0;
+          if(a.revisao>=2147483647)throw new ConflictException('Revisão de agendamento esgotada.');
+          const q=await m.getRepository(QuestionarioOrm).findOne({where:{id:a.questionarioId,tenantId}});
+          if(!q)return 0;
+          const snapshotEstrutura=await this.capturarSnapshotEstruturaQuestionario(m,tenantId,q);
+          const envios=m.getRepository(EnvioQuestionarioOrm);
+          await envios.save(envios.create({tenantId,questionarioId:a.questionarioId,pacienteId:a.pacienteId,
+            agendamentoId:a.id,status:'pendente',snapshotEstrutura}));
+          const efetivadaEm=new Date(Math.max(agora.getTime(),Date.now()));
+          const proxima=a.regraCron ? this.calcularProximaExecucao(a.regraCron,undefined,a.timezone,efetivadaEm) : null;
+          const {affected}=await repo.update({id:a.id,tenantId,revisao:a.revisao},{ultimaExecucaoEm:efetivadaEm,
+            proximaExecucaoEm:proxima,ativo:!!proxima,revisao:a.revisao+1});
+          if(affected!==1)throw new ConflictException('Agendamento alterado.');
+          await registrarAuditoriaNaTransacao(m,{tenantId,usuarioId:a.autorizadoPorUsuarioId!,acao:'questionarios.agendamento.gerar',recursoTipo:'agendamento_questionario',recursoId:a.id});
+          return 1;
+        });
+      }catch(erro){
+        if(erro instanceof UnauthorizedException || erro instanceof ForbiddenException || erro instanceof NotFoundException){
+          // Invalidar apenas a autorização atual do candidato exato. Evita que agendas
+          // bloqueadas ocupem indefinidamente o lote; uma reconfirmação concorrente vence pelo CAS.
+          await this.executorTenant.executar(tenantId,async m=>{
+            const r=await m.getRepository(AgendamentoQuestionarioOrm).update({id:candidato.id,tenantId,
+              revisao:candidato.revisao,autorizadoPorUsuarioId:candidato.autorizadoPorUsuarioId!},
+              {autorizadoPorUsuarioId:null,revisao:candidato.revisao+1});
+            if(r.affected===1)await registrarAuditoriaNaTransacao(m,{tenantId,acao:'questionarios.agendamento.invalidar_autorizacao',recursoTipo:'agendamento_questionario',recursoId:candidato.id});
+          });
+          continue;
+        }
+        const codigo=(erro as {code?:string;driverError?:{code?:string}})?.driverError?.code??(erro as {code?:string})?.code;
+        // Rollback da ocorrência é integral; não repetir cegamente na mesma execução.
+        if(['40P01','40001','55P03'].includes(codigo??''))continue;
+        throw erro;
+      }
+    }
+    return total;
   }
 
-  private calcularProximaExecucao(
-    regraCron?: string,
-    dataFixa?: string,
-    timezone = 'America/Sao_Paulo',
-    base = new Date()
-  ): Date {
-    if (dataFixa) return new Date(dataFixa);
-    if (!regraCron) throw new BadRequestException('Regra cron ausente.');
-
-    try {
-      return CronExpressionParser.parse(regraCron, { currentDate: base, tz: timezone }).next().toDate();
-    } catch {
-      throw new BadRequestException('Regra cron invalida.');
-    }
+  private calcularProximaExecucao(regraCron?:string,dataFixa?:string,timezone='America/Sao_Paulo',base=new Date()):Date {
+    return resolverProximaExecucao(regraCron,dataFixa,timezone,base);
   }
 
   private validarOpcoes(tipo: TipoPergunta, opcoes?: { rotulo: string; valor: string }[], exigirQuandoMultipla = true) {

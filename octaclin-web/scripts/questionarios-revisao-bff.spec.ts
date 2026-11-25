@@ -1,3 +1,5 @@
+import { GET as consultarAgendas } from '../app/api/questionarios/[id]/agendamentos/route';
+import { POST as comandarAgenda } from '../app/api/questionarios/[id]/agendamentos/[agendamentoId]/comandos/route';
 import { GET as consultarPagina } from '../app/api/questionarios/[id]/respostas/pagina/route';
 import { POST as exportarEscopo } from '../app/api/questionarios/[id]/respostas/exportacao.csv/route';
 import { GET as completudeHistorica } from '../app/api/questionarios/[id]/respostas/[respostaId]/completude/route';
@@ -370,4 +372,62 @@ test('QST10-08 três CSV validam alcance, origem e conteúdo privado',async()=>{
   for(const body of [{escopo:'visiveis',respostaIds:[id]},{escopo:'consulta',filtros:{inicio:'2026-11-01'}},{escopo:'questionario'}]){const r=await exportarEscopo(req(body),params);assert.equal(r.status,200);assert.match(r.headers.get('Cache-Control')??'',/no-store/);assert.match(r.headers.get('Content-Type')??'',/text\/csv/);}
   falhar=true;const r=await exportarEscopo(req({escopo:'questionario'}),params);assert.equal(r.status,400);assert.doesNotMatch(await r.text(),/segredo/);
  }finally{restaurarFetch(original);__clearCookies();}
+});
+
+const agendaId='00000000-0000-4000-8000-000000000003';
+const questionarioAgendaId='00000000-0000-4000-8000-000000000001';
+const pacienteAgendaId='00000000-0000-4000-8000-000000000002';
+function agendaSintetica(){return {id:agendaId,questionarioId:questionarioAgendaId,pacienteId:pacienteAgendaId,revisao:2,ativo:false,estado:'pausado',
+  proximaOcorrenciaFutura:'2026-11-25T11:00:00Z',reconfirmacaoNecessaria:true,timezone:'America/Sao_Paulo',regraCron:'0 8 * * *',dataFixa:null,pausadoEm:'2026-11-24T12:00:00Z',ultimaExecucaoEm:null,proximaExecucaoEm:'2026-11-25T11:00:00Z'};}
+const parametrosAgenda=()=>({params:Promise.resolve({id:questionarioAgendaId,agendamentoId:agendaId})});
+const requisicaoAgenda=(dados:unknown,origem='http://localhost')=>new Request('http://localhost/api/agenda',{
+  method:'POST',headers:{Origin:origem,'Content-Type':'application/json'},body:JSON.stringify(dados)});
+const comandoSintetico=()=>({pacienteId:pacienteAgendaId,acao:'pausar',revisaoEsperada:1,confirmar:true});
+
+test('controle de agendas exige sessão/permissão/origem e rejeita campos manipulados sem backend',async()=>{
+  const original=global.fetch;let chamadas=0;global.fetch=(async()=>{chamadas++;throw new Error('Não chamar');}) as typeof fetch;
+  try{
+    __clearCookies();assert.equal((await comandarAgenda(requisicaoAgenda(comandoSintetico()),parametrosAgenda())).status,401);
+    __setCookies(cookiesSessaoValida(['questionarios.ler']));assert.equal((await comandarAgenda(requisicaoAgenda(comandoSintetico()),parametrosAgenda())).status,403);
+    __setCookies(cookiesSessaoValida(['questionarios.gerenciar']));
+    assert.equal((await comandarAgenda(requisicaoAgenda(comandoSintetico(),'https://outro.example.test'),parametrosAgenda())).status,403);
+    for(const dados of [{...comandoSintetico(),confirmar:'true'},{...comandoSintetico(),revisaoEsperada:0},{...comandoSintetico(),tenantId:pacienteAgendaId},{...comandoSintetico(),acao:'excluir'}]){
+      assert.equal((await comandarAgenda(requisicaoAgenda(dados),parametrosAgenda())).status,400);
+    }
+    assert.equal(chamadas,0);
+  }finally{restaurarFetch(original);__clearCookies();}
+});
+test('agenda: projeção remove ator interno, tenant, token e metadados extras',async()=>{
+  const original=global.fetch;__setCookies(cookiesSessaoValida(['questionarios.gerenciar']));
+  global.fetch=(async(input,init)=>{
+    assert.match(String(input),new RegExp(`/questionarios/${questionarioAgendaId}/agendamentos/${agendaId}/comandos$`));
+    assert.deepEqual(JSON.parse(String(init?.body)),comandoSintetico());
+    return Response.json({...agendaSintetica(),autorizadoPorUsuarioId:'NÃO EXPOR',tenantId:'INTERNO',token:'SECRETO'});
+  }) as typeof fetch;
+  try{
+    const r=await comandarAgenda(requisicaoAgenda(comandoSintetico()),parametrosAgenda());
+    assert.equal(r.status,200);assert.match(r.headers.get('Cache-Control')??'',/no-store/);
+    assert.deepEqual(await r.json(),agendaSintetica());
+  }finally{restaurarFetch(original);__clearCookies();}
+});
+test('agenda: revisão/identidade inesperadas e erro do backend não vazam conteúdo',async()=>{
+  const original=global.fetch;__setCookies(cookiesSessaoValida(['questionarios.gerenciar']));
+  try{
+    for(const resposta of [Response.json({...agendaSintetica(),id:pacienteAgendaId}),Response.json({...agendaSintetica(),revisao:1}),new Response('DADO INTERNO',{status:409})]){
+      global.fetch=(async()=>resposta) as typeof fetch;
+      const r=await comandarAgenda(requisicaoAgenda(comandoSintetico()),parametrosAgenda());
+      assert.equal(r.status,resposta.status===409?409:502);assert.doesNotMatch(await r.text(),/DADO INTERNO/);
+    }
+  }finally{restaurarFetch(original);__clearCookies();}
+});
+test('lista de agendas limita escopo/página e valida projeção de cada item',async()=>{
+  const original=global.fetch;__setCookies(cookiesSessaoValida(['questionarios.gerenciar']));let chamadas=0;
+  global.fetch=(async()=>{chamadas++;return Response.json({itens:[agendaSintetica()],pagina:1,temMais:false,interno:'não expor'});}) as typeof fetch;
+  try{
+    const url=`http://localhost/api/questionarios/${questionarioAgendaId}/agendamentos?pacienteId=${pacienteAgendaId}`;
+    for(const extra of ['&tenantId=x','&pagina=0',`&pacienteId=${pacienteAgendaId}`])assert.equal((await consultarAgendas(new Request(url+extra),parametrosAgenda())).status,400);
+    assert.equal(chamadas,0);
+    const r=await consultarAgendas(new Request(url),parametrosAgenda());assert.equal(r.status,200);
+    assert.deepEqual(await r.json(),{itens:[agendaSintetica()],pagina:1,temMais:false});
+  }finally{restaurarFetch(original);__clearCookies();}
 });

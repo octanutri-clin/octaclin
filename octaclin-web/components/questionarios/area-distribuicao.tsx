@@ -1,5 +1,6 @@
 'use client';
 
+import { ControleAgendamentos } from './controle-agendamentos';
 import { useEffect, useRef, useState } from 'react';
 import { CalendarClock, Link2 } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
@@ -63,6 +64,11 @@ export function AreaDistribuicao({ workspace }: { workspace: WorkspaceQuestionar
           {linkFormulario ? <Campo readOnly value={linkFormulario} onFocus={(event) => event.currentTarget.select()} aria-label="Link público do formulário" /> : null}
         </div>
       </div>
+      {questionarioAtual && pacienteAgendamentoId ? <ControleAgendamentos
+        key={`${questionarioAtual.id}:${pacienteAgendamentoId}`} questionarioId={questionarioAtual.id}
+        titulo={questionarioAtual.titulo} pacienteId={pacienteAgendamentoId}
+        pacienteNome={pacientes.find(p=>p.id===pacienteAgendamentoId)?.nome??'Paciente selecionado'}
+      /> : null}
     </Cartao>
   );
 }
