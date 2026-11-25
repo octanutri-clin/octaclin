@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { ChevronDown, ChevronRight, ClipboardList, RefreshCcw, TrendingUp } from 'lucide-react';
 import { CompletudeHistorica } from './completude-historica';
 import { ExportacaoRespostas } from './exportacao-respostas';
+import { DistribuicaoRespostas } from './distribuicao-respostas';
 import { Botao } from '@/components/ui/botao';
 import { Abas } from '@/components/ui/abas';
 import { Cartao } from '@/components/ui/cartao';
@@ -314,13 +315,10 @@ export function AreaRespostas({ workspace }: { workspace: WorkspaceQuestionarios
                     </div>
                   ) : null}
                   {pergunta.distribuicao.length ? (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {pergunta.distribuicao.slice(0, 4).map((item) => (
-                        <span key={`${pergunta.perguntaId}-${item.valor}`} className="rounded-full border border-linha bg-white px-2 py-1 text-xs text-texto-suave">
-                          {item.valor}: {item.total}
-                        </span>
-                      ))}
-                    </div>
+                    <DistribuicaoRespostas
+                      key={JSON.stringify([questionarioAtual?.id, pacienteFiltroRespostas, pergunta.perguntaId])}
+                      distribuicao={pergunta.distribuicao} enunciado={pergunta.enunciado}
+                    />
                   ) : null}
                   {pergunta.textosRecentes.length ? (
                     <p className="mt-3 line-clamp-2 text-xs text-texto-suave">{pergunta.textosRecentes[0]}</p>
