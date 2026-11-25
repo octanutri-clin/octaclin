@@ -675,6 +675,16 @@ test.describe('QST01 — organização da leitura de respostas', () => {
     await page.keyboard.press('Enter');
     await expect(recolher).toBeFocused();
     await page.keyboard.press('Tab');
+    const selecao = envio(page, pacientes[0].nome).getByRole('checkbox', { name: /Selecionar para comparação/ });
+    await expect(selecao).toBeFocused();
+    await expect(selecao).not.toBeChecked();
+    await page.keyboard.press('Space');
+    await expect(selecao).toBeChecked();
+    await expect(page.getByText('1 de 2 selecionados', { exact: true })).toBeVisible();
+    await page.keyboard.press('Space');
+    await expect(selecao).not.toBeChecked();
+    await expect(page.getByText('0 de 2 selecionados', { exact: true })).toBeVisible();
+    await page.keyboard.press('Tab');
     const individual = envio(page, pacientes[0].nome).getByRole('button', { name: /^(Expandir|Recolher) respostas/ });
     await expect(individual).toBeFocused();
     await page.keyboard.press('Space');
@@ -991,4 +1001,131 @@ test('QST10-08 filtros e páginas acessíveis com texto ampliado',async({page},i
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+1)).toBe(true);
  await page.getByLabel('Início do período',{exact:true}).focus();await expect(page.getByLabel('Início do período',{exact:true})).toBeFocused();
  await painel.screenshot({path:`../docs/agents/ux/reports/QST10-08-BC-2026-11-23/paginacao-${info.project.name.startsWith('desktop')?'desktop':'mobile'}.png`});
+});
+
+test('QST10-10 seleciona dois retornos entre páginas e compara somente após ação explícita',async({page})=>{
+  const trinta=Array.from({length:32},(_,i)=>({...respostas[0],respostaId:`resposta-${i+1}`,envioId:`envio-${i+1}`,
+    finalizadoEm:new Date(Date.UTC(2026,9,i+1,12)).toISOString(),respostas:[{...respostas[0].respostas[0],valor:i?`Registro ${i+1}`:'Organizei o almoço'}]}));
+  await preparar(page,trinta);const chamadas=[];
+  await page.route('**/api/questionarios/q-1/respostas/comparacao',async route=>{
+    const corpo=route.request().postDataJSON();chamadas.push(corpo);
+    await route.fulfill({json:{questionarioId:'q-1',pacienteId:'paciente-a',timezone:'America/Sao_Paulo',ordem:'cronologica',
+      a:{respostaId:'resposta-1',envioId:'envio-1',finalizadoEm:trinta[0].finalizadoEm,versaoQuestionario:1},
+      b:{respostaId:'resposta-26',envioId:'envio-26',finalizadoEm:trinta[25].finalizadoEm,versaoQuestionario:2},
+      itens:[{perguntaId:'medida',enunciadoA:'Medida original',enunciadoB:'Medida original',tipoA:'metrica',tipoB:'metrica',
+        unidade:'kg',unidadeA:'kg',unidadeB:'kg',a:{estado:'respondida',valor:0},b:{estado:'respondida',valor:2},compativel:true,motivo:null,delta:2}]}});
+  });
+  await page.getByRole('checkbox',{name:/Selecionar para comparação/}).first().check();
+  await expect(page.getByText('1 de 2 selecionados',{exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Próxima página',exact:true}).click();
+  await expect(page.getByText('Registro 26',{exact:true})).toBeVisible();
+  await page.getByRole('checkbox',{name:/Selecionar para comparação/}).first().check();
+  await expect(page.getByText('2 de 2 selecionados',{exact:true})).toBeVisible();expect(chamadas).toHaveLength(0);
+  await page.getByRole('button',{name:'Comparar selecionados',exact:true}).click();
+  await expect(page.getByRole('region',{name:'Comparação dos retornos'})).toContainText('Medida original');
+  await expect(page.getByRole('region',{name:'Comparação dos retornos'})).toContainText('Aumentou: +2 kg');
+  expect(chamadas).toEqual([{pacienteId:'paciente-a',respostaIds:['resposta-1','resposta-26']}]);
+});
+
+const retornosComparaveis = () => [respostas[0], {...respostas[0],respostaId:'retorno-2',envioId:'envio-2',respostas:[{...respostas[0].respostas[0],valor:'Segundo retorno'}]},
+  {...respostas[0],respostaId:'retorno-3',envioId:'envio-3',respostas:[{...respostas[0].respostas[0],valor:'Terceiro retorno'}]}, respostas[1]];
+function comparacaoSintetica(itens=[]) {
+  return {questionarioId:'q-1',pacienteId:'paciente-a',timezone:'America/Sao_Paulo',ordem:'selecao',
+    a:{respostaId:'resposta-1',envioId:'envio-1',finalizadoEm:null,versaoQuestionario:1},
+    b:{respostaId:'retorno-2',envioId:'envio-2',finalizadoEm:null,versaoQuestionario:null},itens};
+}
+async function selecionarPar(page) {
+  const caixas=page.getByRole('checkbox',{name:/Selecionar para comparação/});await caixas.nth(0).check();await caixas.nth(1).check();
+}
+
+test('QST10-10 limita o par ao mesmo paciente e limpa ao mudar o contexto',async({page})=>{
+  await preparar(page,retornosComparaveis());const caixas=page.getByRole('checkbox',{name:/Selecionar para comparação/});
+  await caixas.nth(0).check();await expect(caixas.nth(3)).toBeDisabled();await caixas.nth(1).check();
+  await expect(caixas.nth(2)).toBeDisabled();await caixas.nth(0).uncheck();await expect(caixas.nth(2)).toBeEnabled();
+  await page.getByRole('button',{name:'Remover da comparação: retorno 1'}).click();
+  await expect(page.getByText('0 de 2 selecionados',{exact:true})).toBeVisible();
+  await caixas.nth(0).check();await page.locator('#filtro-paciente-respostas').selectOption('paciente-b');
+  await expect(page.getByText('0 de 2 selecionados',{exact:true})).toBeVisible();
+  await page.locator('#filtro-paciente-respostas').selectOption('');
+  await expect(page.getByText('0 de 2 selecionados',{exact:true})).toBeVisible();
+  expect(await page.evaluate(()=>window.__persistenciasQst01)).toBe(0);
+});
+
+test('QST10-10 preserva zero, não, ausências, mudanças e anexos sem expor referências',async({page})=>{
+  await preparar(page,retornosComparaveis());
+  const item=(id,tipo,a,b,motivo,extra={})=>({perguntaId:id,enunciadoA:id,enunciadoB:id,tipoA:tipo,tipoB:tipo,
+    unidade:null,unidadeA:null,unidadeB:null,a:{estado:'respondida',valor:a},b:{estado:'respondida',valor:b},compativel:true,motivo,delta:null,...extra});
+  const dados=comparacaoSintetica([
+    item('Escala original','linear',0,0,null,{delta:0}),item('Resposta booleana','sim_nao',false,true,'nao_numerico'),
+    item('Resposta ausente','linear',0,null,'sem_resposta',{b:{estado:'sem_resposta',valor:null}}),
+    item('Unidade alterada','metrica',1,100,'definicao_alterada',{compativel:false,unidadeA:'kg',unidadeB:'cm'}),
+    item('Anexo original','upload_midia',null,null,'anexo',{a:{estado:'anexo',valor:null,quantidadeArquivos:1},b:{estado:'anexo',valor:null,quantidadeArquivos:2}})
+  ]);
+  await page.route('**/api/questionarios/q-1/respostas/comparacao',route=>route.fulfill({json:dados}));
+  await selecionarPar(page);await page.getByRole('button',{name:'Comparar selecionados',exact:true}).click();
+  const regiao=page.getByRole('region',{name:'Comparação dos retornos'});
+  await expect(regiao.getByText('0',{exact:true})).toHaveCount(3);await expect(regiao.getByText('Não',{exact:true})).toBeVisible();
+  await expect(regiao.getByText('Sem resposta',{exact:true})).toBeVisible();await expect(regiao).toContainText('não são diretamente comparáveis');
+  await expect(regiao).toContainText('1 anexo registrado');await expect(regiao).toContainText('Versão indisponível');
+  await expect(regiao).toContainText('não permitem estabelecer uma ordem cronológica');await expect(regiao.locator('a')).toHaveCount(0);
+  await expect(page.getByRole('heading',{name:'Comparar dois retornos'})).toBeFocused();
+  await page.getByRole('button',{name:'Voltar à seleção',exact:true}).click();await expect(regiao).toHaveCount(0);
+  await expect(page.getByRole('button',{name:'Comparar selecionados',exact:true})).toBeFocused();
+  await expect(page.getByText('2 de 2 selecionados',{exact:true})).toBeVisible();
+});
+
+for(const acao of ['cancelar','contexto','remover']) test(`QST10-10 ignora resposta tardia após ${acao}`,async({page})=>{
+  await preparar(page,retornosComparaveis());let liberar,receber;
+  const espera=new Promise(r=>liberar=r),recebida=new Promise(r=>receber=r);
+  await page.route('**/api/questionarios/q-1/respostas/comparacao',async route=>{receber();await espera;await route.fulfill({json:comparacaoSintetica()});});
+  await selecionarPar(page);await page.getByRole('button',{name:'Comparar selecionados',exact:true}).click();await recebida;
+  if(acao==='cancelar') await page.getByRole('button',{name:'Cancelar comparação',exact:true}).click();
+  if(acao==='remover') await page.getByRole('button',{name:'Remover da comparação: retorno 1'}).click();
+  if(acao==='contexto') {await page.locator('#filtro-paciente-respostas').selectOption('paciente-b');await page.locator('#filtro-paciente-respostas').selectOption('');}
+  const resposta=page.waitForResponse(r=>r.url().endsWith('/respostas/comparacao'));liberar();await resposta;
+  await expect(page.getByRole('region',{name:'Comparação dos retornos'})).toHaveCount(0);
+  await expect(page.getByText(`${acao==='cancelar'?2:acao==='remover'?1:0} de 2 selecionados`,{exact:true})).toBeVisible();
+});
+
+test('QST10-10 negações limpam o par e não exibem detalhes do servidor',async({page})=>{
+  await preparar(page,retornosComparaveis());let chamadas=0;
+  await page.route('**/api/questionarios/q-1/respostas/comparacao',route=>{chamadas++;return route.fulfill({status:403,json:{mensagem:'DETALHE_INTERNO_SINTETICO'}});});
+  await selecionarPar(page);await page.getByRole('button',{name:'Comparar selecionados',exact:true}).click();
+  await expect(page.locator('[data-qst10-comparacao]').getByRole('alert')).toContainText('Confira suas permissões');await expect(page.getByText('0 de 2 selecionados',{exact:true})).toBeVisible();
+  await expect(page.getByText('DETALHE_INTERNO_SINTETICO')).toHaveCount(0);expect(chamadas).toBe(1);
+});
+
+test('QST10-10 teclado, axe e ampliação mantêm comparação legível sem persistência',async({page},testInfo)=>{
+  await preparar(page,retornosComparaveis());await page.route('**/api/questionarios/q-1/respostas/comparacao',route=>route.fulfill({json:comparacaoSintetica()}));
+  const caixas=page.getByRole('checkbox',{name:/Selecionar para comparação/});await caixas.first().focus();await page.keyboard.press('Space');
+  await caixas.nth(1).focus();await page.keyboard.press('Space');const botao=page.getByRole('button',{name:'Comparar selecionados',exact:true});
+  await botao.focus();await page.keyboard.press('Enter');await expect(page.getByRole('region',{name:'Comparação dos retornos'})).toBeVisible();
+  const axe=await new AxeBuilder({page}).include('[data-qst10-comparacao]').analyze();expect(axe.violations).toEqual([]);
+  await page.evaluate(()=>{document.documentElement.style.fontSize='200%';});
+  const regiao=page.getByRole('region',{name:'Comparação dos retornos'});await regiao.scrollIntoViewIfNeeded();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1)).toBe(true);
+  await page.screenshot({path:testInfo.outputPath('comparacao-200.png'),fullPage:true});
+  expect(await page.evaluate(()=>window.__persistenciasQst01)).toBe(0);
+});
+
+test('QST10-10 troca de questionário limpa seleção sem recuperar o par anterior',async({page})=>{
+  await preparar(page,retornosComparaveis());await selecionarPar(page);
+  for(const q of ['q-2','q-1']) {
+    await page.getByRole('tab',{name:'Formulários',exact:true}).click();
+    await page.getByLabel('Selecionar',{exact:true}).selectOption(q);
+    await page.getByRole('tab',{name:'Respostas',exact:true}).click();
+    await expect(page.getByText('0 de 2 selecionados',{exact:true})).toBeVisible();
+  }
+});
+
+test('QST10-10 falha recuperável preserva a seleção e exige nova tentativa explícita',async({page})=>{
+  await preparar(page,retornosComparaveis());let chamadas=0;
+  await page.route('**/api/questionarios/q-1/respostas/comparacao',route=>{
+    chamadas++;return chamadas===1?route.fulfill({status:503,json:{mensagem:'DETALHE_INTERNO_SINTETICO'}}):route.fulfill({json:comparacaoSintetica()});
+  });
+  await selecionarPar(page);await page.getByRole('button',{name:'Comparar selecionados',exact:true}).click();
+  await expect(page.locator('[data-qst10-comparacao]').getByRole('alert')).toContainText('Tente novamente');
+  await expect(page.getByText('2 de 2 selecionados',{exact:true})).toBeVisible();expect(chamadas).toBe(1);
+  await page.getByRole('button',{name:'Comparar selecionados',exact:true}).click();
+  await expect(page.getByRole('region',{name:'Comparação dos retornos'})).toBeVisible();expect(chamadas).toBe(2);
 });

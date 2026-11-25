@@ -1,5 +1,6 @@
+import { compararRetornos, RetornoParaComparacao, ComparacaoRetornos } from '../dominio/comparacao-retornos';
 import { resumirRespostas, PerguntaResumo } from './resumo-respostas';
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { EntityManager, In } from 'typeorm';
 import { ServicoQuestionarios, RespostaQuestionarioRecebida, LeituraClinicaQuestionario } from './servico-questionarios';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
@@ -28,6 +29,23 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 @Injectable()
 export class ServicoRespostasPaginadas {
   constructor(private readonly questionarios: ServicoQuestionarios, private readonly cripto: CriptografiaDadosSensiveis) {}
+
+  async comparar(tenantId:string,questionarioId:string,pacienteId:string,ids:string[],usuario:UsuarioAutenticado):Promise<ComparacaoRetornos & {timezone:string}>{
+    if(!UUID.test(pacienteId)||!Array.isArray(ids)||ids.length!==2||ids.some(id=>typeof id!=='string'||!UUID.test(id))
+      ||new Set(ids.map(id=>id.toLowerCase())).size!==2)throw new BadRequestException('Selecione exatamente dois retornos válidos do mesmo paciente.');
+    const selecionados=ids.map(id=>id.toLowerCase());
+    return this.questionarios.lerQuestionarioAutorizado(tenantId,questionarioId,usuario,async(m,profissionalId,sessaoExpiraEm)=>{
+      const timezone=await obterTimezoneClinicoDoTenant(m,tenantId);
+      const filtros=normalizarConsultaRespostas({pacienteId:pacienteId.toLowerCase()});
+      const resultado=await this.selecionar(m,tenantId,questionarioId,profissionalId,filtros,timezone,3,undefined,selecionados);
+      if(resultado.total!==2||resultado.dados.length!==2)throw new NotFoundException('Seleção indisponível. Atualize e selecione novamente.');
+      const dados=await this.hidratar(m,tenantId,questionarioId,profissionalId,resultado.dados,{sessaoExpiraEm});
+      const registros=new Map(dados.historicosComparacao!.map(r=>[r.respostaId,r]));
+      const comparacao={...compararRetornos(registros.get(selecionados[0])!,registros.get(selecionados[1])!),timezone};
+      if(Buffer.byteLength(JSON.stringify(comparacao))>LIMITE_BYTES)throw new BadRequestException('Comparação muito grande.');
+      return comparacao;
+    },true);
+  }
 
   async consultar(tenantId: string, questionarioId: string, usuario: UsuarioAutenticado, entrada: Record<string, unknown>): Promise<PaginaRespostasQuestionario> {
     const { cursor, ...filtros } = normalizarConsultaRespostas(entrada);
@@ -103,7 +121,7 @@ export class ServicoRespostasPaginadas {
     if (pacientes.length !== new Set(ids).size) throw new NotFoundException('Consulta indisponível. Atualize os filtros.');
   }
 
-  private async hidratar(m: EntityManager, tenantId: string, questionarioId: string, profissionalId: string | undefined, pagina: MetadadoResposta[]): Promise<{respostas: RespostaQuestionarioRecebida[]; perguntas: PerguntaResumo[]; incompativeis: Set<string>}> {
+  private async hidratar(m: EntityManager, tenantId: string, questionarioId: string, profissionalId: string | undefined, pagina: MetadadoResposta[], comparacao?:{sessaoExpiraEm?:Date}): Promise<{respostas: RespostaQuestionarioRecebida[]; perguntas: PerguntaResumo[]; incompativeis: Set<string>;historicosComparacao?:RetornoParaComparacao[]}> {
     if (!pagina.length) return {respostas:[],perguntas:[],incompativeis:new Set()};
     await this.travarPacientes(m, tenantId, profissionalId, pagina.map(r => r.pacienteId));
     // Same global resource order as historical reads: questionnaire → patients → sends → responses.
@@ -116,6 +134,7 @@ export class ServicoRespostasPaginadas {
       WHERE r.tenant_id=$1 AND r.id=ANY($2::uuid[]) AND e.questionario_id=$3 AND e.status='respondido' ORDER BY r.id FOR SHARE OF r`, [tenantId,ids,questionarioId]);
     const porId = new Map(bloqueados.map(r => [r.id,r]));
     if (pagina.some(r => { const atual=porId.get(r.id); return !atual || atual.pacienteId!==r.pacienteId || atual.envioId!==r.envioId || atual.finalizadoEm!==r.finalizadoEm; })) throw new ConflictException('A consulta mudou. Atualize antes de continuar.');
+    if(comparacao?.sessaoExpiraEm&&comparacao.sessaoExpiraEm.getTime()<=Date.now())throw new UnauthorizedException('Sessão encerrada.');
     const [volume] = await m.query(`SELECT (
       (SELECT COALESCE(sum(octet_length(valor::text)),0) FROM resposta_valores WHERE tenant_id=$1 AND resposta_checkin_id=ANY($2::uuid[])) +
       (SELECT COALESCE(sum(octet_length(snapshot_estrutura::text)),0) FROM envios_questionario WHERE tenant_id=$1 AND id=ANY($3::uuid[]))
@@ -126,9 +145,14 @@ export class ServicoRespostasPaginadas {
     const valores = await m.getRepository(RespostaValorOrm).find({where:{tenantId,respostaCheckinId:In(ids)}, select:{respostaCheckinId:true,perguntaId:true,valor:true},order:{id:'ASC'}});
     // Preserve the existing legacy fallback only for labels, never for historical completeness.
     const legadas = historicos.some(r=>!Array.isArray(r.snapshot?.perguntas));
-    const atuais = legadas ? await m.getRepository(PerguntaOrm).find({where:{tenantId,questionarioId},select:{id:true,enunciado:true,tipo:true},order:{ordem:'ASC',id:'ASC'}}) : [];
+    const atuais = legadas && !comparacao ? await m.getRepository(PerguntaOrm).find({where:{tenantId,questionarioId},select:{id:true,enunciado:true,tipo:true},order:{ordem:'ASC',id:'ASC'}}) : [];
     const porResposta = new Map<string, typeof valores>();
     for (const valor of valores) { const lista=porResposta.get(valor.respostaCheckinId) ?? []; lista.push(valor); porResposta.set(valor.respostaCheckinId,lista); }
+    if(comparacao)return {respostas:[],perguntas:[],incompativeis:new Set(),historicosComparacao:pagina.map(r=>({
+      respostaId:r.id,envioId:r.envioId,pacienteId:r.pacienteId,questionarioId,finalizadoEm:r.finalizadoEm??null,
+      snapshot:historicosPorId.get(r.envioId)?.snapshot??null,
+      valores:(porResposta.get(r.id)??[]).map(v=>({perguntaId:v.perguntaId,valor:v.valor})),
+    }))};
     const definicoes = new Map<string, PerguntaResumo>();
     const assinaturas = new Map<string,string>();
     const incompativeis = new Set<string>();

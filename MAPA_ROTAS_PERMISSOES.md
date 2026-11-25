@@ -314,3 +314,14 @@ As rotas legadas permanecem compatíveis; a nova página não usa o leitor integ
 | --- | --- | --- |
 | `GET /api/questionarios/[id]/agendamentos` | `GET /questionarios/:id/agendamentos` | Sessão e `questionarios.gerenciar`; paciente obrigatório, páginas25; backend revalida identidade/sessão/papel/questionário/carteira sob locks, allowlist sem ator interno; `private, no-store` |
 | `POST /api/questionarios/[id]/agendamentos/[agendamentoId]/comandos` | `POST /questionarios/:id/agendamentos/:agendamentoId/comandos` | Mesma permissão, origem própria, UUIDs e corpo limitado; pausar/retomar/reconfirmar com confirmação explícita e revisão esperada; CAS e auditoria transacional; não altera envios existentes nem concede acesso pelo ID |
+
+## QST10-10 — comparação profissional de dois retornos
+
+| BFF | Backend | Contrato de segurança |
+| --- | --- | --- |
+| `POST /api/questionarios/[id]/respostas/comparacao` | `POST /questionarios/:id/respostas/comparacao` | Sessão atual, `questionarios.ler`, origem própria e exatamente dois IDs distintos do mesmo paciente/questionário. Backend reautoriza identidade, sessão, profissional e carteira antes do conteúdo, com locks e limite de volume; BFF projeta allowlist privada `no-store`, sem snapshots, referências de anexos ou erros internos. |
+
+Usa somente as definições congeladas, sem preencher histórico pelo questionário
+atual. Consulta não grava revisão clínica nem modifica envios/respostas. A
+auditoria registra ação e recurso, sem valores nem par de respostas nos metadados.
+Não cria fluxo de comparação no portal, relatório ou exportação adicional.

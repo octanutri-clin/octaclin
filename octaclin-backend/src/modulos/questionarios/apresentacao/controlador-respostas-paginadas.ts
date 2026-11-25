@@ -1,3 +1,4 @@
+import { CompararRetornosDto } from '../aplicacao/dto-comparacao-retornos';
 import { BadRequestException, Body, Controller, Get, Header, HttpCode, Param, ParseUUIDPipe, Post, Query, Req, UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
 import { ServicoRespostasPaginadas } from '../aplicacao/servico-respostas-paginadas';
@@ -22,6 +23,18 @@ export class ControladorRespostasPaginadas {
   @Header('Cache-Control','private, no-store')
   consultar(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('id',ParseUUIDPipe) id: string, @Query() dados: ConsultaPaginaRespostasDto) {
     return this.respostas.consultar(usuario.tenantId,id,usuario,{...normalizarConsultaRespostas({...dados})});
+  }
+
+  @Post('questionarios/:id/respostas/comparacao')
+  @HttpCode(200)
+  @Header('Cache-Control','private, no-store')
+  async comparar(@UsuarioAtual() usuario:UsuarioAutenticado,@Param('id',ParseUUIDPipe) id:string,
+    @Body() dados:CompararRetornosDto,@Req() requisicao:Request){
+    const resultado=await this.respostas.comparar(usuario.tenantId,id,dados.pacienteId,dados.respostaIds,usuario);
+    await this.auditoria.registrar({tenantId:usuario.tenantId,usuarioId:usuario.usuarioId,
+      acao:'questionarios.respostas.comparar',recursoTipo:'questionario',recursoId:id,
+      ip:requisicao.ip,userAgent:requisicao.headers['user-agent']});
+    return resultado;
   }
 
   @Post('questionarios/:id/respostas/exportacao.csv')

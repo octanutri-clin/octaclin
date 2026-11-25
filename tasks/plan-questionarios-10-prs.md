@@ -163,3 +163,16 @@ aprovadas viram critérios verificáveis; novas funcionalidades continuam propos
 Recomendação: Solalto para autorização/worker/concorrência09 e fronteiras de
 segurança10; Solmédio para interface, documentação e ajustes delimitados após
 contratos estabilizados. Nenhuma troca manual de modelo foi realizada.
+
+## Checkpoint de implementação10 — 25/11/2026
+
+| Incremento | Evidência | Estado no checkpoint |
+| --- | --- | --- |
+| C1 domínio | 842672e; correçãoP2bbc7698;35testes | Implementado/PASS focal |
+| C2 consulta autorizada | 61c5587;63PG/10HTTP, locks/revogação/snapshot | Implementado/PASS focal |
+| C3 BFF/console | 55a420c;26BFF/28browserprodução local/build | Implementado/PASS focal |
+| C4 revisão e regressões | R4integral estática favorável, UXB/C/D,5685backendPASS/434SKIPPED | Evidências locais eauthzglobalPASS registrados; CI10 pendente |
+
+Escopo aprovado preservado. Não classificar gate pendente/SKIPPED comoPASS nem
+abrir nova implementação por este registro. Detalhes/histórico e próxima ação
+em `questionarios-10-comparacao-handoff.md`; resultados posteriores naPR própria.

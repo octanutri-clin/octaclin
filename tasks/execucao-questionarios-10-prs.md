@@ -1,4 +1,22 @@
 # Registro de execução — plan-questionarios-10-prs.md
+## Checkpoint da sequência — 25/11/2026
+
+09: PR591Draft, HEADcd68dde, base08 explícita;21checksSUCCESS eSBOMprovenance
+SKIPPED confirmados nesta rodada. Authzglobal09 terminouPASS posteriormente aos
+checkpoints abaixo. Nenhum merge executado.
+
+10: código55a420c salvo em origin, implementação utilizável de comparação de
+dois retornos no console, base09cd68dde. Domínio/API/BFF/UI, TDD, PostgreSQL/RLS,
+28/28browser produção local, build/types/lint e R4integral estática favorável.
+5685PASS/434SKIPPED no backendglobal; as provasPG pertinentes são separadas.
+UXB/C/D e authzglobalWeb PASS registrados. CI10NOTRUN antes da abertura; PR10 será
+abertaDraft após consolidar este checkpoint. Handoff10 é a fonte de detalhe.
+
+Os registros seguintes são históricos; estados pendentes de09/10 descritos neles
+não substituem este checkpoint e o handoff de cada entrega. Após a abertura, a
+descrição daPR registra resultados posteriores sem push meramente cosmético. Sem alterações FOOD06.
+
+## Histórico de execução
 
 ## Integração da PR02 #584 — checkpoint25/11/2026
 

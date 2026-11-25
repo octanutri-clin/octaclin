@@ -620,4 +620,114 @@ suite('QST-P05 — PostgreSQL descartável, runtime e FORCE RLS', () => {
     });
   });
 
+  describe('QST10-10 comparação autorizada e congelada',()=>{
+    const leitor=()=>new ServicoRespostasPaginadas(servico,new CriptografiaDadosSensiveis());
+    async function par(){
+      const {paciente,resposta}=await prepararRetornoHistorico();const respostaB=randomUUID(),envioB=randomUUID();
+      const snapshot={versaoQuestionario:1,titulo:'Histórico sintético',perguntas:[
+        {id:origemId,enunciado:'Medida congelada',tipo:'metrica',obrigatoria:true,configuracao:{unidade:'kg',minimo:0,maximo:200,passo:0.1},opcoes:[]},
+        {id:finalId,enunciado:'Condição congelada',tipo:'sim_nao',obrigatoria:true,configuracao:{},opcoes:[]},
+      ]};
+      await admin.query('update envios_questionario set snapshot_estrutura=$1 where id=$2',[JSON.stringify(snapshot),envioId]);
+      await admin.query("update respostas_checkin set finalizado_em='2026-01-01T12:00:00Z' where id=$1",[resposta]);
+      await admin.query("insert into envios_questionario(id,tenant_id,questionario_id,paciente_id,status,snapshot_estrutura) values($1,$2,$3,$4,'respondido',$5)",[envioB,tenant,questionarioId,paciente,JSON.stringify({...snapshot,versaoQuestionario:2})]);
+      await admin.query("insert into respostas_checkin(id,tenant_id,paciente_id,envio_questionario_id,finalizado_em) values($1,$2,$3,$4,'2026-02-01T12:00:00Z')",[respostaB,tenant,paciente,envioB]);
+      await admin.query("insert into resposta_valores(tenant_id,resposta_checkin_id,pergunta_id,valor) values($1,$2,$3,'2'),($1,$2,$4,'true')",[tenant,respostaB,origemId,finalId]);
+      return {paciente,resposta,respostaB,envioB,ids:[resposta,respostaB]};
+    }
+    it('compara duas respostas exatas, preserva zero/falso e ignora modelo atual sem escrever histórico',async()=>{
+      const p=await par();const antes=(await admin.query('select * from envios_questionario order by id')).rows;
+      const valoresAntes=(await admin.query('select * from resposta_valores order by id')).rows;
+      await admin.query("update perguntas set enunciado='Modelo atual não deve ser usado',configuracao='{}'");
+      const r=await leitor().comparar(tenant,questionarioId,p.paciente,p.ids,ator);
+      expect(r.a.respostaId).toBe(p.resposta);expect(r.b.respostaId).toBe(p.respostaB);
+      expect(r.itens.find(i=>i.perguntaId===origemId)).toMatchObject({enunciadoA:'Medida congelada',a:{valor:0},b:{valor:2},delta:2,compativel:true});
+      expect(r.itens.find(i=>i.perguntaId===finalId)).toMatchObject({a:{valor:false},b:{valor:true},delta:null});
+      expect((await admin.query('select * from envios_questionario order by id')).rows).toEqual(antes);
+      expect((await admin.query('select * from resposta_valores order by id')).rows).toEqual(valoresAntes);
+    });
+    it('snapshot ausente não utiliza rótulo/configuração do modelo atual',async()=>{
+      const p=await par();await admin.query('update envios_questionario set snapshot_estrutura=null where id=$1',[envioId]);
+      const r=await leitor().comparar(tenant,questionarioId,p.paciente,p.ids,ator);
+      expect(r.itens.find(i=>i.perguntaId===origemId)).toMatchObject({enunciadoA:null,motivo:'snapshot_ausente',delta:null});
+      expect(JSON.stringify(r)).not.toContain('Pergunta sintética salva');
+    });
+    it('outro tenant, paciente e questionário não adquirem acesso pelos IDs selecionados',async()=>{
+      const p=await par();
+      await expect(leitor().comparar(outroTenant,questionarioId,p.paciente,p.ids,{...ator,tenantId:outroTenant})).rejects.toBeInstanceOf(NotFoundException);
+      await expect(leitor().comparar(tenant,questionarioId,randomUUID(),p.ids,ator)).rejects.toBeInstanceOf(NotFoundException);
+      await expect(leitor().comparar(tenant,randomUUID(),p.paciente,p.ids,ator)).rejects.toBeInstanceOf(NotFoundException);
+    });
+    it.each(['identidade','sessao','papel'] as const)('revalida %s atual antes do conteúdo',async tipo=>{
+      const p=await par();
+      if(tipo==='identidade')await admin.query('update usuarios set ativo=false where id=$1',[usuarioId]);
+      if(tipo==='sessao')await admin.query('update sessoes_usuario set revogado_em=now() where id=$1',[sessaoId]);
+      if(tipo==='papel')await admin.query("update usuarios set role='Patient' where id=$1",[usuarioId]);
+      await expect(leitor().comparar(tenant,questionarioId,p.paciente,p.ids,ator)).rejects.toBeInstanceOf(UnauthorizedException);
+    });
+    it('profissional de outra carteira não consegue comparar',async()=>{
+      const p=await par();await admin.query('update pacientes set profissional_responsavel_id=$1 where id=$2',[randomUUID(),p.paciente]);
+      await expect(leitor().comparar(tenant,questionarioId,p.paciente,p.ids,ator)).rejects.toBeInstanceOf(NotFoundException);
+    });
+    it('não amplia permissões de Patient nem estreita leitura tenant-wide de Collaborator',async()=>{
+      const p=await par();await admin.query("update usuarios set role='Patient' where id=$1",[usuarioId]);
+      await expect(leitor().comparar(tenant,questionarioId,p.paciente,p.ids,{...ator,papel:'Patient'})).rejects.toBeInstanceOf(ForbiddenException);
+      await admin.query("update usuarios set role='Collaborator' where id=$1",[usuarioId]);
+      expect((await leitor().comparar(tenant,questionarioId,p.paciente,p.ids,{...ator,papel:'Collaborator'})).itens).toHaveLength(2);
+    });
+    it('transferência que confirma antes do lock impede leitura dos dois retornos',async()=>{
+      const p=await par(),trava=runtime.createQueryRunner();await trava.connect();await trava.startTransaction();
+      let pendente:Promise<PromiseSettledResult<unknown>[]>|undefined;
+      try{
+        await trava.query("select set_config('app.tenant_id',$1,true)",[tenant]);
+        await trava.query('update pacientes set profissional_responsavel_id=$1 where id=$2',[randomUUID(),p.paciente]);
+        pendente=Promise.allSettled([leitor().comparar(tenant,questionarioId,p.paciente,p.ids,ator)]);
+        await aguardarBloqueados(1);await trava.commitTransaction();const [r]=await pendente;
+        expect(r.status).toBe('rejected');if(r.status==='rejected')expect(r.reason).toBeInstanceOf(NotFoundException);
+      }finally{if(trava.isTransactionActive)await trava.rollbackTransaction();await trava.release();await pendente;}
+    });
+    it('revogação durante a espera pelo questionário é revalidada depois do lock',async()=>{
+      const p=await par(),trava=runtime.createQueryRunner();await trava.connect();await trava.startTransaction();
+      let pendente:Promise<PromiseSettledResult<unknown>[]>|undefined;
+      try{
+        await trava.query("select set_config('app.tenant_id',$1,true)",[tenant]);
+        await trava.query('select id from questionarios where id=$1 for update',[questionarioId]);
+        pendente=Promise.allSettled([leitor().comparar(tenant,questionarioId,p.paciente,p.ids,ator)]);
+        await aguardarBloqueados(1);await trava.query('update usuarios set ativo=false where id=$1',[usuarioId]);
+        await trava.commitTransaction();const [r]=await pendente;
+        expect(r.status).toBe('rejected');if(r.status==='rejected')expect(r.reason).toBeInstanceOf(UnauthorizedException);
+      }finally{if(trava.isTransactionActive)await trava.rollbackTransaction();await trava.release();await pendente;}
+    });
+    it('não aceita duplicatas, terceiros ou dois pacientes na mesma seleção',async()=>{
+      const p=await par();
+      for(const ids of [[p.resposta,p.resposta],[...p.ids,randomUUID()],['invalido',p.resposta]])
+        await expect(leitor().comparar(tenant,questionarioId,p.paciente,ids,ator)).rejects.toBeInstanceOf(BadRequestException);
+      const outroPaciente=randomUUID();await admin.query('insert into pacientes(id,tenant_id,profissional_responsavel_id) values($1,$2,$3)',[outroPaciente,tenant,profissionalId]);
+      await admin.query('update envios_questionario set paciente_id=$1 where id=$2',[outroPaciente,p.envioB]);
+      await admin.query('update respostas_checkin set paciente_id=$1 where id=$2',[outroPaciente,p.respostaB]);
+      await expect(leitor().comparar(tenant,questionarioId,p.paciente,p.ids,ator)).rejects.toBeInstanceOf(NotFoundException);
+    });
+    it('outro profissional do mesmo tenant não recebe o questionário pelos IDs',async()=>{
+      const p=await par();await admin.query('update questionarios set profissional_id=$1 where id=$2',[randomUUID(),questionarioId]);
+      await expect(leitor().comparar(tenant,questionarioId,p.paciente,p.ids,ator)).rejects.toBeInstanceOf(NotFoundException);
+    });
+    it('sessão que vence enquanto aguarda paciente não materializa comparação',async()=>{
+      const p=await par(),trava=runtime.createQueryRunner();await trava.connect();await trava.startTransaction();
+      let pendente:Promise<PromiseSettledResult<unknown>[]>|undefined;let relogio:jest.SpiedFunction<typeof Date.now>|undefined;
+      try{
+        await trava.query("select set_config('app.tenant_id',$1,true)",[tenant]);
+        await trava.query('select id from pacientes where id=$1 for update',[p.paciente]);
+        pendente=Promise.allSettled([leitor().comparar(tenant,questionarioId,p.paciente,p.ids,ator)]);
+        await aguardarBloqueados(1);relogio=jest.spyOn(Date,'now').mockReturnValue(Date.parse('2099-01-01T12:00:00Z'));
+        await trava.commitTransaction();const [r]=await pendente;
+        expect(r.status).toBe('rejected');if(r.status==='rejected')expect(r.reason).toBeInstanceOf(UnauthorizedException);
+      }finally{relogio?.mockRestore();if(trava.isTransactionActive)await trava.rollbackTransaction();await trava.release();await pendente;}
+    });
+    it('QST10-10 informa o fuso clínico resolvido no servidor para as datas do par',async()=>{
+      const p=await par();
+      await admin.query(`insert into tenant_configuracoes(tenant_id,chave,valor) values($1,'conta_cliente','{"timezone":"Europe/Lisbon"}')`,[tenant]);
+      expect(await leitor().comparar(tenant,questionarioId,p.paciente,p.ids,ator)).toHaveProperty('timezone','Europe/Lisbon');
+    });
+
+  });
 });

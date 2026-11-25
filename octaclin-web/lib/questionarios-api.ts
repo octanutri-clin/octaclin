@@ -560,3 +560,10 @@ export function comandarAgendamentoQuestionario(questionarioId:string,agendament
     method:'POST',body:JSON.stringify({pacienteId:agendamento.pacienteId,acao,revisaoEsperada:agendamento.revisao,confirmar:true}),
   });
 }
+
+export type ComparacaoRetornosApi = ReturnType<typeof import('./server/questionarios-comparacao-bff').projetarComparacaoQst>;
+export function compararRetornosQuestionario(questionarioId: string, pacienteId: string, respostaIds: string[]) {
+  return requisitar<ComparacaoRetornosApi>(`/api/questionarios/${encodeURIComponent(questionarioId)}/respostas/comparacao`, {
+    method: 'POST', body: JSON.stringify({ pacienteId, respostaIds }),
+  });
+}
