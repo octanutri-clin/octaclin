@@ -36,3 +36,38 @@ seleção de2 em memória entre páginas, UI comparativa, UXB/C e R4 próprios.
 
 Semmerge/deploy/DDLexterna ou alterações FOOD06/Claude. Não chamarC1 entrega10
 concluída. Preservar09 e CI sem integrar alterações silenciosamente.
+
+## C2 — API/leitura autorizada implementada; interface ainda pendente
+
+Novo POSTquestionarios/:id/respostas/comparacao, permissãoquestionarios.ler,
+paciente explícito e exatamente2IDs; DTO/pipe rejeitam extras e tipos inválidos.
+Selecionar/hidratar08 reutilizados com limites/locks/volume antes dos valores;
+modo comparação usa exclusivamente snapshots congelados e não calcula resumos
+ou consulta definição atual. Metadados mínimos até autorização atual; depois
+identidade/sessão/profissional/paciente/envios/respostas na ordem compartilhada.
+Prazo da sessão conferido depois de esperas antes do conteúdo e antes de retornar.
+A verificação de ator09 foi extraída sem mudar sua política; modo legado08 intacto.
+Auditoria da comparação registra ação/recurso, nunca respostas ou IDsdo par em
+metadados; leitura não marca revisado nem altera snapshots/respostas.
+
+TDD:8falhas funcionais com método ainda indisponível; seleções iniciais também
+incluíam barreiras sem operação implementada (não sãoRED de concorrência).
+GREEN inicial10PG; após3casos adicionais e correção de escopo da fixture:
+62/62PG =49regressões07/08/P05 +13novos. Transferência/revogação com barreiras,
+expiração enquanto aguarda paciente, contexto cruzado e memória histórica
+inalterada comprovados em runtimeNOBYPASS/FORCERLS. Sem schema novo ou banco
+externo. Outra seleção após reinício:24PGrecorrências+67serviço+33domínioPASS;
+o arquivoPG falhou por erro de escopo dos3testes novos, não por função do produto.
+O escopo foi corrigido sem remover assertions, resultando62/62 acima.
+
+HTTP10/10PASS (6antigos+4novos):DTO/guardas/privacidade/auditoria. Uma expectativa
+inicial de nenhuma auditoria de negação estava errada; corrigida para exigir as2
+entradasauth.autorizacao.negada e nenhuma chamada ao leitor. Não desabilitar
+ou omitir auditoria legítima para fazer o teste passar. TypecheckNode22PASS;
+redação de auditoria/diff/secretsPASS. Build/backend/revisãoR4 têm estado separado.
+
+Em25/11 oCI591cd68dde concluiu21SUCCESS/1SKIP(SBOMprovenance), inclusive step
+RLS/Testcontainers do run45399556076/job138464718545. PRbody atualizada somente,
+sem commit cosmético/restartCI; permaneceDraft, semmerge/deploy/operação externa.
+PróximoC3: BFF/seleção2 por contexto em memória e interface, sem modelo atual
+substituindo histórico, UXB/C sobre UI executada e R4 integral10 antes de concluir.

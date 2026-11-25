@@ -1,3 +1,4 @@
+import { revalidarAtorQuestionarios } from './acesso-questionarios';
 import { autorizarContextoAgendamento, projetarAgendamento } from './acesso-agendamento';
 import { AcaoAgendamento, planejarComandoAgendamento } from '../dominio/estado-agendamento';
 import { registrarAuditoriaNaTransacao } from '../../../infraestrutura/auditoria/servico-auditoria';
@@ -983,18 +984,28 @@ export class ServicoQuestionarios {
 
   /** Internal transaction boundary for bounded readers. Authorization is never conveyed by a cursor. */
   async lerQuestionarioAutorizado<T>(tenantId: string, questionarioId: string, usuario: UsuarioAutenticado,
-    ler: (gerenciador: EntityManager, profissionalId: string | undefined) => Promise<T>): Promise<T> {
+    ler: (gerenciador: EntityManager, profissionalId: string | undefined, sessaoExpiraEm?:Date) => Promise<T>, sessaoAtual=false): Promise<T> {
     return this.executorTenant.executar(tenantId, async gerenciador => {
-      await this.garantirQuestionarioDoProfissional(gerenciador, tenantId, questionarioId, usuario, 'pessimistic_read');
+      let metadado:Pick<QuestionarioOrm,'id'|'profissionalId'>|null=null;
+      let sessaoExpiraEm:Date|undefined;
+      if(sessaoAtual){
+        // Metadata mínima enquanto espera. Só depois resolver identidade atual e conteúdo.
+        metadado=await gerenciador.getRepository(QuestionarioOrm).findOne({where:{id:questionarioId,tenantId},
+          select:{id:true,profissionalId:true},lock:{mode:'pessimistic_read'}});
+        if(!metadado)throw new NotFoundException('Questionário indisponível.');
+        ({sessaoExpiraEm}=await revalidarAtorQuestionarios(gerenciador,tenantId,usuario.usuarioId,'questionarios.ler',usuario));
+      }else await this.garantirQuestionarioDoProfissional(gerenciador, tenantId, questionarioId, usuario, 'pessimistic_read');
       const profissionalId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
       if (profissionalId) {
         const profissional = await gerenciador.getRepository(ProfissionalOrm).findOne({
           where: {id: profissionalId, tenantId, usuarioId: usuario.usuarioId, arquivadoEm: IsNull()},
           select: {id: true}, lock: {mode: 'pessimistic_read'}
         });
-        if (!profissional) throw new NotFoundException('Questionário indisponível.');
+        if (!profissional || (metadado && metadado.profissionalId!==profissionalId)) throw new NotFoundException('Questionário indisponível.');
       }
-      return ler(gerenciador, profissionalId);
+      const resultado=await ler(gerenciador, profissionalId,sessaoExpiraEm);
+      if(sessaoExpiraEm&&sessaoExpiraEm.getTime()<=Date.now())throw new UnauthorizedException('Sessão encerrada.');
+      return resultado;
     });
   }
 

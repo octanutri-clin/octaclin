@@ -1,10 +1,8 @@
+import { revalidarAtorQuestionarios } from './acesso-questionarios';
 import { resolverProximaExecucao } from '../dominio/proxima-execucao';
-import { ForbiddenException, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { EntityManager, IsNull } from 'typeorm';
-import { possuiPermissao } from '../../auth/dominio/permissoes';
 import type { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
-import { SessaoUsuarioOrm } from '../../auth/infraestrutura/sessao-usuario.orm';
-import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { QuestionarioOrm } from '../infraestrutura/questionario.orm';
@@ -21,22 +19,9 @@ export async function autorizarContextoAgendamento(
 ): Promise<void> {
   const q = await m.getRepository(QuestionarioOrm).findOne({where:{id:questionarioId,tenantId},select:{id:true,profissionalId:true},lock:{mode:'pessimistic_read'}});
   if (!q) throw new NotFoundException('Agendamento não disponível.');
-  const identidade = await m.getRepository(UsuarioOrm).findOne({where:{id:atorId,tenantId,ativo:true},select:{id:true,role:true},lock:{mode:'pessimistic_read'}});
-  if (!identidade || (usuario && (usuario.tenantId !== tenantId || identidade.role !== usuario.papel))) {
-    throw new UnauthorizedException('Acesso alterado. Confira sua autorização.');
-  }
-  if (!['SuperAdmin','Professional','Collaborator','Patient','Client'].includes(identidade.role)
-    || !possuiPermissao(identidade.role,'questionarios.gerenciar')) throw new ForbiddenException('Sem permissão para gerenciar agendamentos.');
-  // A única concessão dinâmica vigente é restricoes.confirmar; não amplia esta permissão.
-  let sessaoExpiraEm: Date | undefined;
-  if (usuario) {
-    if (!usuario.sessaoId) throw new UnauthorizedException('Sessão não disponível.');
-    const sessao = await m.getRepository(SessaoUsuarioOrm).findOne({where:{id:usuario.sessaoId,tenantId,usuarioId:atorId,revogadoEm:IsNull()},select:{id:true,expiraEm:true},lock:{mode:'pessimistic_read'}});
-    if (!sessao || sessao.expiraEm.getTime() <= Date.now()) throw new UnauthorizedException('Sessão encerrada.');
-    sessaoExpiraEm=sessao.expiraEm;
-  }
+  const {papel,sessaoExpiraEm}=await revalidarAtorQuestionarios(m,tenantId,atorId,'questionarios.gerenciar',usuario);
   let profissionalId: string | undefined;
-  if (identidade.role === 'Professional') {
+  if (papel === 'Professional') {
     const p = await m.getRepository(ProfissionalOrm).findOne({where:{tenantId,usuarioId:atorId,arquivadoEm:IsNull()},select:{id:true},lock:{mode:'pessimistic_read'}});
     if (!p || p.id !== q.profissionalId) throw new NotFoundException('Agendamento não disponível.');
     profissionalId = p.id;

@@ -10,16 +10,16 @@ import { ServicoRespostasPaginadas } from '../aplicacao/servico-respostas-pagina
 describe('QST10-08 consulta e exportação limitadas', () => {
   let app: INestApplication, url: string;
   const id='00000000-0000-4000-8000-000000000001', respostaId='00000000-0000-4000-8000-000000000002';
-  const consultar=jest.fn(),exportar=jest.fn(),registrar=jest.fn();
+  const consultar=jest.fn(),exportar=jest.fn(),comparar=jest.fn(),registrar=jest.fn();
   const headers=(papel='Professional',permissao='questionarios.ler')=>({'x-papel':papel,'x-permissao':permissao});
   beforeAll(async()=>{
     const modulo=await Test.createTestingModule({controllers:[ControladorRespostasPaginadas],providers:[
-      {provide:ServicoRespostasPaginadas,useValue:{consultar,exportar}}, {provide:ServicoAuditoria,useValue:{registrar}}
+      {provide:ServicoRespostasPaginadas,useValue:{consultar,exportar,comparar}}, {provide:ServicoAuditoria,useValue:{registrar}}
     ]}).overrideGuard(GuardaJwt).useValue({canActivate(c:ExecutionContext){const r=c.switchToHttp().getRequest();if(!r.headers['x-papel'])throw new UnauthorizedException();r.usuarioAutenticado={tenantId:id,usuarioId:id,papel:r.headers['x-papel'],permissoes:[r.headers['x-permissao']]};return true;}}).compile();
     app=modulo.createNestApplication({logger:false});app.useGlobalPipes(criarPipeValidacaoHttp());await app.listen(0,'127.0.0.1');url=`http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`;
   });
   afterAll(async()=>{await app?.close();});
-  beforeEach(()=>{jest.resetAllMocks();consultar.mockResolvedValue({respostas:[],totalConsulta:0,proximoCursor:null,timezone:'America/Sao_Paulo'});exportar.mockResolvedValue('respostaId,pacienteId\n');});
+  beforeEach(()=>{jest.resetAllMocks();comparar.mockResolvedValue({questionarioId:id,pacienteId:id,itens:[]});consultar.mockResolvedValue({respostas:[],totalConsulta:0,proximoCursor:null,timezone:'America/Sao_Paulo'});exportar.mockResolvedValue('respostaId,pacienteId\n');});
   const caminho=`/questionarios/${id}/respostas/pagina`;
   it('consulta privada com filtros normalizados',async()=>{
     const r=await fetch(url+caminho+'?tamanho=50&inicio=2026-11-01',{headers:headers()});
@@ -52,4 +52,36 @@ describe('QST10-08 consulta e exportação limitadas', () => {
   it('não audita sucesso diante de revogação ou falha',async()=>{
     consultar.mockRejectedValue(new NotFoundException());expect((await fetch(url+caminho,{headers:headers()})).status).toBe(404);expect(registrar).not.toHaveBeenCalled();
   });
+  const comparacao=`/questionarios/${id}/respostas/comparacao`;
+  const idsComparacao=[respostaId,'00000000-0000-4000-8000-000000000003'];
+  it('QST10-10 comparação privada recebe apenas dois IDs e paciente explícito e audita acesso sem conteúdo',async()=>{
+    const r=await fetch(url+comparacao,{method:'POST',headers:{...headers(),'content-type':'application/json'},body:JSON.stringify({pacienteId:id,respostaIds:idsComparacao})});
+    expect(r.status).toBe(200);expect(r.headers.get('cache-control')).toContain('no-store');
+    expect(comparar).toHaveBeenCalledWith(id,id,id,idsComparacao,expect.objectContaining({tenantId:id,papel:'Professional'}));
+    expect(registrar).toHaveBeenCalledWith(expect.objectContaining({acao:'questionarios.respostas.comparar',recursoId:id}));
+    expect(registrar.mock.calls[0][0]).not.toHaveProperty('metadados');
+  });
+  it('QST10-10 exige sessão, papel e permissão antes do serviço',async()=>{
+    for(const [h,status]of [[{},401],[headers('Patient'),403],[headers('Professional','dashboard.ler'),403]]as const){
+      expect((await fetch(url+comparacao,{method:'POST',headers:{...h,'content-type':'application/json'},body:JSON.stringify({pacienteId:id,respostaIds:idsComparacao})})).status).toBe(status);
+    }
+    expect(comparar).not.toHaveBeenCalled();
+    expect(registrar.mock.calls.map(([evento])=>evento.acao)).toEqual(['auth.autorizacao.negada','auth.autorizacao.negada']);
+  });
+  it('QST10-10 rejeita limites, duplicatas, tipos e capacidades extras no corpo',async()=>{
+    for(const corpo of [{pacienteId:id,respostaIds:[]},{pacienteId:id,respostaIds:[respostaId]},
+      {pacienteId:id,respostaIds:[...idsComparacao,id]},{pacienteId:id,respostaIds:[id,id]},
+      {pacienteId:id,respostaIds:['invalido',respostaId]},{pacienteId:'invalido',respostaIds:idsComparacao},
+      {pacienteId:id,respostaIds:idsComparacao,tenantId:id},{pacienteId:id,respostaIds:idsComparacao,usuarioId:id},
+      {pacienteId:id,respostaIds:[null,respostaId]}]){
+      expect((await fetch(url+comparacao,{method:'POST',headers:{...headers(),'content-type':'application/json'},body:JSON.stringify(corpo)})).status).toBe(400);
+    }
+    expect(comparar).not.toHaveBeenCalled();
+  });
+  it('QST10-10 não registra sucesso se o acesso foi revogado entre seleção e leitura',async()=>{
+    comparar.mockRejectedValue(new NotFoundException());
+    expect((await fetch(url+comparacao,{method:'POST',headers:{...headers(),'content-type':'application/json'},body:JSON.stringify({pacienteId:id,respostaIds:idsComparacao})})).status).toBe(404);
+    expect(registrar).not.toHaveBeenCalled();
+  });
+
 });
