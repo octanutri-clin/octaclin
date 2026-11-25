@@ -15,6 +15,7 @@ import {
 import { assinarOperacoesSincronizadas, ehFalhaDeRede } from '@/lib/pwa-private-queue';
 import { Botao } from '@/components/ui/botao';
 import { Campo } from '@/components/ui/campo';
+import { Modal } from '@/components/ui/modal';
 
 interface Props {
   token: string;
@@ -56,6 +57,21 @@ function formatarExpiracao(valor: string) {
   }).format(data);
 }
 
+function focarPergunta(id: string) {
+  const grupo = document.getElementById(`formulario-pergunta-${id}`);
+  const campo = grupo?.querySelector<HTMLElement>('input:not(:disabled), textarea:not(:disabled), select:not(:disabled), button:not(:disabled)');
+  (campo ?? grupo)?.focus(); grupo?.scrollIntoView({ block: 'center' });
+}
+
+function respostaParaConferencia(pergunta: PerguntaFormularioPublico, valor: ValorResposta | undefined) {
+  if (!valorPreenchido(valor)) return 'Sem resposta';
+  if (pergunta.tipo === 'upload_midia' && Array.isArray(valor)) return `${valor.length} ${valor.length === 1 ? 'arquivo anexado' : 'arquivos anexados'}`;
+  if (typeof valor === 'boolean') return texto(pergunta.configuracao, valor ? 'rotuloSim' : 'rotuloNao', valor ? 'Sim' : 'Não');
+  if (pergunta.tipo === 'multipla_escolha') return (Array.isArray(valor) ? valor : [String(valor)]).map(item => pergunta.opcoes.find(opcao => opcao.valor === item)?.rotulo ?? 'Opção indisponível').join(', ');
+  if (typeof valor === 'number') return Number.isFinite(valor) ? `${new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 20 }).format(valor)}${texto(pergunta.configuracao, 'unidade') ? ` ${texto(pergunta.configuracao, 'unidade')}` : ''}` : 'Valor indisponível';
+  return String(valor);
+}
+
 export function FormularioPacientePublico({ token }: Props) {
   const secoesId = useId();
   const [formulario, setFormulario] = useState<FormularioPublico | null>(null);
@@ -67,9 +83,18 @@ export function FormularioPacientePublico({ token }: Props) {
   useEffect(() => { if (pedidoFoco) resumoPendenciasRef.current?.focus(); }, [pedidoFoco]);
   const [mensagemErroCarregamento, setMensagemErroCarregamento] = useState<string | null>(null);
   const [enviado, setEnviado] = useState(false);
+  const [revisando, setRevisando] = useState(false);
+  const destinoEdicaoRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!revisando && destinoEdicaoRef.current) {
+      focarPergunta(destinoEdicaoRef.current);
+      destinoEdicaoRef.current = null;
+    }
+  }, [revisando]);
   const [envioPendente, setEnvioPendente] = useState(false);
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
+  const [uploadsPendentes, setUploadsPendentes] = useState<Set<string>>(() => new Set());
   const [estadoRascunho, setEstadoRascunho] = useState<'inativo' | 'salvando' | 'salvo' | 'offline' | 'erro'>('inativo');
   const [houveEdicao, setHouveEdicao] = useState(false);
   const versaoRascunhoRef = useRef(0);
@@ -126,12 +151,6 @@ export function FormularioPacientePublico({ token }: Props) {
   const obrigatoriasRespondidas = perguntasObrigatorias.filter((pergunta) => valorPreenchido(respostas[pergunta.id])).length;
   const pendencias = tentouEnviar ? perguntasObrigatorias.filter(pergunta => !valorPreenchido(respostas[pergunta.id])) : [];
 
-  function focarPergunta(id: string) {
-    const grupo = document.getElementById(`formulario-pergunta-${id}`);
-    const campo = grupo?.querySelector<HTMLElement>('input:not(:disabled), textarea:not(:disabled), select:not(:disabled), button:not(:disabled)');
-    (campo ?? grupo)?.focus();
-    grupo?.scrollIntoView({ block: 'center' });
-  }
 
   const montarRespostas = useCallback((valores: Record<string, ValorResposta>) => (
     (formulario?.perguntas ?? [])
@@ -212,7 +231,7 @@ export function FormularioPacientePublico({ token }: Props) {
   }
 
   async function enviar() {
-    if (!formulario) return;
+    if (!formulario || salvando || uploadsPendentes.size > 0) return;
 
     const obrigatoriaPendente = formulario.perguntas.find((pergunta) => pergunta.obrigatoria && !valorPreenchido(respostas[pergunta.id]));
     if (obrigatoriaPendente) {
@@ -368,6 +387,12 @@ export function FormularioPacientePublico({ token }: Props) {
                 <CampoPergunta
                   key={pergunta.id}
                   pergunta={pergunta}
+                  bloqueado={salvando}
+                  aoEstadoUpload={pendente => setUploadsPendentes(atuais => {
+                    const proximos = new Set(atuais);
+                    if (pendente) proximos.add(pergunta.id); else proximos.delete(pergunta.id);
+                    return proximos;
+                  })}
                   pendente={pendencias.some(item => item.id === pergunta.id)}
                   valor={respostas[pergunta.id]}
                   aoAlterar={(valor) => atualizarResposta(pergunta.id, valor)}
@@ -379,12 +404,29 @@ export function FormularioPacientePublico({ token }: Props) {
             </div>
           ))}
 
-          <Botao type="button" variante="primario" className="h-11" onClick={() => void enviar()} disabled={salvando}>
+          <p className="text-xs text-texto-suave">Você pode revisar suas respostas antes de enviar. A revisão é opcional.</p>
+          <Botao type="button" onClick={() => setRevisando(true)} disabled={salvando || uploadsPendentes.size > 0}>Revisar respostas</Botao>
+          <Botao type="button" variante="primario" className="h-11" onClick={() => void enviar()} disabled={salvando || uploadsPendentes.size > 0}>
             <Send className="h-4 w-4" />
             {salvando ? 'Enviando' : 'Enviar respostas'}
           </Botao>
         </section>
       </section>
+      <Modal aberto={revisando} aoFechar={() => { if (!salvando) setRevisando(false); }} titulo="Conferir respostas" descricao="Confira e, se precisar, volte para editar. Suas respostas ainda não foram enviadas.">
+        <div className="grid min-w-0 gap-3">
+          {formulario.perguntas.map(pergunta => (
+            <section key={pergunta.id} className="min-w-0 rounded-md border border-linha p-3">
+              <h3 className="font-semibold">{pergunta.enunciado}</h3>
+              <p className="whitespace-pre-wrap text-sm [overflow-wrap:anywhere]">{respostaParaConferencia(pergunta, respostas[pergunta.id])}</p>
+              <Botao type="button" tamanho="sm" aria-label={`Editar: ${pergunta.enunciado}`} onClick={() => { destinoEdicaoRef.current = pergunta.id; setRevisando(false); }}>Editar</Botao>
+            </section>
+          ))}
+          <div className="flex flex-wrap gap-2">
+            <Botao type="button" onClick={() => setRevisando(false)} disabled={salvando}>Voltar ao formulário</Botao>
+            <Botao type="button" variante="primario" onClick={() => { setRevisando(false); void enviar(); }} disabled={salvando || uploadsPendentes.size > 0}>Confirmar envio</Botao>
+          </div>
+        </div>
+      </Modal>
     </main>
   );
 }
@@ -392,6 +434,8 @@ export function FormularioPacientePublico({ token }: Props) {
 function CampoPergunta({
   pergunta,
   pendente,
+  bloqueado,
+  aoEstadoUpload,
   valor,
   aoAlterar,
   aoAlternarCheckbox,
@@ -400,6 +444,8 @@ function CampoPergunta({
 }: {
   pergunta: PerguntaFormularioPublico;
   pendente?: boolean;
+  bloqueado?: boolean;
+  aoEstadoUpload: (pendente: boolean) => void;
   valor?: ValorResposta;
   aoAlterar: (valor: ValorResposta) => void;
   aoAlternarCheckbox: (valor: string) => void;
@@ -410,7 +456,7 @@ function CampoPergunta({
   const [enviandoArquivos, setEnviandoArquivos] = useState(false);
 
   return (
-    <fieldset id={`formulario-pergunta-${pergunta.id}`} tabIndex={-1} aria-invalid={pendente || undefined} aria-describedby={pendente ? `pendencia-${pergunta.id}` : undefined} className="grid gap-3 rounded-md border border-linha bg-superficie p-4">
+    <fieldset id={`formulario-pergunta-${pergunta.id}`} disabled={bloqueado} tabIndex={-1} aria-invalid={pendente || undefined} aria-describedby={pendente ? `pendencia-${pergunta.id}` : undefined} className="grid gap-3 rounded-md border border-linha bg-superficie p-4">
       <legend className="text-base font-semibold text-tinta">
         {pergunta.enunciado}
         {pergunta.obrigatoria ? <span className="ml-1 text-perigo">*</span> : null}
@@ -521,6 +567,7 @@ function CampoPergunta({
               const arquivos = Array.from(event.target.files ?? []);
               if (!arquivos.length) return;
               setEnviandoArquivos(true);
+              aoEstadoUpload(true);
               aoErro(null);
               try {
                 aoAlterar(await aoEnviarArquivos(arquivos));
@@ -529,6 +576,7 @@ function CampoPergunta({
                 aoErro(mensagemSeguraOuGenerica(erroAtual, 'Não foi possível enviar o arquivo agora. Tente novamente.'));
               } finally {
                 setEnviandoArquivos(false);
+                aoEstadoUpload(false);
               }
             }}
             className="min-h-11 w-full rounded-md border border-linha bg-white px-3 py-2 text-sm"

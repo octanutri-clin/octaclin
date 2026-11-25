@@ -59,6 +59,36 @@ async function prepararFormulario(page) {
   return { respostaFinal: () => respostaFinal };
 }
 
+async function prepararUploadFormulario(page, espera = Promise.resolve()) {
+    let respostaFinal = null;
+    await page.route('**/api/formularios/token-upload', async (route) => {
+      if (route.request().method() !== 'GET') return route.fallback();
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+        envioId: 'envio-1', titulo: 'Envio de exame', status: 'enviado', rascunhoVersao: 0, respostasRascunho: [],
+        perguntas: [{ id: perguntaUploadId, tipo: 'upload_midia', enunciado: 'Anexe o exame', obrigatoria: true, configuracao: { tiposAceitos: ['application/pdf'], maxArquivos: 1 }, opcoes: [], ordem: 1 }]
+      }) });
+    });
+    await page.route('**/api/formularios/token-upload/anexos', async (route) => {
+      await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({
+        arquivo: { id: '33333333-3333-4333-8333-333333333333' }, uploadUrl: 'https://upload.example/exame', uploadHeaders: { 'Content-Type': 'application/pdf' }
+      }) });
+    });
+    await page.route('https://upload.example/**', async (route) => route.fulfill({ status: 200, body: '' }));
+    await page.route('**/api/formularios/token-upload/anexos/*/confirmacao', async (route) => {
+      await espera;
+      await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ id: '33333333-3333-4333-8333-333333333333' }) });
+    });
+    await page.route('**/api/formularios/token-upload/rascunho', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ rascunhoVersao: 1, rascunhoAtualizadoEm: new Date().toISOString() }) });
+    });
+    await page.route('**/api/formularios/token-upload/respostas', async (route) => {
+      respostaFinal = route.request().postDataJSON();
+      await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ envioId: 'envio-1', status: 'respondido', respondidoEm: new Date().toISOString() }) });
+    });
+
+  return { respostaFinal: () => respostaFinal };
+}
+
 test.describe('formulario publico com rascunho', () => {
   test('salva, retoma e finaliza sem armazenamento local', async ({ page }) => {
     const formulario = await prepararFormulario(page);
@@ -80,37 +110,13 @@ test.describe('formulario publico com rascunho', () => {
   });
 
   test('envia arquivo real e responde com o id confirmado', async ({ page }) => {
-    let respostaFinal = null;
-    await page.route('**/api/formularios/token-upload', async (route) => {
-      if (route.request().method() !== 'GET') return route.fallback();
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
-        envioId: 'envio-1', titulo: 'Envio de exame', status: 'enviado', rascunhoVersao: 0, respostasRascunho: [],
-        perguntas: [{ id: perguntaUploadId, tipo: 'upload_midia', enunciado: 'Anexe o exame', obrigatoria: true, configuracao: { tiposAceitos: ['application/pdf'], maxArquivos: 1 }, opcoes: [], ordem: 1 }]
-      }) });
-    });
-    await page.route('**/api/formularios/token-upload/anexos', async (route) => {
-      await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({
-        arquivo: { id: '33333333-3333-4333-8333-333333333333' }, uploadUrl: 'https://upload.example/exame', uploadHeaders: { 'Content-Type': 'application/pdf' }
-      }) });
-    });
-    await page.route('https://upload.example/**', async (route) => route.fulfill({ status: 200, body: '' }));
-    await page.route('**/api/formularios/token-upload/anexos/*/confirmacao', async (route) => {
-      await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ id: '33333333-3333-4333-8333-333333333333' }) });
-    });
-    await page.route('**/api/formularios/token-upload/rascunho', async (route) => {
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ rascunhoVersao: 1, rascunhoAtualizadoEm: new Date().toISOString() }) });
-    });
-    await page.route('**/api/formularios/token-upload/respostas', async (route) => {
-      respostaFinal = route.request().postDataJSON();
-      await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ envioId: 'envio-1', status: 'respondido', respondidoEm: new Date().toISOString() }) });
-    });
-
+    const controle = await prepararUploadFormulario(page);
     await page.goto('/formularios/token-upload');
     await page.getByLabel('Anexe o exame').setInputFiles({ name: 'exame.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.7 sintetico') });
     await expect(page.getByText('1 arquivo(s) anexado(s)')).toBeVisible();
     await page.getByRole('button', { name: 'Enviar respostas' }).click();
 
-    await expect.poll(() => respostaFinal).toEqual({ respostas: [{ perguntaId: perguntaUploadId, valor: ['33333333-3333-4333-8333-333333333333'] }] });
+    await expect.poll(() => controle.respostaFinal()).toEqual({ respostas: [{ perguntaId: perguntaUploadId, valor: ['33333333-3333-4333-8333-333333333333'] }] });
   });
 });
 
@@ -382,4 +388,72 @@ test('QST10-04 formulário com uma seção não apresenta navegação desnecess�
   await prepararFormulario(page); await page.goto('/formularios/token-publico');
   await expect(page.getByRole('button', { name: 'Sim', exact: true })).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Seções do formulário', exact: true })).toHaveCount(0);
+});
+
+test('QST10-05 conferência opcional preserva última edição e permite corrigir sem enviar', async ({ page }) => {
+  const controle = await prepararPendencias(page);
+  const campo = page.getByLabel('Pergunta de texto', { exact: true });
+  await campo.fill('<b>Última edição antes do autosave</b>');
+  await page.getByRole('button', { name: 'Revisar respostas', exact: true }).click();
+  const dialogo = page.getByRole('dialog', { name: 'Conferir respostas', exact: true });
+  await expect(dialogo.getByText('<b>Última edição antes do autosave</b>', { exact: true })).toBeVisible();
+  await expect(dialogo.getByText('Sem resposta', { exact: true })).toHaveCount(2);
+  expect(controle.respostaFinal()).toBeNull();
+  await dialogo.getByRole('button', { name: 'Editar: Pergunta de texto', exact: true }).click();
+  await expect(campo).toBeFocused();
+  await expect(campo).toHaveValue('<b>Última edição antes do autosave</b>');
+  await page.getByRole('button', { name: 'Revisar respostas', exact: true }).click();
+  await dialogo.getByRole('button', { name: 'Confirmar envio', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Respostas pendentes', exact: true })).toBeVisible();
+  expect(controle.respostaFinal()).toBeNull();
+});
+
+test('QST10-05 só anuncia sucesso após ACK e não duplica confirmação', async ({ page }) => {
+  await prepararPendencias(page);
+  await page.getByRole('button', { name: 'Não', exact: true }).click();
+  await page.getByRole('spinbutton', { name: 'Pergunta numérica', exact: true }).fill('0');
+  await page.getByLabel('Pergunta de texto', { exact: true }).fill('Conteúdo conferido');
+  let liberar; const espera = new Promise(resolve => { liberar = resolve; }); let comandos = 0; let corpo;
+  await page.route('**/api/formularios/token-publico/respostas', async route => {
+    comandos++; corpo = route.request().postDataJSON(); await espera;
+    await route.fulfill({ json: { envioId: 'envio-1', status: 'respondido' } });
+  });
+  await page.getByRole('button', { name: 'Revisar respostas', exact: true }).click();
+  const dialogo = page.getByRole('dialog', { name: 'Conferir respostas', exact: true });
+  await expect(dialogo.getByText('Não', { exact: true })).toBeVisible();
+  await expect(dialogo.getByText('0', { exact: true })).toBeVisible();
+  await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
+  const axe = await new AxeBuilder({ page }).include('[role="dialog"]').analyze();
+  expect(axe.violations).toEqual([]);
+  await dialogo.getByRole('button', { name: 'Confirmar envio', exact: true }).click();
+  await expect.poll(() => comandos).toBe(1);
+  try {
+    await expect(page.getByRole('heading', { name: 'Respostas enviadas', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Enviando', exact: true })).toBeDisabled();
+    await expect(page.getByRole('spinbutton', { name: 'Pergunta numérica', exact: true })).toBeDisabled();
+    expect(corpo.respostas.map(item => item.valor)).toEqual([false, 0, 'Conteúdo conferido']);
+  } finally { liberar(); }
+  await expect(page.getByRole('heading', { name: 'Respostas enviadas', exact: true })).toBeVisible();
+  expect(comandos).toBe(1);
+});
+
+
+test('QST10-05 anexo pendente bloqueia revisão/envio e conferência não expõe o ID do arquivo', async ({ page }) => {
+  let liberar; const espera = new Promise(resolve => { liberar = resolve; });
+  const controle = await prepararUploadFormulario(page, espera);
+  await page.goto('/formularios/token-upload');
+  await page.getByLabel('Anexe o exame').setInputFiles({ name: 'exame.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.7 sintetico') });
+  await expect(page.getByText('Enviando e verificando arquivo', { exact: true })).toBeVisible();
+  try {
+    await expect(page.getByRole('button', { name: 'Revisar respostas', exact: true })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Enviar respostas', exact: true })).toBeDisabled();
+  } finally { liberar(); }
+  await expect(page.getByText('1 arquivo(s) anexado(s)', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Revisar respostas', exact: true }).click();
+  const dialogo = page.getByRole('dialog', { name: 'Conferir respostas', exact: true });
+  await expect(dialogo.getByText('1 arquivo anexado', { exact: true })).toBeVisible();
+  await expect(dialogo).not.toContainText('33333333-3333-4333-8333-333333333333');
+  await dialogo.getByRole('button', { name: 'Confirmar envio', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Respostas enviadas', exact: true })).toBeVisible();
+  expect(controle.respostaFinal().respostas).toEqual([{ perguntaId: perguntaUploadId, valor: ['33333333-3333-4333-8333-333333333333'] }]);
 });
