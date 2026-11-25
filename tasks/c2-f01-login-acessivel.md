@@ -116,3 +116,34 @@ explícita à base F01 se empilhada. Não misturar com consolidação #585–#59
   personas concluídas, sem novo bloqueio de UX no escopo automatizado.
 - Leitor de tela manual NOT RUN; build local SKIPPED por disco; CI NOT RUN até
   push. Não há PASS global da rodada interrompida. PR continuará Draft.
+
+## Retomada da PR #593 — falha do smoke
+
+Checkpoint anterior substituído para CI: run `45618302748`, HEAD `2d5941fb`.
+Backend, Web (incluindo build), scanners e governança PASS; SBOM provenance
+SKIPPED. Demo smoke FAIL e PR Gate FAIL. No Playwright global: 1483 PASS,
+10 SKIPPED, 2 FAIL (o mesmo caso XSS desktop/mobile) e 1 flaky (reordenação por
+teclado passou no retry). Os steps após smoke visual não executaram. Não é CI verde.
+
+Causa comprovada/reproduzida localmente: o teste de segurança antigo exigia
+exibir a string HTML hostil recebida em uma resposta 401. Isso contraria o
+contrato F01 de descartar mensagens arbitrárias. Correção somente no teste:
+exigir a mensagem pública e ausência do payload, mantendo as provas de ausência
+de execução de script e de elemento injetado. Nenhum código funcional alterado.
+
+Revisão R4 delimitada `/root/c2_f01_r4`, prompt-only: troca preserva proteção XSS
+e fortalece o contrato público; sem execução própria ou inspeção independente do
+diff nesta retomada. O caso não prova proteção geral contra XSS.
+
+Reordenação por teclado: reprodução isolada do caso do CI PASS 1/1, sem mudança.
+O resultado não prova ausência de intermitência; manter registrado como flaky no
+run original e acompanhar o novo CI. Sem aumento de timeout/retry nem alteração
+do fluxo clínico para contornar falha de teste.
+
+Validação da correção: suíte segurança-browser 10/10 PASS desktop/mobile. Rodada
+conjunta segurança/login/MFA: 35/36 PASS; um timeout de navegação segura no desktop
+(requisição de destino pendente, sem erro de script capturado) durante execuções
+concorrentes no Next dev. Caso isolado passou 2/2 desktop/mobile sem mudança de
+código, timeout ou retry. Não declarar a rodada conjunta inteiramente GREEN nem
+afirmar causa ambiental comprovada. CI novo ainda necessário. Lint do teste e
+diff-check/secrets PASS. Código funcional e lockfiles inalterados.
