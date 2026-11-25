@@ -60,6 +60,10 @@ export function FormularioPacientePublico({ token }: Props) {
   const [formulario, setFormulario] = useState<FormularioPublico | null>(null);
   const [respostas, setRespostas] = useState<Record<string, ValorResposta>>({});
   const [erro, setErro] = useState<string | null>(null);
+  const [tentouEnviar, setTentouEnviar] = useState(false);
+  const [pedidoFoco, setPedidoFoco] = useState(0);
+  const resumoPendenciasRef = useRef<HTMLElement>(null);
+  useEffect(() => { if (pedidoFoco) resumoPendenciasRef.current?.focus(); }, [pedidoFoco]);
   const [mensagemErroCarregamento, setMensagemErroCarregamento] = useState<string | null>(null);
   const [enviado, setEnviado] = useState(false);
   const [envioPendente, setEnvioPendente] = useState(false);
@@ -119,6 +123,14 @@ export function FormularioPacientePublico({ token }: Props) {
 
   const perguntasObrigatorias = formulario?.perguntas.filter((pergunta) => pergunta.obrigatoria) ?? [];
   const obrigatoriasRespondidas = perguntasObrigatorias.filter((pergunta) => valorPreenchido(respostas[pergunta.id])).length;
+  const pendencias = tentouEnviar ? perguntasObrigatorias.filter(pergunta => !valorPreenchido(respostas[pergunta.id])) : [];
+
+  function focarPergunta(id: string) {
+    const grupo = document.getElementById(`formulario-pergunta-${id}`);
+    const campo = grupo?.querySelector<HTMLElement>('input:not(:disabled), textarea:not(:disabled), select:not(:disabled), button:not(:disabled)');
+    (campo ?? grupo)?.focus();
+    grupo?.scrollIntoView({ block: 'center' });
+  }
 
   const montarRespostas = useCallback((valores: Record<string, ValorResposta>) => (
     (formulario?.perguntas ?? [])
@@ -203,7 +215,9 @@ export function FormularioPacientePublico({ token }: Props) {
 
     const obrigatoriaPendente = formulario.perguntas.find((pergunta) => pergunta.obrigatoria && !valorPreenchido(respostas[pergunta.id]));
     if (obrigatoriaPendente) {
-      setErro(`Responda a pergunta obrigatoria: ${obrigatoriaPendente.enunciado}`);
+      setTentouEnviar(true);
+      setErro(null);
+      setPedidoFoco(atual => atual + 1);
       return;
     }
 
@@ -322,6 +336,16 @@ export function FormularioPacientePublico({ token }: Props) {
         ) : null}
 
         <section className="grid gap-4 border border-linha bg-white p-5">
+          {pendencias.length ? (
+            <section ref={resumoPendenciasRef} tabIndex={-1} role="alert" aria-labelledby="titulo-pendencias" className="rounded-md border border-alerta-forte bg-white p-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primaria">
+              <h2 id="titulo-pendencias" className="font-semibold">Respostas pendentes</h2>
+              <p className="text-sm">Confira as perguntas obrigatórias antes de enviar.</p>
+              <ul className="list-disc pl-5">
+                {pendencias.map(pergunta => <li key={pergunta.id}><a className="underline" href={`#formulario-pergunta-${pergunta.id}`} onClick={event => { event.preventDefault(); focarPergunta(pergunta.id); }}>{pergunta.enunciado}</a></li>)}
+              </ul>
+            </section>
+          ) : null}
+
           {secoes.map((secao) => (
             <div key={secao.nome} className="grid gap-3">
               <div className="border-b border-linha pb-2">
@@ -331,6 +355,7 @@ export function FormularioPacientePublico({ token }: Props) {
                 <CampoPergunta
                   key={pergunta.id}
                   pergunta={pergunta}
+                  pendente={pendencias.some(item => item.id === pergunta.id)}
                   valor={respostas[pergunta.id]}
                   aoAlterar={(valor) => atualizarResposta(pergunta.id, valor)}
                   aoAlternarCheckbox={(valor) => alternarCheckbox(pergunta.id, valor)}
@@ -353,6 +378,7 @@ export function FormularioPacientePublico({ token }: Props) {
 
 function CampoPergunta({
   pergunta,
+  pendente,
   valor,
   aoAlterar,
   aoAlternarCheckbox,
@@ -360,6 +386,7 @@ function CampoPergunta({
   aoErro
 }: {
   pergunta: PerguntaFormularioPublico;
+  pendente?: boolean;
   valor?: ValorResposta;
   aoAlterar: (valor: ValorResposta) => void;
   aoAlternarCheckbox: (valor: string) => void;
@@ -370,12 +397,13 @@ function CampoPergunta({
   const [enviandoArquivos, setEnviandoArquivos] = useState(false);
 
   return (
-    <fieldset className="grid gap-3 rounded-md border border-linha bg-superficie p-4">
+    <fieldset id={`formulario-pergunta-${pergunta.id}`} tabIndex={-1} aria-invalid={pendente || undefined} aria-describedby={pendente ? `pendencia-${pergunta.id}` : undefined} className="grid gap-3 rounded-md border border-linha bg-superficie p-4">
       <legend className="text-base font-semibold text-tinta">
         {pergunta.enunciado}
         {pergunta.obrigatoria ? <span className="ml-1 text-perigo">*</span> : null}
       </legend>
 
+      {pendente ? <p id={`pendencia-${pergunta.id}`} className="text-sm text-texto-suave">Resposta obrigatória pendente.</p> : null}
       {pergunta.tipo === 'multipla_escolha' ? (
         <div className="grid gap-2">
           {pergunta.opcoes.map((opcao) => (
@@ -446,11 +474,12 @@ function CampoPergunta({
         <div className="grid grid-cols-[1fr_auto] items-center gap-2">
           <Campo
             type="number"
+            aria-label={pergunta.enunciado}
             min={numero(pergunta.configuracao, 'minimo', 0)}
             max={numero(pergunta.configuracao, 'maximo', 100)}
             step={numero(pergunta.configuracao, 'passo', 1)}
             value={typeof valor === 'number' ? valor : ''}
-            onChange={(event) => aoAlterar(Number(event.target.value))}
+            onChange={(event) => aoAlterar(event.target.value === '' ? '' : Number(event.target.value))}
           />
           {texto(pergunta.configuracao, 'unidade') ? <span className="text-sm text-texto-suave">{texto(pergunta.configuracao, 'unidade')}</span> : null}
         </div>
