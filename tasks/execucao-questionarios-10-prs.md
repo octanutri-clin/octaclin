@@ -151,3 +151,62 @@ Substitui pendência histórica B/C/revisão01–05; não cobre06–10 nem confi
 CapturasChromium sintéticas preservadas; personas não interagiram com UI.
 Sem novo requisito inferido das personas. PRs01#583/02#584/03#585/04#586Draft.
 05 aguarda push/PR;06–10 ainda não implementadas.
+
+## Recuperação de executor — 23/11/2026
+
+O executor anterior ficou inacessível e o novo /workspace não tinha repositório,
+worktrees ou /tmp anterior. Após aguardar statusready, confirmou-se isso por
+listagem e ausência do objeto b674350f. Não é prova de apagamento do provider;
+é perda de acesso neste ambiente. GitHub preserva01–05 (#583–#587),05HEAD
+1b06fafb38e67e0aabbe1a7b5606c1b35ddb24a6. Branch06 não existia no remoto.
+Clone novo filtrado da05, sem main/Claude/produção tocados; nova06 sobre05.
+Reconstruir somente delta06 conforme registro da sessão. SHAs886d69eb/b674350f
+e logs anteriores são históricos inacessíveis, não aprovação desta reconstrução.
+Anteriormente: HTTP12PASS, serviço+HTTP61PASS após correção de projeção em memória,
+BFF14PASS, navegador4PASS e PostgreSQL2PASS/31SKIPPED por filtro. Regressão do
+editor e revalidações estavam em andamento: resultado perdido, NÃO PASS.
+Revisão independente06 estava pendente. Reexecutar gates no novo código.
+Node22.21.1 obtido de nodejs.org com SHA256 verificado; instalação inicial de
+pacotes começou com Node24 antes da extração, não é validação suportada;
+verificar frozeninstall e todos os testes com Node22, sem mudar lock/engines.
+
+## PR lógica06 — checklist de validação do editor
+
+Reconstrução preservada em8544cc4(C1),ac98a37(C2),2d08ed4(C3). RED HTTP12falhas
+funcionais404. GREEN61/61serviço+HTTP,14/14BFF. Prévia/consulta de revisão
+somenteleitura autorizada tenant/profissional; requisição512KiB/1000edições,
+DTOs existentes, códigos allowlist por campo, lockread e versãoesperada.
+Não cria ruleset clínico novo, não salva nem altera snapshots/rascunhos.
+
+Revisão independente encontrouP2 de ressurreição de prévia A→B→A/salvarfalhou;
+2REDdesktop reproduziram. Geração por identidade em2d08ed4 corrige,8GREEN
+focados e62/62regressão final desktop/mobile(5,4min), com teste tardio reforçado
+para aguardar resposta/conclusão/renderização. Execução anterior cancelada
+quandoP2foiencontrado:5PASS/1interrompido/52NOTRUN, não aprovação global.
+
+PostgreSQL descartável completo33/33PASS, runtimeNOSUPERUSER/NOBYPASSRLS e
+FORCERLS: provasnovas de negação cross-tenant/proprietário, sem gravação no
+banco/snapshot, espera por escritor e staleversion rejeitada apóscommit;
+31casoslegados da cópia também executados, nenhumskip nestaexecução.
+Typecheckbackend/Web, lintafetado(0erros),linguagem,backendbuild+artefato PASS.
+Node22.21.1 eNext16.4.5 do lockfile nesteexecutor; frozeninstall refeito com
+pnpm11.25.0 invocado peloNode22diretamente, sem alteração de lock/engines.
+Nextdev atualizou somente headinggerenciado emWeb/AGENTS.md; registrado sem
+alterar regrasOctaClin. next-env.d.ts gerado será excluído do diff intencional.
+
+UX B/C e revisãoR4 estática final favoráveis, sem execução própria de testes;
+[relatório](../docs/agents/ux/reports/QST10-06-BC-2026-11-23/consolidado.md).
+PacienteN/A: conferência de console sem gravação/envio/conteúdo noportal.
+Screenreader manual/usuáriosreais SKIPPED, sem alegar equivalência comaxe.
+Suíte globaltest:authz localSKIPPED:14BFFespecíficos+HTTP/RLScobremfronteira
+nova; suíteglobal permanece gate oficial deCI, não aprovada por inferência.
+Webbuild em execução no checkpoint;CI/scanners do novoHEAD ainda pendentes.
+
+05#587 confirmou21SUCCESS/1SKIPPED(SBOM) noHEAD1b06fafb em leitura atual.
+PR01#583 foi promovida externamente aReadyforReview; esta execução não alterou
+estado de nenhumaPR nem fez merge/deploy. Descrições01–04 atualizadas somente
+com links às evidênciasUX/R4preservadas na05.06aguarda publicação comoDraft.
+
+07emworktreeprópria/workspace/qst10-07-completude-historica, base2d08ed4,
+preparaçãoTDDenquantocódigo06congelado. Antesdo primeirocommit07, integrar
+explicitamente somente checkpointdocumental06 porfastforward.08–10NOTRUN.

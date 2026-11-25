@@ -1,3 +1,6 @@
+import { plainToInstance } from 'class-transformer';
+import { validateSync } from 'class-validator';
+import { ValidarPreviaEditorDto, ProblemaEditor } from './dto-validacao-editor';
 import { BadRequestException, ConflictException, GoneException, Injectable, NotFoundException, ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { createHmac, randomUUID, timingSafeEqual } from 'crypto';
 import { EntityManager, ILike, In, IsNull, LessThanOrEqual } from 'typeorm';
@@ -435,6 +438,49 @@ export class ServicoQuestionarios {
       await gerenciador.getRepository(QuestionarioOrm).save(questionario);
       if (sessaoExpiraEm.getTime() <= Date.now()) throw new UnauthorizedException('Sessão expirada durante a cópia.');
       return { perguntaId: copiaId, versaoQuestionario: questionario.versao };
+    });
+  }
+
+  async obterVersaoEditor(tenantId: string, questionarioId: string, usuario: UsuarioAutenticado) {
+    return this.executorTenant.executar(tenantId, async gerenciador => {
+      const q = await this.garantirQuestionarioDoProfissional(gerenciador, tenantId, questionarioId, usuario, 'pessimistic_read');
+      return { versao: q.versao };
+    });
+  }
+
+  async validarPreviaEditor(tenantId: string, questionarioId: string, dados: ValidarPreviaEditorDto, usuario: UsuarioAutenticado) {
+    return this.executorTenant.executar(tenantId, async gerenciador => {
+      // Escritores do questionário usam FOR UPDATE; a prévia mantém a leitura coerente.
+      const q = await this.garantirQuestionarioDoProfissional(gerenciador, tenantId, questionarioId, usuario, 'pessimistic_read');
+      if (q.versao !== dados.versaoEsperada) throw new ConflictException('O questionário mudou. Confira a versão salva novamente, preservando suas edições locais.');
+      const perguntas = await this.listarPerguntasComOpcoesPorQuestionario(gerenciador, tenantId, questionarioId);
+      const edicoes = new Map(dados.perguntas.map(item => [item.id, item.dados]));
+      if (edicoes.size !== dados.perguntas.length || [...edicoes.keys()].some(id => !perguntas.some(p => p.id === id))) {
+        throw new BadRequestException('Uma edição não pertence ao questionário disponível.');
+      }
+      const problemas: ProblemaEditor[] = [];
+      if (!dados.titulo.trim()) problemas.push({ campo: 'titulo', codigo: 'titulo_ausente' });
+      for (const salva of perguntas) {
+        const p = { ...salva, ...(edicoes.get(salva.id) ?? {}) };
+        const adicionar = (campo: ProblemaEditor['campo'], codigo: ProblemaEditor['codigo']) => problemas.push({ perguntaId: salva.id, campo, codigo });
+        if (typeof p.enunciado !== 'string' || !p.enunciado.trim()) adicionar('enunciado', 'enunciado_ausente');
+        const entrada = plainToInstance(AtualizarPerguntaDto, {
+          categoriaId: p.categoriaId, tipo: p.tipo, enunciado: p.enunciado,
+          peso: p.peso === null || p.peso === undefined ? NaN : Number(p.peso),
+          obrigatoria: p.obrigatoria, chaveClinica: p.chaveClinica, visivelBiblioteca: p.visivelBiblioteca,
+          configuracao: p.configuracao, opcoes: (p.opcoes ?? []).map(o => ({ rotulo: o.rotulo, valor: o.valor, imagemUrl: o.imagemUrl }))
+        });
+        for (const erro of validateSync(entrada, { whitelist: true, forbidNonWhitelisted: true })) {
+          const campo = ['peso', 'categoriaId', 'tipo', 'configuracao', 'opcoes'].includes(erro.property) ? erro.property as ProblemaEditor['campo'] : 'dados';
+          adicionar(campo, 'dados_invalidos');
+        }
+        try { this.validarOpcoes(p.tipo, p.opcoes); }
+        catch (erro) { if (!(erro instanceof BadRequestException)) throw erro; adicionar('opcoes', 'opcoes_insuficientes'); }
+        if (p.configuracao === null || typeof p.configuracao !== 'object' || Array.isArray(p.configuracao)) adicionar('configuracao', 'configuracao_invalida');
+        else try { normalizarConfiguracaoPergunta(p.tipo, p.configuracao); }
+        catch (erro) { if (!(erro instanceof BadRequestException)) throw erro; adicionar('configuracao', 'configuracao_invalida'); }
+      }
+      return { versao: q.versao, problemas };
     });
   }
 
@@ -1796,7 +1842,7 @@ export class ServicoQuestionarios {
       opcoesPorPergunta.set(opcao.perguntaId, atuais);
     });
 
-    return perguntas.map((pergunta) => Object.assign(pergunta, { opcoes: opcoesPorPergunta.get(pergunta.id) ?? [] }));
+    return perguntas.map((pergunta) => ({ ...pergunta, opcoes: opcoesPorPergunta.get(pergunta.id) ?? [] }));
   }
 
   private async capturarSnapshotEstruturaQuestionario(

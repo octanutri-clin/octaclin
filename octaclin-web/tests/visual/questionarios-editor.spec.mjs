@@ -482,3 +482,80 @@ test('P05 leitura antiga do seletor não remove cópia após A-B-A',async({page}
   await expect(page.getByRole('button',{name:'Reordenar pergunta',exact:true})).toHaveCount(3);
   await expect(page.getByLabel('Enunciado',{exact:true})).toHaveValue('Pergunta salva');
 });
+
+test('QST10-06 checklist usa edição local sem salvar e ignora resposta após nova edição', async ({ page }) => {
+  await criarSessao(page); await mockarBff(page); let entrada, liberar, chamadas = 0;
+  const espera = new Promise(resolve => { liberar = resolve; });
+  await page.route('**/api/questionarios/q-1/validacao', async route => {
+    chamadas++; entrada = route.request().postDataJSON(); if (chamadas === 2) await espera;
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ versao: 1, problemas: [{ perguntaId: 'p-1', campo: 'configuracao', codigo: 'configuracao_invalida' }] }) });
+  });
+  let escritas = 0; page.on('request', r => { if (/api\/questionarios/.test(r.url()) && ['PATCH', 'PUT', 'DELETE'].includes(r.method())) escritas++; });
+  await page.goto('/questionarios'); await page.getByRole('tab', { name: 'Editor', exact: true }).click();
+  await page.getByLabel('Enunciado', { exact: true }).fill('Edição local ainda não salva');
+  await page.getByRole('button', { name: 'Conferir questionário', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Checklist do questionário' })).toContainText('Revise os limites e a configuração desta pergunta.');
+  await page.locator('[data-qst10-checklist]').screenshot({ path: test.info().outputPath('qst10-06-checklist.png') });
+  expect(entrada.perguntas[0].dados.enunciado).toBe('Edição local ainda não salva'); expect(entrada.versaoEsperada).toBe(1); expect(escritas).toBe(0);
+  await page.getByRole('button', { name: 'Corrigir pergunta 1: configuração', exact: true }).click();
+  await expect(page.locator('#configuracao-pergunta')).toBeFocused();
+  await page.getByRole('button', { name: 'Conferir questionário', exact: true }).click(); await expect.poll(() => chamadas).toBe(2);
+  await page.getByLabel('Enunciado', { exact: true }).fill('Edição mais recente'); liberar();
+  await expect(page.getByRole('region', { name: 'Checklist do questionário' })).toHaveCount(0);
+  await expect(page.getByLabel('Enunciado', { exact: true })).toHaveValue('Edição mais recente');
+});
+
+test('QST10-06 conflito preserva rascunho e nova conferência exige ação explícita', async ({ page }) => {
+  await criarSessao(page); await mockarBff(page); let chamadas = 0, consultas = 0;
+  await page.route('**/api/questionarios/q-1/validacao', route => {
+    if (route.request().method() === 'GET') { consultas++; return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ versao: 2 }) }); }
+    chamadas++; const entrada = route.request().postDataJSON();
+    return route.fulfill({ status: entrada.versaoEsperada === 1 ? 409 : 200, contentType: 'application/json', body: JSON.stringify(entrada.versaoEsperada === 1 ? { message: 'Confira novamente.' } : { versao: 2, problemas: [] }) });
+  });
+  await page.goto('/questionarios'); await page.getByRole('tab', { name: 'Editor', exact: true }).click();
+  await page.getByLabel('Enunciado', { exact: true }).fill('Rascunho preservado');
+  await page.getByRole('button', { name: 'Conferir questionário', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Checklist do questionário' })).toContainText('Não foi possível concluir a conferência');
+  expect(chamadas).toBe(1); expect(consultas).toBe(0); await expect(page.getByLabel('Enunciado', { exact: true })).toHaveValue('Rascunho preservado');
+  await page.getByRole('button', { name: 'Conferir com a versão salva atual', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Checklist do questionário' })).toContainText('Nenhuma pendência nas regras verificadas');
+  expect(chamadas).toBe(2); expect(consultas).toBe(1); await expect(page.getByLabel('Enunciado', { exact: true })).toHaveValue('Rascunho preservado');
+  await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
+  const resultado = await new AxeBuilder({ page }).include('[data-qst10-checklist]').analyze(); expect(resultado.violations).toEqual([]);
+});
+
+test('QST10-06 conferência não reaparece após ida e volta de edição ou falha ao salvar', async ({ page }) => {
+  await criarSessao(page); await mockarBff(page);
+  await page.route('**/api/questionarios/q-1/validacao', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ versao: 1, problemas: [] }) }));
+  await page.route('**/api/questionarios/q-1/perguntas/p-1', route => route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ mensagem: 'Falha sintética ao salvar.' }) }));
+  await page.goto('/questionarios'); await page.getByRole('tab', { name: 'Editor', exact: true }).click();
+  const enunciado = page.getByLabel('Enunciado', { exact: true });
+  await enunciado.fill('Edição A');
+  await page.getByRole('button', { name: 'Conferir questionário', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Checklist do questionário' })).toContainText('Nenhuma pendência');
+  await enunciado.fill('Edição B'); await enunciado.fill('Edição A');
+  await expect(page.getByRole('region', { name: 'Checklist do questionário' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Conferir questionário', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Checklist do questionário' })).toContainText('Nenhuma pendência');
+  await page.getByRole('button', { name: 'Salvar pergunta', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Salvar pergunta', exact: true })).toBeEnabled();
+  await expect(page.getByRole('region', { name: 'Checklist do questionário' })).toHaveCount(0);
+  await expect(enunciado).toHaveValue('Edição A');
+});
+
+test('QST10-06 resposta tardia de A não é aceita após editar para B e voltar a A', async ({ page }) => {
+  await criarSessao(page); await mockarBff(page); let liberar;
+  const espera = new Promise(resolve => { liberar = resolve; });
+  await page.route('**/api/questionarios/q-1/validacao', async route => { await espera; await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ versao: 1, problemas: [] }) }); });
+  await page.goto('/questionarios'); await page.getByRole('tab', { name: 'Editor', exact: true }).click();
+  const enunciado = page.getByLabel('Enunciado', { exact: true }); await enunciado.fill('Edição A');
+  const envio = page.waitForRequest(r => r.url().endsWith('/validacao'));
+  await page.getByRole('button', { name: 'Conferir questionário', exact: true }).click(); await envio;
+  await enunciado.fill('Edição B'); await enunciado.fill('Edição A');
+  const resposta = page.waitForResponse(r => r.url().endsWith('/validacao')); liberar();
+  await (await resposta).finished();
+  // A ausência deve permanecer após a resposta e o próximo ciclo de renderização.
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  await expect(page.getByRole('region', { name: 'Checklist do questionário' })).toHaveCount(0);
+  await expect(enunciado).toHaveValue('Edição A');
+});

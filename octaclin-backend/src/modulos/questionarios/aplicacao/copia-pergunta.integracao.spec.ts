@@ -389,4 +389,36 @@ suite('QST-P05 — PostgreSQL descartável, runtime e FORCE RLS', () => {
     expect((await admin.query('SELECT count(*)::int AS n FROM perguntas WHERE questionario_id=$1', [b])).rows[0].n).toBe(2);
   });
 
+  it('QST10-06 prévia preserva banco/snapshot com runtime FORCE RLS e reautoriza propriedade', async () => {
+    const antes = (await admin.query('SELECT * FROM perguntas ORDER BY id')).rows;
+    const enviosAntes = (await admin.query('SELECT * FROM envios_questionario ORDER BY id')).rows;
+    const qAntes = (await admin.query('SELECT * FROM questionarios ORDER BY id')).rows;
+    const entrada = { versaoEsperada: 4, titulo: 'Título local', perguntas: [{ id: origemId, dados: { tipo: 'metrica' as const, configuracao: { minimo: 10, maximo: 1 } } }] };
+    expect(await sut().validarPreviaEditor(tenant, questionarioId, entrada, ator)).toEqual({ versao: 4, problemas: [{ perguntaId: origemId, campo: 'configuracao', codigo: 'configuracao_invalida' }] });
+    expect((await admin.query('SELECT * FROM perguntas ORDER BY id')).rows).toEqual(antes);
+    expect((await admin.query('SELECT * FROM envios_questionario ORDER BY id')).rows).toEqual(enviosAntes);
+    expect((await admin.query('SELECT * FROM questionarios ORDER BY id')).rows).toEqual(qAntes);
+    expect(await sut().obterVersaoEditor(tenant, questionarioId, ator)).toEqual({ versao: 4 });
+    await expect(sut().validarPreviaEditor(outroTenant, questionarioId, entrada, { ...ator, tenantId: outroTenant })).rejects.toBeInstanceOf(NotFoundException);
+    await expect(sut().validarPreviaEditor(tenant, questionarioId, { ...entrada, perguntas: [{ id: randomUUID(), dados: {} }] }, ator)).rejects.toBeInstanceOf(BadRequestException);
+    await admin.query('UPDATE questionarios SET profissional_id=$1 WHERE id=$2', [randomUUID(), questionarioId]);
+    await expect(sut().validarPreviaEditor(tenant, questionarioId, entrada, ator)).rejects.toBeInstanceOf(NotFoundException);
+    await expect(sut().obterVersaoEditor(tenant, questionarioId, ator)).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('QST10-06 espera escritor concorrente e rejeita versão stale após commit sem aplicar prévia', async () => {
+    const trava = runtime.createQueryRunner(); await trava.connect(); await trava.startTransaction();
+    let pendente: Promise<PromiseSettledResult<unknown>[]> | undefined;
+    try {
+      await trava.query("SELECT set_config('app.tenant_id',$1,true)",[tenant]);
+      await trava.query('UPDATE questionarios SET versao=versao+1 WHERE id=$1',[questionarioId]);
+      pendente = Promise.allSettled([sut().validarPreviaEditor(tenant, questionarioId, { versaoEsperada: 4, titulo: 'Local', perguntas: [] }, ator)]);
+      await aguardarBloqueados(1); await trava.commitTransaction();
+      const [resultado] = await pendente;
+      expect(resultado.status).toBe('rejected');
+      if (resultado.status === 'rejected') expect(resultado.reason).toBeInstanceOf(ConflictException);
+      expect((await admin.query('SELECT versao FROM questionarios WHERE id=$1',[questionarioId])).rows[0].versao).toBe(5);
+    } finally { if(trava.isTransactionActive)await trava.rollbackTransaction();await trava.release();await pendente; }
+  });
+
 });
