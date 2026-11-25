@@ -794,3 +794,24 @@ test.describe('QPRO-09 — categorias recebidas da distribuição', () => {
     await grupo.screenshot({ path: test.info().outputPath('distribuicao-ampliada.png') });
   });
 });
+
+test('QST10-01 apresenta variação factual sem cores de julgamento clínico', async ({ page }) => {
+  await preparar(page);
+  await page.route('**/api/questionarios/matriz-longitudinal*', route => route.fulfill({ json: {
+    resumo: { totalIndicadores: 4, totalRespostas: 7 },
+    indicadores: [
+      { perguntaId: 'a', enunciado: 'Indicador subiu', atual: { valor: 5 }, anterior: { valor: 3 }, delta: 2 },
+      { perguntaId: 'b', enunciado: 'Indicador desceu', atual: { valor: 3 }, anterior: { valor: 5 }, delta: -2 },
+      { perguntaId: 'c', enunciado: 'Indicador estável', atual: { valor: 0 }, anterior: { valor: 0 }, delta: 0 },
+      { perguntaId: 'd', enunciado: 'Indicador inicial', atual: { valor: 3 } }
+    ].map(indicador => ({ ...indicador, pacienteId: 'paciente-a', questionarioId: 'q-1', questionarioTitulo: 'Retorno sintético', tipo: 'metrica', historico: [], atual: { ...indicador.atual, finalizadoEm: '2026-11-23T08:00:00Z' } }))
+  } }));
+  await page.getByRole('button', { name: 'Atualizar matriz', exact: true }).click();
+  for (const [titulo, texto] of [['Indicador subiu', 'Aumentou: +2'], ['Indicador desceu', 'Diminuiu: -2'], ['Indicador estável', 'Sem alteração: 0'], ['Indicador inicial', 'Sem comparação']]) {
+    const card = page.locator('article').filter({ has: page.getByText(titulo, { exact: true }) });
+    await expect(card.getByText(texto, { exact: true })).toBeVisible();
+    await expect(card.locator('.text-sucesso-forte, .text-perigo')).toHaveCount(0);
+  }
+  const zero = page.locator('article').filter({ has: page.getByText('Indicador estável', { exact: true }) });
+  await expect(zero.getByText('0', { exact: true })).toHaveCount(2);
+});

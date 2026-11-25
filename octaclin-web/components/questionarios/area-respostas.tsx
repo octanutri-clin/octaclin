@@ -385,11 +385,12 @@ export function AreaRespostas({ workspace }: { workspace: WorkspaceQuestionarios
                             <p className="text-sm font-semibold text-tinta">{indicador.enunciado}</p>
                             <p className="text-xs text-texto-suave">{paciente?.nome ?? 'Paciente'} · {indicador.questionarioTitulo}</p>
                           </div>
-                          {typeof indicador.delta === 'number' ? (
-                            <span className={indicador.delta >= 0 ? 'text-sm font-semibold text-sucesso-forte' : 'text-sm font-semibold text-perigo'}>
-                              {indicador.delta >= 0 ? '+' : ''}{indicador.delta}
-                            </span>
-                          ) : null}
+                          <span className="text-sm font-semibold text-tinta">
+                            {indicador.anterior && typeof indicador.delta === 'number' && Number.isFinite(indicador.delta)
+                              ? indicador.delta > 0 ? `Aumentou: +${indicador.delta}`
+                                : indicador.delta < 0 ? `Diminuiu: ${indicador.delta}` : 'Sem alteração: 0'
+                              : 'Sem comparação'}
+                          </span>
                         </div>
                         <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
                           <div className="rounded-md border border-linha bg-white px-3 py-2">
