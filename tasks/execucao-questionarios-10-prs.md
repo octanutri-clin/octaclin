@@ -18,6 +18,46 @@ descrição daPR registra resultados posteriores sem push meramente cosmético. 
 
 ## Histórico de execução
 
+## Integração da PR02 #584 — checkpoint25/11/2026
+
+Preparação autorizada pelo proprietário após a revisão da cadeia584–592.
+HEAD remoto anteriorb2a59f83 preservado como ancestral; main855a35d2 (já com
+#583) integrada explicitamente na branch de trabalho da própriaPR, sem rebase
+ou forcepush. Worktreeisolada, sem alterar592/Claude/branches de terceiros.
+
+Conflito documental resolvido preservando integralmente os dois registros: a
+resolução/integração de583 e a entrega02. Os registros seguintes são históricos;
+seus estados antigosDraft/CIpendente/regressãoemexecução não são o estado atual.
+
+A conciliação automática do componente preserva as abasEnvios/Resumo da02 e as
+distribuiçõesQPRO09 da main. A integração revelou incompatibilidade de testes:
+o helperQPRO09 esperava distribuições visíveis na aba inicialEnvios. REDfocal
+1FAIL/1interrompido/12NOTRUN, conteúdo encontrado porém oculto. Correção mínima
+de teste abreResumo explicitamente e verificaEnvios como inicial após trocar
+paciente/questionário, antes de reabrirResumo. Todas as assertions antigas de
+expansão, dados, zero, rede, teclado/foco eaxe preservadas. Sem ajuste funcional,
+redução de asserts, timeout ou retries. Primeiro start do servidor foi chamado
+no cwd inadequado; falha de setup corrigida, não conta comoRED.
+
+GREENfocal14/14 desktop/mobile (QPRO09+QST10-01/02). TypecheckWeb,lintafetado e
+linguagemPASS Node22.21.1/Next16.4.5 compatível com manifesto, sem reinstalação
+ou lockfile alterado. Regressão completa de leitura:82/82PASS desktop/mobile, sem retries, incluindo
+os14focais (não somar reexecuções). Teclado/foco/axe/texto200% e contratos de
+consulta, busca, CSV, contexto e distribuições preservados.
+
+Buildglobal/backend/RLS/leitor de tela manual:SKIPPED nesta validação local de
+integração visual, sem mudança de contratos/API/persistência; CI do novoHEAD
+continua obrigatório e não herda21SUCCESS/1SBOMSKIP doHEADanteriorb2a59f83.
+UX e revisão estática anteriores01–05 permanecem ligadas ao artefato que
+examinaram, sem alegar nova execução independente da integração atual.
+
+BaseGitHub será alterada para main antes do push para validar o novoHEAD com a
+base correta. Nenhum autoMerge habilitado. Nenhum merge daPR, escrita emmain,
+deploy ou operação externa executado. Depois doCI, o proprietário decide o
+merge;585 só deve ser retargetada após584 efetivamente entrar na main.
+
+## Histórico preservado
+
 Base inicial989f4d5c. Plano aprovado integralmente pelo proprietário.
 01–10: pendentes inicialmente; só marcar concluído com evidências específicas.
 
@@ -46,6 +86,23 @@ Next16.3.8 versus manifesto^16.4.5: CI canônico pendente. Banco/RLS/build
 completo local SKIPPED, fronteiras não alteradas. UXA aprovado no plano;
 B/C e revisão estática final do lote pendentes, sem declaração de aceite.
 PR01 mantém Draft e não herda PASS de outro commit.
+
+## PR01 #583 — atualização da base e resolução de conflito
+
+Integração explícita de main00810d9 na branch da própriaPR, mantendoHEADanterior
+19c94939 como ancestral, sem rebase/forcepush ou alteração de outrasworktrees.
+Conflito único: ambas as branches acrescentaram testes no final do mesmoarquivo.
+Preservados integralmente o arquivo de testes da main(QPRO09distribuições) e o
+bloco originalQST10-01, sem reduzir assertions. Produção conciliada automaticamente;
+a diferença funcional diante da main permanece somente a variação neutra.
+
+Validação local Node22.21.1:10/10Playwright desktop/mobile(QPRO09+QST10-01),
+typecheckWeb,lintafetado,sintaxe,diffcheck e scannerlocal de segredosPASS.
+Sem novos comportamentos ou testes inventados comoRED. Buildglobal/suíteintegral
+localNOTRUN: checks oficiais do novoHEAD devem validar a integração completa.
+Arquivos gerados pelo Next no ambiente local restaurados à versão do índice;
+regras AGENTS intactas. Nenhuma migration, merge da PR, deploy ou escrita emmain.
+CI anterior19c94939 é evidência histórica; novoHEAD aguardará seus próprioschecks.
 
 ## PR lógica02 — organização da leitura
 
