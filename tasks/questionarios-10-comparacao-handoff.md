@@ -1,5 +1,40 @@
 # Entrega10 — comparação de dois retornos
 
+## Estado de correção do smoke — 25/11/2026
+
+HEAD anterior99859abc:19checksSUCCESS,2FAIL(Demo local smoke ePRGate),
+1SKIP(SBOMprovenance). Run45533224165/job138936898250. Relatório real do
+artefato14987566951:1538testes,1525expected,2unexpected,1flaky,10skipped.
+As duas falhas persistentes são o mesmo teste de teclado em desktop/mobile;
+o testeP05 de reordenação passou no retry e permanece intermitência histórica.
+Etapas posteriores de estados/densidade/linguagem foramSKIPPED, nãoPASS.
+
+Causa reproduzida: Tab apósRecolherTudo chega ao novo checkbox de comparação,
+não ao botãoExpandir como o teste legado esperava. RED2/2 local sobre build de
+produção. Patch somente no teste: assert foco/seleção/desseleção porEspaço e
+contador; depoisTab ao botão e todas as antigas assertions de foco/expandir/axe.
+Sem mudança funcional, de timeout, retries, dependência ou workflow.
+
+GREENfocal2/2; regressão ampliada186/186(editor+respostas,desktop/mobile), sem
+retry; estados/densidade/linguagem16/16 e gate textual de linguagemPASS. P05
+repetido6/6PASS, além da regressão; não reproduzido, não declarado corrigido.
+Lint/sintaxeNode22/diff/secretsPASS. Dois comandos iniciais usaram cwd incorreto
+na localização da ferramenta; foram setup, nãoRED nemGREEN, e repetidos no cwd
+correto antes de registrar resultados. Sem backend/BFF/runtime alterados;
+build/types/RLS do código funcional anterior permanecem evidências com seus
+commits, não execução nova do patch. R4/UX anteriores continuam limitados ao
+artefato que examinaram; não foi alegada revisão independente nova destes testes.
+
+OsPNGde08 gerados pela regressão foram restaurados dos bytes do índice na própria
+worktree. Relatório/ordem de integração584–592 e planejamento20fases estão fora
+daPRem/workspace/planejamentos, sem novas funcionalidades misturadas neste patch.
+
+NovoCI/scanners: pendentes após push do commit corretivo. Não herdar os19SUCCESS
+anteriores nem dizer que186testes equivalem ao smoke completo1538. ManterDraft,
+semmerge/deploy/migrationexterna. Descrição daPRregistra HEAD/run posteriores.
+
+## Checkpoints anteriores — histórico, substituído pelo estado acima
+
 ## Checkpoint de abertura — código55a420c, 25/11/2026
 
 Interface utilizável implementada e salva em origin, base09cd68dde. PR10 própria

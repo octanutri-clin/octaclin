@@ -675,6 +675,16 @@ test.describe('QST01 — organização da leitura de respostas', () => {
     await page.keyboard.press('Enter');
     await expect(recolher).toBeFocused();
     await page.keyboard.press('Tab');
+    const selecao = envio(page, pacientes[0].nome).getByRole('checkbox', { name: /Selecionar para comparação/ });
+    await expect(selecao).toBeFocused();
+    await expect(selecao).not.toBeChecked();
+    await page.keyboard.press('Space');
+    await expect(selecao).toBeChecked();
+    await expect(page.getByText('1 de 2 selecionados', { exact: true })).toBeVisible();
+    await page.keyboard.press('Space');
+    await expect(selecao).not.toBeChecked();
+    await expect(page.getByText('0 de 2 selecionados', { exact: true })).toBeVisible();
+    await page.keyboard.press('Tab');
     const individual = envio(page, pacientes[0].nome).getByRole('button', { name: /^(Expandir|Recolher) respostas/ });
     await expect(individual).toBeFocused();
     await page.keyboard.press('Space');
