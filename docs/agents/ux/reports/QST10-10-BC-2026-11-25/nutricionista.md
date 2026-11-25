@@ -14,3 +14,15 @@ afirmado na correção. Aceite: nome inclui texto visível e distingue o envio.
 Preservar causas, ausência e linguagem sem inferência clínica. Sem novas funções.
 
 Não é teste humano, validação clínica, R4, build ou prova de autorização.
+
+## C — código55a420c
+
+Mesmo revisor, nova etapa após relato dos28/28 testes em build/start de produção
+local (20novos+8regressões) e build/typecheck/lint. Sem imagem/interação próprias.
+Jornada atende selecionar/conferir/corrigir/retomar, sem nova decisão de produto
+ou fricção comprovada. NUX-B01 encerrada no escopo do relato técnico de axe e
+nomes visíveis/acessíveis. Global authz e CI continuavam pendentes no brief C.
+
+D: futura pesquisa com profissionais reais pode observar entendimento da ordem
+A/B sem datas, distinção de ausências e substituição do par sem perder contexto;
+perguntas de pesquisa, sem requisito novo/defeito demonstrado. Não autoriza merge.

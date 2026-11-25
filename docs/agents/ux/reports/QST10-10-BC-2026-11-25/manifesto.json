@@ -1,6 +1,6 @@
 {
   "registrado_em": "2026-11-25T02:09:34.409487+00:00",
-  "etapas": "B; C pendente",
+  "etapas": "B e C concluídas; D registrado",
   "modalidade": "subagentes distintos por papel explícito, fork_turns=none; seleção TOML nativa não comprovada",
   "instancias": [
     "/root/qst10_nutricionista_b",
@@ -15,13 +15,16 @@
   },
   "relatorios_sha256": {
     "brief.md": "3caa2027647ca2d8d34987f4b26ebb5acc14afc3c3da78990619b79e1ba75cfc",
-    "paciente.md": "4110a75eb42159f959573808b398233132aed111cc776f412021394c893da89b",
-    "consolidado.md": "adef8f850cf58a0732f2886ba36e647f77e1db2e0f79bfed3f25912ca6c4ccae",
-    "nutricionista.md": "9f2c7b2021e76fe16fa0d31ff3e76c894ddcfd128d0dfd9919f72333466d7273"
+    "brief-c.md": "76e793226236db26ea5359c9607b07511de2a08cc95d0098b54961ac56d24940",
+    "r4.md": "338cc712086c17dd5956e1d2016ec330ddf953af43c3f0e09b184862459875b4",
+    "paciente.md": "20c22aa080e2df2d7bdcf95b7f3f74acd8d0ac82abd813a3c0353ba2f0610a41",
+    "consolidado.md": "e6f9d59c121dd59d1deb26c73d5de237730fc3c8c49c858b2d78aab1e6b1a2dd",
+    "nutricionista.md": "4d2329d1f0a4f48eca4dbacd003b640d1dbd1737d73f6a036c6cb8f855d696b2"
   },
   "limitacoes": [
     "Sem teste com pessoas reais ou leitor de tela manual",
-    "Personas não receberam imagem nem interagiram; descrição de evidência executada pelo coordenador",
-    "B não encerra testes finais ou R4"
-  ]
+    "Personas não receberam imagem nem interagiram; descrição de evidência executada pelo coordenador"
+  ],
+  "encerramento_registro": "2026-11-25T02:28:18.112959+00:00",
+  "codigo_avaliado": "55a420cc240b246e57821a0c0cc578c02b0997e0"
 }

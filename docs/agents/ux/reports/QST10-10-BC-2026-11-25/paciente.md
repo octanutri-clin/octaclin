@@ -15,3 +15,12 @@ sem delta incompatível, datas/versões desconhecidas preservadas.
 
 Nenhum defeito direto comprovado no portal. Rótulo axe profissional corrigido
 ainda exige reteste técnico; parecer não substitui acessibilidade ou R4.
+
+## C — código55a420c
+
+Mesmo revisor, sem imagem/interação próprias. DiretoN/A preservado. PUX-B01/B02
+sustentados pelos28/28 testes relatados (contexto/cancelamento/resposta tardia e
+semântica de dados), sem defeito aberto demonstrado; manter regressões. Rótulo,
+axe, teclado/foco/zoom foram retestados pelo coordenador, não pela persona.
+Sem novos achados; globalauthz/CI ainda pendentes no brief, sem aprovação clínica
+ou de merge. D preserva os critérios indiretos nas próximas entregas.

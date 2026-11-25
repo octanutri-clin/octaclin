@@ -1,5 +1,46 @@
 # Entrega10 — comparação de dois retornos
 
+## Checkpoint de abertura — código55a420c, 25/11/2026
+
+Interface utilizável implementada e salva em origin, base09cd68dde. PR10 própria
+Draft preparada sobre09; a descrição da PR e checks doHEAD passam a registrar
+resultados posteriores ao commit deste checkpoint. Sem merge/base implícitos.
+PR591Draft OPEN com21SUCCESS/1SKIP(SBOM) conferidos nesta rodada; não são CI10.
+
+| Gate | Resultado e escopo |
+| --- | --- |
+| Domínio e PostgreSQL | PASS35+63 em bbc7698;49regressões+14novasPG, runtimeNOBYPASS/FORCERLS e barreiras, antes de conteúdo |
+| HTTP | PASS10; contrato/DTO/guardas/auditoria |
+| BFF específico | PASS26;22regressões+4novos, permissões/origem/limites/projeção |
+| Backend completo55a420c | PASS5685testes/479suítes;434testes/20suítesSKIPPED, não aprovados pelo comando padrão |
+| Browserdev55a420c | PASS20/20;10cenários×desktop/mobile |
+| Browserprodução local55a420c | PASS28/28;20novos+8regressões07/08/organização, nextbuild/start Node22 |
+| Webbuild/types/lint/linguagem | PASS; rota nova incluída no artefato |
+| Backendbuild/types/artefato | PASS repetido no código55a420c, Node22, artefato dist/main.js verificado |
+| R4integral independente | Favorável estática55a420c, sem novos achados; não executou bateria autoral |
+| UX | A/D anterior eB/C/D das duas personas registrados; paciente diretoN/A |
+| Segurança/governança local | PASSdiff/secrets/redaçãoauditoria/migrationsgovernança; nenhuma migration10 |
+| Webtest:authzglobal | PASS, comando completo exit0 em55a420c;69 é só a contagem do último script, não o total global |
+| CI10/scanners | NOTRUN antes da abertura; conferirHEADexato daPR, sem herdar verde09 |
+| Pessoas reais/leitor de tela manual | SKIPPED: sem sessão humana/tecnologiaassistiva manual; axe/teclado não substituem |
+
+Todas as provas usam fontes sintéticas/ambiente descartável ou navegador com
+rotas simuladas. Browser não é provaRLS; PG tem execução própria separada,
+selecionada pelo runner oficial no arquivo copia-pergunta.integracao.spec.ts.
+Nenhum testeSKIPPED torna-sePASS por proximidade de outra evidência. Sem prova
+multiplos processos real por browser; fronteiras têm provas específicas acima.
+
+Sem alteração de schema10, contratos clínicos históricos ou permissões. Reverter
+o código específico10 remove a consulta/interface sem transformar ou reescrever
+respostas/snapshots/auditorias; o rollback operacional da09/migration1088 herdada
+continua separado e exige seu runbook/autorização. Sem operação externa ou FOOD06.
+
+Próxima ação: confirmar checks/scanners doHEAD daPR,
+registrar resultados na descrição sem push cosmético, corrigir somente achado
+reproduzível. Manter Draft; não iniciar nova entrega, merge ou deploy.
+
+## Checkpoints históricos — não representam o estado vigente
+
 Branch feat/qst10-10-comparacao-retornos, base09cd68dde explícita. SemPR10 ainda.
 PR09 é591Draft, semmerge. Runtime09f945fd3 passou R4 estática integral e UXB/C;
 rechecagem estática do gatecd68dde favorável. Posteriormente o comando global
@@ -119,3 +160,17 @@ assertions ou ampliar timeouts. B das duas personas registrada em
 `docs/agents/ux/reports/QST10-10-BC-2026-11-25/`; paciente direto N/A. R4P2
 rechecou3 reproduções no próprio fonte e confirmou a correção de canonização,
 sem executarPG/HTTP; a revisão integral10 continua pendente.
+
+## Consolidação antes da abertura
+
+Código55a420c: authzglobalWeb terminou exit0; backendtypes/build/artefato também
+confirmados no mesmo código, Node22.21.1. Browserprodução28/28 e UXC/D das duas
+personas concluídos. Descrições/limites daR4 e das personas preservados, sem
+transformar revisão estática em teste executado. Os dois PNG derivados de08
+sobrescritos pelo próprio teste foram restaurados dos bytes do índice, sem
+alterar relatórios históricos; capturas10 permanecem nos artefatos locais.
+
+CI10/scanners aindaNOTRUN antes da criação daPR. Próxima ação após abrirDraft:
+conferirHEAD/checks exatos e atualizar descrição com resultados, sem push cosmético.
+PowerShellpreflightSKIPPED nesteLinux, sem execução declarada. Não há merge,
+deploy, novo schema, gravação clínica ou operação externa.
