@@ -86,3 +86,36 @@ limite completo do envelope. Nenhum fuso é aceito do navegador.
 
 GREEN98/98 =35domínio+63PG(49regressões+14novas). RechecagemR4 pendente até commit
 corretivo; frontend/BFF aindaNOTRUN. Sem nova migration/dependência/operação externa.
+
+## C3 — primeira interface, 25/11
+
+Preservado `bbc7698` em origin. BFF aditivo implementado com sessão/permissão,
+origem, corpo de 2 KiB, envelope de 8 MiB, allowlist e erros seguros. Runner
+específico 26/26 PASS (22 regressões e 4 novos), sem cálculo paralelo. API usa
+POST de consulta, sem alteração clínica; mapa de rotas atualizado.
+
+RED navegador: checkbox de comparação inexistente, página previamente pronta.
+GREEN inicial desktop: selecionar em duas páginas e confirmar explicitamente.
+Hook no workspace mantém no máximo dois metadados em memória, invalida geração
+monotônica ao trocar contexto/remover/cancelar e não usa storage. Tabela de
+comparação reutiliza resultado autoritativo e fuso servidor, sem definição atual
+como fallback, com causas por campo e datas/versões indisponíveis explícitas.
+Typecheck e lint afetados PASS. Dois erros de fixture/seletores iniciais não
+contam como RED funcional: texto duplicado, seletor CSS axe inválido e alerta
+global ambíguo foram corrigidos sem enfraquecer assertions. Axe encontrou nome
+acessível do botão de remoção sem seu texto visível: corrigidos botão e checkbox
+para preservar o texto visível; regressão final ainda em execução.
+
+Pendentes neste checkpoint: bateria final desktop/mobile/zoom/axe, build,
+authz Web global, regressão backend global, UX B/C e R4 integral. Nenhum desses
+gates é PASS por antecipação. Sem migration10, merge/deploy/banco externo.
+
+C3 navegador final dev: 20/20 PASS (10 cenários × desktop/mobile), incluindo
+axe, teclado, zoom200%, seleção entre páginas, mudança de questionário/paciente,
+zero/falso/ausência/incompatibilidade/anexos, cancelar/remover/retorno tardio,
+403 seguro e503 com tentativa explícita. Uma execução anterior parcialmente
+interrompida por fixture e outra com rótulo antigo não são aprovação. Sem reduzir
+assertions ou ampliar timeouts. B das duas personas registrada em
+`docs/agents/ux/reports/QST10-10-BC-2026-11-25/`; paciente direto N/A. R4P2
+rechecou3 reproduções no próprio fonte e confirmou a correção de canonização,
+sem executarPG/HTTP; a revisão integral10 continua pendente.

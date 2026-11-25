@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from 'react';
 import { ChevronDown, ChevronRight, ClipboardList, RefreshCcw, TrendingUp } from 'lucide-react';
+import { ComparacaoRetornos } from './comparacao-retornos';
 import { CompletudeHistorica } from './completude-historica';
 import { ExportacaoRespostas } from './exportacao-respostas';
 import { Botao } from '@/components/ui/botao';
@@ -42,8 +43,8 @@ function TextoComRealce({ texto, busca }: { texto: string; busca: string }) {
 }
 
 function ListaRespostas({
-  respostasVisiveis, pacientesPorId, carregandoRespostas, buscaRespostas, timezone
-}: Pick<WorkspaceQuestionarios, 'respostasVisiveis' | 'pacientesPorId' | 'carregandoRespostas' | 'buscaRespostas'> & {timezone?:string}) {
+  respostasVisiveis, pacientesPorId, carregandoRespostas, buscaRespostas, timezone, comparacao
+}: Pick<WorkspaceQuestionarios, 'respostasVisiveis' | 'pacientesPorId' | 'carregandoRespostas' | 'buscaRespostas'> & {timezone?:string; comparacao:WorkspaceQuestionarios['comparacaoRetornos']}) {
   const idLista = useId();
   const [recolhidas, setRecolhidas] = useState<Set<string>>(() => new Set());
 
@@ -133,6 +134,13 @@ function ListaRespostas({
                   <span className="rounded-full border border-linha bg-white px-3 py-1 text-xs font-semibold text-texto-suave">
                     {resposta.totalRespostas} {resposta.totalRespostas === 1 ? 'resposta' : 'respostas'}
                   </span>
+                  <label className="flex min-w-0 items-center gap-2 text-sm">
+                    <input type="checkbox" checked={comparacao.selecionadas.some(s => s.respostaId === resposta.respostaId)}
+                      disabled={carregandoRespostas || !comparacao.podeSelecionar(resposta)}
+                      aria-label={`Comparar este envio — Selecionar para comparação: ${paciente?.nome ?? 'Paciente não identificado'}, ${formatarDataResposta(resposta.finalizadoEm, timezone)}`}
+                      onChange={() => comparacao.alternar(resposta, timezone)} />
+                    Comparar este envio
+                  </label>
                   {!respostaLeitura ? <Botao
                     type="button" tamanho="sm" disabled={carregandoRespostas}
                     aria-expanded={aberta} aria-controls={conteudoId}
@@ -348,6 +356,7 @@ export function AreaRespostas({ workspace }: { workspace: WorkspaceQuestionarios
 
           </div>
           <div id={`${abasId}-envios-painel`} role="tabpanel" aria-labelledby={`${abasId}-envios-aba`} hidden={aba !== 'envios'} className="pt-3">
+          <ComparacaoRetornos controle={workspace.comparacaoRetornos} nomePaciente={id => pacientesPorId.get(id)?.nome ?? 'Paciente não identificado'} />
           <ListaRespostas
             key={`${questionarioAtual?.id ?? ''}:${pacienteFiltroRespostas}`}
             respostasVisiveis={respostasVisiveis}
@@ -355,6 +364,7 @@ export function AreaRespostas({ workspace }: { workspace: WorkspaceQuestionarios
             buscaRespostas={buscaRespostas}
             carregandoRespostas={carregandoRespostas}
             timezone={leituraClinica?.timezone}
+            comparacao={workspace.comparacaoRetornos}
           />
           </div>
           </div>

@@ -1,4 +1,5 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useComparacaoRetornos } from './usar-comparacao-retornos';
 import { useCopiaPergunta } from './usar-copia-pergunta';
 import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { DragEndEvent, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
@@ -167,6 +168,7 @@ export function useWorkspaceQuestionarios() {
   const [historicoVersoesAberto, setHistoricoVersoesAberto] = useState(false);
   const [carregandoRespostas, setCarregandoRespostas] = useState(false);
   const [pacienteFiltroRespostas, definirPacienteFiltroRespostas] = useState('');
+  const comparacaoRetornos = useComparacaoRetornos(JSON.stringify([questionarioAtual?.id, pacienteFiltroRespostas]), questionarioAtual?.id);
   const sequenciaLeituraRespostas = useRef(0);
   const [inicioRespostas, definirInicioRespostas] = useState('');
   const [fimRespostas, definirFimRespostas] = useState('');
@@ -923,6 +925,7 @@ export function useWorkspaceQuestionarios() {
     perguntasPendentes,
     setAlteracoesPerguntaPendentes,
     respostasRecebidas,
+    comparacaoRetornos,
     leituraClinica,
     carregandoRespostas,
     versoes,

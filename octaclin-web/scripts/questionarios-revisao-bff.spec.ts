@@ -1,3 +1,4 @@
+import { POST as compararRetornosBff } from '../app/api/questionarios/[id]/respostas/comparacao/route';
 import { GET as consultarAgendas } from '../app/api/questionarios/[id]/agendamentos/route';
 import { POST as comandarAgenda } from '../app/api/questionarios/[id]/agendamentos/[agendamentoId]/comandos/route';
 import { GET as consultarPagina } from '../app/api/questionarios/[id]/respostas/pagina/route';
@@ -429,5 +430,66 @@ test('lista de agendas limita escopo/página e valida projeção de cada item',a
     assert.equal(chamadas,0);
     const r=await consultarAgendas(new Request(url),parametrosAgenda());assert.equal(r.status,200);
     assert.deepEqual(await r.json(),{itens:[agendaSintetica()],pagina:1,temMais:false});
+  }finally{restaurarFetch(original);__clearCookies();}
+});
+
+const idsComparar=['00000000-0000-4000-8000-000000000004','00000000-0000-4000-8000-000000000005'];
+const dadosComparar=()=>({pacienteId:pacienteAgendaId,respostaIds:idsComparar});
+function retornoComparadoSintetico(){return {questionarioId:questionarioAgendaId,pacienteId:pacienteAgendaId,ordem:'cronologica',timezone:'America/Sao_Paulo',
+  a:{respostaId:idsComparar[0],envioId:'00000000-0000-4000-8000-000000000006',finalizadoEm:'2026-01-01T12:00:00Z',versaoQuestionario:1},
+  b:{respostaId:idsComparar[1],envioId:'00000000-0000-4000-8000-000000000007',finalizadoEm:'2026-02-01T12:00:00Z',versaoQuestionario:2},
+  itens:[{perguntaId:'00000000-0000-4000-8000-000000000008',enunciadoA:'Medida original',enunciadoB:'Medida original',tipoA:'metrica',tipoB:'metrica',
+    unidade:'kg',unidadeA:'kg',unidadeB:'kg',a:{estado:'respondida',valor:0},b:{estado:'respondida',valor:2},compativel:true,motivo:null,delta:2}]};}
+
+test('QST10-10 BFF exige sessão, permissão, origem, exatamente2IDs e paciente sem delegar autoridade ao corpo',async()=>{
+  const original=global.fetch;let chamadas=0;global.fetch=(async()=>{chamadas++;throw new Error('Não chamar');}) as typeof fetch;
+  try{
+    __clearCookies();assert.equal((await compararRetornosBff(requisicaoAgenda(dadosComparar()),parametrosAgenda())).status,401);
+    __setCookies(cookiesSessaoValida([]));assert.equal((await compararRetornosBff(requisicaoAgenda(dadosComparar()),parametrosAgenda())).status,403);
+    __setCookies(cookiesSessaoValida(['questionarios.ler']));
+    assert.equal((await compararRetornosBff(requisicaoAgenda(dadosComparar(),'https://outra.example.test'),parametrosAgenda())).status,403);
+    for(const corpo of [{...dadosComparar(),tenantId:questionarioAgendaId},{...dadosComparar(),usuarioId:questionarioAgendaId},
+      {...dadosComparar(),respostaIds:[]},{...dadosComparar(),respostaIds:[idsComparar[0]]},{...dadosComparar(),respostaIds:[...idsComparar,agendaId]},
+      {...dadosComparar(),respostaIds:[idsComparar[0],idsComparar[0]]},{...dadosComparar(),pacienteId:'invalido'}]){
+      assert.equal((await compararRetornosBff(requisicaoAgenda(corpo),parametrosAgenda())).status,400);
+    }
+    assert.equal(chamadas,0);
+  }finally{restaurarFetch(original);__clearCookies();}
+});
+test('QST10-10 BFF preserva zero/fuso e projeta somente os fatos autorizados do par',async()=>{
+  const original=global.fetch;__setCookies(cookiesSessaoValida(['questionarios.ler']));const fonte=retornoComparadoSintetico();
+  global.fetch=(async(input,init)=>{
+    assert.match(String(input),new RegExp(`/questionarios/${questionarioAgendaId}/respostas/comparacao$`));
+    assert.deepEqual(JSON.parse(String(init?.body)),dadosComparar());
+    return Response.json({...fonte,snapshot:'NÃO EXPOR',capability:'NÃO EXPOR',a:{...fonte.a,contextoCifrado:'NÃO EXPOR'}});
+  }) as typeof fetch;
+  try{
+    const r=await compararRetornosBff(requisicaoAgenda(dadosComparar()),parametrosAgenda());assert.equal(r.status,200);
+    assert.match(r.headers.get('Cache-Control')??'',/no-store/);assert.deepEqual(await r.json(),fonte);
+  }finally{restaurarFetch(original);__clearCookies();}
+});
+test('QST10-10 BFF rejeita contexto, identidades, delta ou anexo inconsistentes e oculta erro interno',async()=>{
+  const original=global.fetch;__setCookies(cookiesSessaoValida(['questionarios.ler']));const fonte=retornoComparadoSintetico();
+  try{
+    for(const corpo of [{...fonte,pacienteId:agendaId},{...fonte,a:{...fonte.a,respostaId:agendaId}},
+      {...fonte,itens:[{...fonte.itens[0],compativel:false}]},{...fonte,itens:[{...fonte.itens[0],delta:'Infinity'}]},
+      {...fonte,itens:[{...fonte.itens[0],tipoA:'upload_midia',a:{estado:'respondida',valor:['URL_NÃO_DIVULGAR']}}]},
+      {...fonte,itens:[{...fonte.itens[0],a:{estado:'respondida',valor:false}}]}]){
+      global.fetch=(async()=>Response.json(corpo)) as typeof fetch;
+      const r=await compararRetornosBff(requisicaoAgenda(dadosComparar()),parametrosAgenda());assert.equal(r.status,502);
+      assert.doesNotMatch(await r.text(),/URL_NÃO_DIVULGAR/);
+    }
+    global.fetch=(async()=>new Response('DETALHE_INTERNO',{status:404})) as typeof fetch;
+    const negada=await compararRetornosBff(requisicaoAgenda(dadosComparar()),parametrosAgenda());assert.equal(negada.status,404);
+    assert.doesNotMatch(await negada.text(),/DETALHE_INTERNO/);
+  }finally{restaurarFetch(original);__clearCookies();}
+});
+test('QST10-10 BFF limita corpo e envelope sem truncar silenciosamente',async()=>{
+  const original=global.fetch;__setCookies(cookiesSessaoValida(['questionarios.ler']));let chamadas=0;
+  global.fetch=(async()=>{chamadas++;return new Response('x'.repeat(8*1024*1024+1));}) as typeof fetch;
+  try{
+    const grande=new Request('http://localhost/api/comparar',{method:'POST',headers:{Origin:'http://localhost'},body:'x'.repeat(2049)});
+    assert.equal((await compararRetornosBff(grande,parametrosAgenda())).status,413);assert.equal(chamadas,0);
+    assert.equal((await compararRetornosBff(requisicaoAgenda(dadosComparar()),parametrosAgenda())).status,413);assert.equal(chamadas,1);
   }finally{restaurarFetch(original);__clearCookies();}
 });
