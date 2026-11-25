@@ -210,3 +210,57 @@ com links às evidênciasUX/R4preservadas na05.06aguarda publicação comoDraft.
 07emworktreeprópria/workspace/qst10-07-completude-historica, base2d08ed4,
 preparaçãoTDDenquantocódigo06congelado. Antesdo primeirocommit07, integrar
 explicitamente somente checkpointdocumental06 porfastforward.08–10NOTRUN.
+
+## PR lógica07 — preenchimento histórico
+
+C1 209eea0: domínioRED7falhasfuncionais/1PASS, depoisGREEN8/8. C2 7a2bc76:
+leitor autorizado de resposta/envio exatos, q→paciente→envioFORSHARE, metadados
+mínimos antes de snapshot/valores, carteira/ciclo de vida; sem fallback atual,
+sem capability/revisão geradas. C3 39f1a92: consulta explícita no leitor,
+fora do sticky, sem GET novo ao apenasLerenvio/navegar; validouP02original sem
+alterar seus critérios. Controles estáveis preservam foco/impedem GET repetido.
+
+REDs adicionais: interface ausente por reversão controlada da própria integração;
+motivoarrayBFFaceito200quandoesperado502; foco perdido durante atualização;
+revisãoR4 encontrou leitura aplicando regras de qualidade de submissão aos
+históricos(2REDnull/11). Corrigido só no leitor: presença não é qualidade;
+validador deescrita inalterado. UmRED de dataausente mostrou que data não é
+requisito matemático; enviorespondido continua obrigatório, sem inventardata.
+Fixture de revogação passou a usar estado explícito em vez de número deGETs
+(StrictMode), preservando negação/hide e assertions; auditoria negada agora
+assertada positivamente, não confundida com auditoria de sucesso.
+
+Gates atuais:78/78domínio/serviço/HTTP;15/15BFF;37/37PostgreSQLdescartável
+real/runtime/NOBYPASSRLS/FORCERLS, incluindo4novos sobre carteira/concorrência,
+imutabilidade, null/fora-faixa/dataausente e33regressões dos pais. Backendbuild
++artefato e typechecksbackend/Web, lintafetado/linguagem PASS Node22.21.1.
+Regressão80/80 desktop/mobile(6,5min) no runtime39f1a92, incluindo6novos.
+Ajuste posterior só de fixtures/screenshot reconcilia2valorescom2preenchidas e
+versãosalva3comenviada2;6casosreexecutadosPASS(34s), mesmos critérios/runtime.
+Não somar reexecuções. Default dasfixtures74legadas permanece idêntico.
+CI do novoHEAD deve executar arquivo integral atual; não herdarPASSdeoutroSHA.
+
+Execução parcial anterior:33PASS/1FAIL(P02nav)/1interrompido/43NOTRUN, substituída
+pelo80PASS apósconsultaexplícita/posição preservarem contrato. Setupfalhou antes
+porReact/jsxruntimeexterno à.nextem/tmp e tipagemHTTPunknown: NÃO RED; resolvido
+só porNODE_PATHlocal para dependências confiáveis já congeladas e fixturetipada,
+sem alterar segurança/engines/deps/workflows. LintnoCWDerrou: setup, nãoPASS;
+reexecutado no pacoteWeb com sucesso. Nenhuma dependência nova/lock modificado.
+
+UXB/C e R4estática finais favoráveis, limites no
+[relatório](../docs/agents/ux/reports/QST10-07-BC-2026-11-23/consolidado.md).
+PacienteN/A, sem efeito noportal/envios/conteúdo. Screenreadermanual/usuáriosreais
+SKIPPED. Globaltest:authz/buildWeb local SKIPPED: gates canônicos doCI mantidos;
+15BFF e Nextdev/typecheck não substituem esses checks. Não há migration07.
+
+Ruling: backup dos commitsverdes da07 antes de abrirPR, para não repetir perda
+doexecutor; OctaClinCI/CodeQL declaram pull_request/pushmain, sem nova rodadaglobal
+nessa branch semPR. Nenhuma configuração alterada. ApósC4, PRDraftúnica sobre06.
+
+Atualização06: buildWebcompleto PASS apóscheckpoint8d06cf2(que registrava
+emexecução); runtime2d08ed4 sem mudanças. PR#588Draft, head8d06cf24, último
+CI consultado20SUCCESS/1SKIPPED(SBOM)/Demoemexecução, sem falha naqueleinstante.
+
+08preparada em/workspace/qst10-08-paginacao-exportacoes, base39f1a92,
+apenas leitura, sem código novo. AntesC1 fazerFF explícito só do C4documental
+07.09/10NOTRUN. Sem merge, deploy, operação externa ou mudançasClaude/FOOD06.

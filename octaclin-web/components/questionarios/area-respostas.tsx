@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from 'react';
 import { ChevronDown, ChevronRight, ClipboardList, RefreshCcw, TrendingUp } from 'lucide-react';
+import { CompletudeHistorica } from './completude-historica';
 import { ExportacaoRespostas } from './exportacao-respostas';
 import { DistribuicaoRespostas } from './distribuicao-respostas';
 import { Botao } from '@/components/ui/botao';
@@ -118,6 +119,7 @@ function ListaRespostas({
             <Botao type="button" tamanho="sm" disabled={carregandoRespostas} onClick={() => organizarExibidas(true)}>Recolher tudo</Botao>
           </div>
           )}
+          {respostaLeitura && <CompletudeHistorica key={`${respostaLeitura.questionarioId}:${respostaLeitura.respostaId}`} questionarioId={respostaLeitura.questionarioId} respostaId={respostaLeitura.respostaId} />}
           {(respostaLeitura ? [respostaLeitura] : respostasVisiveis).map((resposta) => {
             const paciente = pacientesPorId.get(resposta.pacienteId);
             const aberta = Boolean(respostaLeitura) || !recolhidas.has(resposta.respostaId);

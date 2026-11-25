@@ -1,3 +1,4 @@
+import { GET as completudeHistorica } from '../app/api/questionarios/[id]/respostas/[respostaId]/completude/route';
 import { GET as versaoEditor, POST as conferirEditor } from '../app/api/questionarios/[id]/validacao/route';
 import assert from 'node:assert/strict';
 import test from 'node:test';
@@ -300,5 +301,29 @@ test('QST10-06 prévia exige sessão permissão origem limites e não projeta ex
     assert.deepEqual(await(await versaoEditor(new Request('http://localhost'),params)).json(),{versao:2});
     global.fetch=(async()=>new Response(JSON.stringify({versao:2,problemas:[{campo:'secreto',codigo:'interno'}]}),{headers:{'Content-Type':'application/json'}}))as typeof fetch;
     assert.equal((await conferirEditor(req(),params)).status,502);
+  }finally{restaurarFetch(original);__clearCookies();}
+});
+
+
+test('QST10-07 leitura histórica exige sessão e permissão e só projeta contagens confiáveis', async()=>{
+  const original=global.fetch, id='00000000-0000-4000-8000-000000000001', respostaId='00000000-0000-4000-8000-000000000002';
+  const params={params:Promise.resolve({id,respostaId})};const req=new Request('http://localhost/api/completude');let chamadas=0;
+  const contagem={estado:'disponivel',versaoQuestionario:2,totalPerguntas:3,respondidas:2,obrigatorias:2,obrigatoriasRespondidas:2};
+  try{
+    global.fetch=(async()=>{chamadas++;return new Response(JSON.stringify({respostaId,envioId:id,completude:{...contagem,interno:'não expor'},snapshotEstrutura:{texto:'não expor'},comprovanteLeitura:'não expor'}),{headers:{'Content-Type':'application/json'}});})as typeof fetch;
+    __clearCookies();assert.equal((await completudeHistorica(req,params)).status,401);
+    __setCookies(cookiesSessaoValida(['dashboard.ler']));assert.equal((await completudeHistorica(req,params)).status,403);
+    __setCookies(cookiesSessaoValida(['questionarios.ler']));assert.equal((await completudeHistorica(req,{params:Promise.resolve({id:'invalido',respostaId})})).status,400);assert.equal(chamadas,0);
+    const resposta=await completudeHistorica(req,params);assert.equal(resposta.status,200);assert.match(resposta.headers.get('Cache-Control')??'',/no-store/);assert.deepEqual(await resposta.json(),{respostaId,completude:contagem});
+    for(const c of [{...contagem,respondidas:4},{...contagem,totalPerguntas:null},
+      {estado:'desconhecido',motivo:['snapshot_ausente'],versaoQuestionario:null,totalPerguntas:null,respondidas:null,obrigatorias:null,obrigatoriasRespondidas:null}]){
+      global.fetch=(async()=>new Response(JSON.stringify({respostaId,completude:c}),{headers:{'Content-Type':'application/json'}}))as typeof fetch;
+      assert.equal((await completudeHistorica(req,params)).status,502);
+    }
+    const desconhecida={estado:'desconhecido',motivo:'snapshot_ausente',versaoQuestionario:null,totalPerguntas:null,respondidas:null,obrigatorias:null,obrigatoriasRespondidas:null};
+    global.fetch=(async()=>new Response(JSON.stringify({respostaId,completude:desconhecida}),{headers:{'Content-Type':'application/json'}}))as typeof fetch;
+    assert.deepEqual(await(await completudeHistorica(req,params)).json(),{respostaId,completude:desconhecida});
+    global.fetch=(async()=>new Response(JSON.stringify({interno:'não expor'}),{status:404}))as typeof fetch;
+    const negada=await completudeHistorica(req,params);assert.equal(negada.status,404);assert.doesNotMatch(await negada.text(),/interno|não expor/);
   }finally{restaurarFetch(original);__clearCookies();}
 });

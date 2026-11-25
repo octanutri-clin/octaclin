@@ -348,6 +348,15 @@ export class ControladorQuestionarios {
     return this.servicoQuestionarios.listarRespostasQuestionario(usuario.tenantId, id, usuario);
   }
 
+  @Get('questionarios/:id/respostas/:respostaId/completude')
+  @Header('Cache-Control', 'private, no-store')
+  async obterCompletudeHistorica(@UsuarioAtual() usuario: UsuarioAutenticado, @Req() requisicao: Request,
+    @Param('id', ParseUUIDPipe) id: string, @Param('respostaId', ParseUUIDPipe) respostaId: string) {
+    const detalhe = await this.servicoQuestionarios.obterCompletudeHistorica(usuario.tenantId, id, respostaId, usuario);
+    await this.registrarAuditoria(usuario, requisicao, 'questionarios.resposta.visualizar', 'envio_questionario', detalhe.envioId, {});
+    return detalhe;
+  }
+
   @Get('questionarios/:id/respostas/exportar.csv')
   @Header('Content-Type', 'text/csv; charset=utf-8')
   @Header('Content-Disposition', 'attachment; filename="octaclin-respostas-formulario.csv"')

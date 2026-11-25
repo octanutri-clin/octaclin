@@ -15,7 +15,7 @@ const respostas = pacientes.map((paciente, indice) => ({
   respostas: [{ perguntaId: 'pergunta-1', tipo: 'texto', enunciado: 'Como foi a rotina?', valor: indice ? 'Preparei o jantar' : 'Organizei o almoço' }]
 }));
 
-async function preparar(page) {
+async function preparar(page, respostasDaFixture = respostas, questionariosDaFixture = questionarios) {
   const requisicoes = [];
   await page.context().addCookies([
     { name: 'octaclin_access_token', value: 'fake', domain: 'localhost', path: '/' },
@@ -48,10 +48,10 @@ async function preparar(page) {
     } else if (caminho === '/api/profissionais') {
       corpo = { itens: [{ id: 'profissional-1', nome: 'Profissional Exemplo' }], total: 1 };
     } else if (caminho === '/api/questionarios') {
-      corpo = { itens: questionarios, total: questionarios.length };
+      corpo = { itens: questionariosDaFixture, total: questionariosDaFixture.length };
     } else if (/^\/api\/questionarios\/q-[12]\/respostas\/leitura-clinica$/.test(caminho)) {
       const pacienteId = url.searchParams.get('pacienteId');
-      const selecionadas = respostas.filter((resposta) => !pacienteId || resposta.pacienteId === pacienteId);
+      const selecionadas = respostasDaFixture.filter((resposta) => !pacienteId || resposta.pacienteId === pacienteId);
       corpo = {
         questionarioId: caminho.split('/')[3], pacientes: [], perguntas: [],
         resumo: { totalRespostas: selecionadas.length, totalPacientes: selecionadas.length, totalPerguntas: 1, mediaRespostasPorEnvio: 1 },
@@ -851,4 +851,58 @@ test('QST10-02 painéis acessíveis com texto ampliado e contexto novo inicia em
   expect(axe.violations).toEqual([]);
   await page.locator('#filtro-paciente-respostas').selectOption('paciente-b');
   await expect(page.getByRole('tab', { name: 'Envios', exact: true })).toHaveAttribute('aria-selected', 'true');
+});
+
+test('QST10-07 leitura usa contagens históricas sem marcar revisão e mantém incerteza legada', async ({ page }) => {
+  const respostasCoerentes=[{...respostas[0],totalRespostas:2,respostas:[...respostas[0].respostas,{perguntaId:'pergunta-2',tipo:'metrica',enunciado:'Indicador sintético',valor:0}]},respostas[1]];
+  const requisicoes=await preparar(page,respostasCoerentes,questionarios.map(q=>q.id==='q-1'?{...q,versao:3}:q));
+  await page.route('**/api/questionarios/q-1/respostas/resposta-1/completude',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({respostaId:'resposta-1',completude:{estado:'disponivel',versaoQuestionario:2,totalPerguntas:4,respondidas:2,obrigatorias:2,obrigatoriasRespondidas:2}})}));
+  await page.route('**/api/questionarios/q-1/respostas/resposta-2/completude',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({respostaId:'resposta-2',completude:{estado:'desconhecido',motivo:'snapshot_ausente',versaoQuestionario:null,totalPerguntas:null,respondidas:null,obrigatorias:null,obrigatoriasRespondidas:null}})}));
+  await envio(page,pacientes[0].nome).getByRole('button',{name:'Ler envio',exact:true}).click();
+  await page.getByRole('button',{name:'Consultar preenchimento histórico',exact:true}).click();
+  const painel=page.getByRole('region',{name:'Preenchimento histórico',exact:true});
+  await expect(painel).toContainText('2 de 4 perguntas preenchidas na versão enviada 2.');
+  await expect(painel).toContainText('2 de 2 perguntas obrigatórias preenchidas.');
+  await expect(envio(page,pacientes[0].nome)).toContainText('2 respostas');
+  await expect(envio(page,pacientes[0].nome)).toContainText('Indicador sintético');
+  await expect(painel).toContainText('Preenchimento não mede qualidade');
+  await painel.screenshot({path:test.info().outputPath('qst10-07-completude.png')});
+  await page.locator('[data-qst-p02-leitura]').screenshot({path:test.info().outputPath('qst10-07-leitor.png')});
+  await page.getByRole('button',{name:'Próximo',exact:true}).click();await page.getByRole('button',{name:'Consultar preenchimento histórico',exact:true}).click();await expect(painel).toContainText('Preenchimento desconhecido');await expect(painel).not.toContainText('2 de 4');
+  expect(requisicoes.some(r=>r.metodo==='POST'&&r.caminho.includes('revisar'))).toBe(false);
+  await page.evaluate(()=>{document.documentElement.style.fontSize='200%';});const a=await new AxeBuilder({page}).include('[data-qst10-completude]').analyze();expect(a.violations).toEqual([]);
+});
+
+test('QST10-07 resultado atrasado não invade outro envio e acesso revogado não mantém contagem', async ({ page }) => {
+  await preparar(page);let liberar;
+  const espera=new Promise(resolve=>{liberar=resolve;});
+  await page.route('**/api/questionarios/q-1/respostas/resposta-1/completude',async route=>{await espera;await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({respostaId:'resposta-1',completude:{estado:'disponivel',versaoQuestionario:1,totalPerguntas:99,respondidas:99,obrigatorias:0,obrigatoriasRespondidas:0}})});});
+  let acessoRevogado=false;
+  await page.route('**/api/questionarios/q-1/respostas/resposta-2/completude',route=>{return route.fulfill({status:acessoRevogado?404:200,contentType:'application/json',body:JSON.stringify(!acessoRevogado?{respostaId:'resposta-2',completude:{estado:'disponivel',versaoQuestionario:1,totalPerguntas:0,respondidas:0,obrigatorias:0,obrigatoriasRespondidas:0}}:{mensagem:'Indisponível'})});});
+  const requisicaoA=page.waitForRequest(r=>r.url().endsWith('/resposta-1/completude'));
+  await envio(page,pacientes[0].nome).getByRole('button',{name:'Ler envio',exact:true}).click();
+  await page.getByRole('button',{name:'Consultar preenchimento histórico',exact:true}).click();await requisicaoA;
+  await page.getByRole('button',{name:'Próximo',exact:true}).click();await page.getByRole('button',{name:'Consultar preenchimento histórico',exact:true}).click();
+  const painel=page.getByRole('region',{name:'Preenchimento histórico',exact:true});await expect(painel).toContainText('0 de 0 perguntas preenchidas');liberar();
+  await expect(painel).not.toContainText('99 de 99');
+  acessoRevogado=true;await painel.getByRole('button',{name:'Atualizar preenchimento',exact:true}).click();await expect(painel).toContainText('Não foi possível consultar');await expect(painel).not.toContainText('0 de 0');
+  await expect(painel.getByRole('button',{name:'Tentar consultar novamente',exact:true})).toBeVisible();
+});
+
+test('QST10-07 atualização preserva foco de teclado e não duplica consulta pendente', async ({ page }) => {
+  await preparar(page);let bloquear=false, liberar, iniciou;let repeticoes=0;
+  const espera=new Promise(resolve=>{liberar=resolve;});const iniciada=new Promise(resolve=>{iniciou=resolve;});
+  await page.route('**/api/questionarios/q-1/respostas/resposta-1/completude',async route=>{
+    if(bloquear){repeticoes++;iniciou();await espera;}
+    await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({respostaId:'resposta-1',completude:{estado:'disponivel',versaoQuestionario:2,totalPerguntas:3,respondidas:2,obrigatorias:2,obrigatoriasRespondidas:2}})});
+  });
+  await envio(page,pacientes[0].nome).getByRole('button',{name:'Ler envio',exact:true}).click();
+  await page.getByRole('button',{name:'Consultar preenchimento histórico',exact:true}).click();
+  const painel=page.getByRole('region',{name:'Preenchimento histórico',exact:true});await expect(painel).toContainText('2 de 3');
+  bloquear=true;const botao=painel.getByRole('button',{name:'Atualizar preenchimento',exact:true});await botao.focus();await page.keyboard.press('Enter');await iniciada;
+  try{
+    await expect(painel.locator('button')).toBeFocused();await expect(painel.locator('button')).toHaveAttribute('aria-disabled','true');
+    await page.keyboard.press('Enter');expect(repeticoes).toBe(1);
+  }finally{liberar();}
+  await expect(botao).toBeFocused();await expect(painel).toContainText('2 de 3');
 });

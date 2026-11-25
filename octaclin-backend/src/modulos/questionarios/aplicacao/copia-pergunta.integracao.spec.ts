@@ -1,3 +1,6 @@
+import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
+import { RespostaCheckinOrm } from '../infraestrutura/resposta-checkin.orm';
+import { RespostaValorOrm } from '../infraestrutura/resposta-valor.orm';
 import 'reflect-metadata';
 import { randomUUID } from 'node:crypto';
 import { BadRequestException, ConflictException, ForbiddenException, NotFoundException, UnauthorizedException } from '@nestjs/common';
@@ -68,24 +71,30 @@ suite('QST-P05 — PostgreSQL descartável, runtime e FORCE RLS', () => {
       CREATE TABLE envios_questionario(id uuid PRIMARY KEY, tenant_id uuid NOT NULL, questionario_id uuid, snapshot_estrutura jsonb, paciente_id uuid DEFAULT gen_random_uuid(), agendamento_id uuid,
         status varchar(40) DEFAULT 'pendente', enviado_em timestamptz, respondido_em timestamptz, revisado_em timestamptz,
         revisado_por_usuario_id uuid, expira_em timestamptz, respostas_rascunho jsonb, rascunho_atualizado_em timestamptz, rascunho_versao int DEFAULT 0);
+      CREATE TABLE pacientes(id uuid PRIMARY KEY, tenant_id uuid NOT NULL, profissional_responsavel_id uuid NOT NULL,
+        arquivado_em timestamptz, status_ciclo_vida varchar(32) DEFAULT 'ACTIVE');
+      CREATE TABLE respostas_checkin(id uuid PRIMARY KEY, tenant_id uuid NOT NULL, paciente_id uuid NOT NULL,
+        envio_questionario_id uuid NOT NULL, finalizado_em timestamptz, criado_em timestamptz DEFAULT now(), score_final numeric(8,2));
+      CREATE TABLE resposta_valores(id uuid PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id uuid NOT NULL,
+        resposta_checkin_id uuid NOT NULL, pergunta_id uuid NOT NULL, valor jsonb NOT NULL, score_ponderado numeric(8,2));
       CREATE ROLE qst_runtime LOGIN PASSWORD 'runtime-test-only' NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS;
       GRANT USAGE ON SCHEMA public TO qst_runtime;
       GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA public TO qst_runtime;
     `);
-    for (const tabela of ['questionarios', 'perguntas', 'opcoes_pergunta', 'usuarios', 'sessoes_usuario', 'profissionais', 'envios_questionario']) {
+    for (const tabela of ['questionarios', 'perguntas', 'opcoes_pergunta', 'usuarios', 'sessoes_usuario', 'profissionais', 'envios_questionario', 'pacientes', 'respostas_checkin', 'resposta_valores']) {
       await admin.query(`ALTER TABLE ${tabela} ENABLE ROW LEVEL SECURITY; ALTER TABLE ${tabela} FORCE ROW LEVEL SECURITY;
         CREATE POLICY tenant_isolado ON ${tabela} USING (tenant_id = current_setting('app.tenant_id', true)::uuid)
         WITH CHECK (tenant_id = current_setting('app.tenant_id', true)::uuid);`);
     }
     runtime = new DataSource({ type: 'postgres', ...conexao, username: 'qst_runtime', password: 'runtime-test-only',
       synchronize: false, logging: false, extra: { max: 8, application_name: 'qst_p05_runtime', statement_timeout: 10_000 },
-      entities: [QuestionarioOrm, PerguntaOrm, OpcaoPerguntaOrm, UsuarioOrm, SessaoUsuarioOrm, ProfissionalOrm, EnvioQuestionarioOrm] });
+      entities: [QuestionarioOrm, PerguntaOrm, OpcaoPerguntaOrm, UsuarioOrm, SessaoUsuarioOrm, ProfissionalOrm, EnvioQuestionarioOrm, PacienteOrm, RespostaCheckinOrm, RespostaValorOrm] });
     await runtime.initialize();
     servico = new ServicoQuestionarios(new ExecutorTenant(runtime));
   }, 90_000);
 
   beforeEach(async () => {
-    await admin.query('TRUNCATE opcoes_pergunta,perguntas,questionarios,usuarios,sessoes_usuario,profissionais,envios_questionario CASCADE');
+    await admin.query('TRUNCATE opcoes_pergunta,perguntas,questionarios,usuarios,sessoes_usuario,profissionais,envios_questionario,pacientes,respostas_checkin,resposta_valores CASCADE');
     await admin.query(`INSERT INTO questionarios(id,tenant_id,profissional_id,titulo,status,versao) VALUES($1,$2,$3,'Rascunho sintético','rascunho',4)`, [questionarioId, tenant, profissionalId]);
     await admin.query(`INSERT INTO perguntas(id,tenant_id,questionario_id,categoria_id,tipo,enunciado,peso,obrigatoria,configuracao,ordem,chave_clinica,visivel_biblioteca)
       VALUES($1,$3,$4,$5,'multipla_escolha','Pergunta sintética salva',1.5,false,'{"secao":"Rotina","multipla":true}',1,'comparacao-original',true),
@@ -419,6 +428,66 @@ suite('QST-P05 — PostgreSQL descartável, runtime e FORCE RLS', () => {
       if (resultado.status === 'rejected') expect(resultado.reason).toBeInstanceOf(ConflictException);
       expect((await admin.query('SELECT versao FROM questionarios WHERE id=$1',[questionarioId])).rows[0].versao).toBe(5);
     } finally { if(trava.isTransactionActive)await trava.rollbackTransaction();await trava.release();await pendente; }
+  });
+
+  async function prepararRetornoHistorico(semSnapshot = false) {
+    const paciente = randomUUID(), resposta = randomUUID();
+    const snapshot = { versaoQuestionario: 1, titulo: 'Histórico sintético', perguntas: [
+      { id: origemId, tipo: 'metrica', obrigatoria: true, configuracao: { minimo: 0, maximo: 10 }, opcoes: [] },
+      { id: finalId, tipo: 'sim_nao', obrigatoria: true, configuracao: {}, opcoes: [] }
+    ] };
+    await admin.query('INSERT INTO pacientes(id,tenant_id,profissional_responsavel_id) VALUES($1,$2,$3)', [paciente, tenant, profissionalId]);
+    await admin.query("UPDATE envios_questionario SET paciente_id=$1,status='respondido',snapshot_estrutura=$2::jsonb WHERE id=$3", [paciente, semSnapshot ? null : JSON.stringify(snapshot), envioId]);
+    await admin.query('INSERT INTO respostas_checkin(id,tenant_id,paciente_id,envio_questionario_id,finalizado_em) VALUES($1,$2,$3,$4,now())',[resposta,tenant,paciente,envioId]);
+    await admin.query("INSERT INTO resposta_valores(tenant_id,resposta_checkin_id,pergunta_id,valor) VALUES($1,$2,$3,'0'),($1,$2,$4,'false')",[tenant,resposta,origemId,finalId]);
+    return { paciente, resposta };
+  }
+
+  it('QST10-07 usa snapshot sem gravar, preserva zero/falso e reautoriza carteira sob RLS', async () => {
+    const { paciente, resposta } = await prepararRetornoHistorico();
+    const antes = (await admin.query('SELECT * FROM envios_questionario WHERE id=$1',[envioId])).rows;
+    await admin.query('UPDATE questionarios SET versao=99 WHERE id=$1',[questionarioId]);
+    await admin.query("UPDATE perguntas SET enunciado='Definição atual alterada',configuracao='{}' WHERE questionario_id=$1",[questionarioId]);
+    expect(await sut().obterCompletudeHistorica(tenant,questionarioId,resposta,ator)).toEqual({respostaId:resposta,envioId,completude:{estado:'disponivel',versaoQuestionario:1,totalPerguntas:2,respondidas:2,obrigatorias:2,obrigatoriasRespondidas:2}});
+    expect((await admin.query('SELECT * FROM envios_questionario WHERE id=$1',[envioId])).rows).toEqual(antes);
+    await expect(sut().obterCompletudeHistorica(outroTenant,questionarioId,resposta,{...ator,tenantId:outroTenant})).rejects.toBeInstanceOf(NotFoundException);
+    await admin.query('UPDATE pacientes SET profissional_responsavel_id=$1 WHERE id=$2',[randomUUID(),paciente]);
+    await expect(sut().obterCompletudeHistorica(tenant,questionarioId,resposta,ator)).rejects.toBeInstanceOf(NotFoundException);
+    expect((await admin.query('SELECT * FROM envios_questionario WHERE id=$1',[envioId])).rows).toEqual(antes);
+  });
+
+  it('QST10-07 legado sem snapshot mantém denominadores nulos', async () => {
+    const { resposta } = await prepararRetornoHistorico(true);
+    const r = await sut().obterCompletudeHistorica(tenant,questionarioId,resposta,ator);
+    expect(r.completude).toEqual({estado:'desconhecido',motivo:'snapshot_ausente',versaoQuestionario:null,totalPerguntas:null,respondidas:null,obrigatorias:null,obrigatoriasRespondidas:null});
+  });
+
+  it('QST10-07 transferência concorrente impede leitura após esperar pelo paciente', async () => {
+    const { paciente, resposta } = await prepararRetornoHistorico();
+    const trava = runtime.createQueryRunner(); await trava.connect(); await trava.startTransaction();
+    let pendente: Promise<PromiseSettledResult<unknown>[]> | undefined;
+    try {
+      await trava.query("SELECT set_config('app.tenant_id',$1,true)",[tenant]);
+      await trava.query('UPDATE pacientes SET profissional_responsavel_id=$1 WHERE id=$2',[randomUUID(),paciente]);
+      pendente=Promise.allSettled([sut().obterCompletudeHistorica(tenant,questionarioId,resposta,ator)]);
+      await aguardarBloqueados(1); await trava.commitTransaction();
+      const [r]=await pendente;expect(r.status).toBe('rejected');if(r.status==='rejected')expect(r.reason).toBeInstanceOf(NotFoundException);
+    } finally { if(trava.isTransactionActive)await trava.rollbackTransaction();await trava.release();await pendente; }
+  });
+
+  it('QST10-07 presença null e fora da faixa não reinterpreta qualidade nem regrava valores', async () => {
+    const { resposta } = await prepararRetornoHistorico();
+    const snapshotAntes=(await admin.query('SELECT snapshot_estrutura FROM envios_questionario WHERE id=$1',[envioId])).rows;
+    await admin.query("UPDATE resposta_valores SET valor='null'::jsonb WHERE resposta_checkin_id=$1 AND pergunta_id=$2",[resposta,origemId]);
+    expect((await sut().obterCompletudeHistorica(tenant,questionarioId,resposta,ator)).completude).toMatchObject({estado:'disponivel',totalPerguntas:2,respondidas:1,obrigatorias:2,obrigatoriasRespondidas:1});
+    expect((await admin.query('SELECT valor::text AS v FROM resposta_valores WHERE resposta_checkin_id=$1 AND pergunta_id=$2',[resposta,origemId])).rows[0].v).toBe('null');
+    await admin.query("UPDATE resposta_valores SET valor='11'::jsonb WHERE resposta_checkin_id=$1 AND pergunta_id=$2",[resposta,origemId]);
+    expect((await sut().obterCompletudeHistorica(tenant,questionarioId,resposta,ator)).completude).toMatchObject({estado:'disponivel',totalPerguntas:2,respondidas:2,obrigatorias:2,obrigatoriasRespondidas:2});
+    expect((await admin.query('SELECT valor::text AS v FROM resposta_valores WHERE resposta_checkin_id=$1 AND pergunta_id=$2',[resposta,origemId])).rows[0].v).toBe('11');
+    await admin.query('UPDATE respostas_checkin SET finalizado_em=NULL WHERE id=$1',[resposta]);
+    expect((await sut().obterCompletudeHistorica(tenant,questionarioId,resposta,ator)).completude).toMatchObject({estado:'disponivel',totalPerguntas:2,respondidas:2});
+    expect((await admin.query('SELECT finalizado_em FROM respostas_checkin WHERE id=$1',[resposta])).rows[0].finalizado_em).toBeNull();
+    expect((await admin.query('SELECT snapshot_estrutura FROM envios_questionario WHERE id=$1',[envioId])).rows).toEqual(snapshotAntes);
   });
 
 });

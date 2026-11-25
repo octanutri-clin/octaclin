@@ -1,0 +1,25 @@
+{
+  "codigo": "39f1a923cbe4ac641a0f0502613a673157a08298",
+  "modalidade": "runtime com papel explícito, sem TOML nativo comprovado",
+  "instancia": "/root/qst06_nutricionista_bc",
+  "inicio": null,
+  "fim": null,
+  "data": "2026-11-23; horários individuais não capturados",
+  "ferramentas_persona": [],
+  "paciente": "N/A justificado; não executado",
+  "saidas": "síntese editorial do retorno, não transcrição literal",
+  "hashes": {
+    "docs/agents/ux/reports/QST10-07-BC-2026-11-23/brief.md": "1d8ffcbf3db8a0b285f2ec2a638485a95d6416970f2db99ea74061cdb686bb6a",
+    "docs/agents/ux/reports/QST10-07-BC-2026-11-23/completude-desktop.png": "f3cdfef230a4750b8b84d98603bfaf5b0549301827aa2bbd9df26f5c2ea4df3f",
+    "docs/agents/ux/reports/QST10-07-BC-2026-11-23/leitor-mobile.png": "fc54dd83552d0344bd0f2e94786bfc4904d1dfa0a5cc6acd00b95cb77033d7ec",
+    "docs/agents/ux/reports/QST10-07-BC-2026-11-23/paciente.md": "dd3866b40c16c47e9b73f118ad4138c4f98c39d518481222a801b432a13dfbf3",
+    "docs/agents/ux/reports/QST10-07-BC-2026-11-23/consolidado.md": "b220afacb7ddae8504b134cebbe6b5652898592efaffac37e6f60ef9849e7c6b",
+    "docs/agents/ux/reports/QST10-07-BC-2026-11-23/leitor-desktop.png": "57fe6af78ac16f6f487c0e3c3c0e0b8861dc67e26f1543e2c9fccf43621e9112",
+    "docs/agents/ux/reports/QST10-07-BC-2026-11-23/completude-mobile.png": "c3df9b503bd05f3a1fa69b0b1d05bbc70b7d2e1be78e2097a18b9197f157f214",
+    "docs/agents/ux/reports/QST10-07-BC-2026-11-23/nutricionista.md": "d78b8c103ad6987ce42a25a4f23f85dab263571d75ae6ca0290d8c423ec266ec"
+  },
+  "papeis": {
+    ".codex/agents/octaclin-nutricionista-ux.toml": "6259b40a98e2c49053cbc6adbc0c59d0312b14e191b228ab73de2f2eac53af6d",
+    ".codex/agents/octaclin-paciente-ux.toml": "a40b1ded5e47739a2710caa5ec9a9a7871b57be7efc11deefaae0515028ff7d7"
+  }
+}
