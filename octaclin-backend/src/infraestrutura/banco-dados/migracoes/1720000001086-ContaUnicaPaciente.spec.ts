@@ -1,5 +1,6 @@
 import type { QueryRunner } from 'typeorm';
 import { ContaUnicaPaciente1720000001086 } from './1720000001086-ContaUnicaPaciente';
+import { DelegacoesCarteiraEVinculosRepresentacao1720000001085 } from './1720000001085-DelegacoesCarteiraEVinculosRepresentacao';
 import { criarOpcoesTypeOrm } from '../opcoes-typeorm';
 
 const Migracao = ContaUnicaPaciente1720000001086;
@@ -12,7 +13,10 @@ describe('1086 conta única por ficha de paciente', () => {
   it('registrada uma única vez, depois da 1085', () => {
     const migracoes = criarOpcoesTypeOrm().migrations as unknown[];
     expect(migracoes.filter(m => m === Migracao)).toHaveLength(1);
-    expect(migracoes[migracoes.length - 1]).toBe(Migracao);
+    const antecessora = DelegacoesCarteiraEVinculosRepresentacao1720000001085;
+    expect(migracoes.filter(m => m === antecessora)).toHaveLength(1);
+    // Later migrations may be appended; this contract is the 1085 → 1086 ordering.
+    expect(migracoes.indexOf(Migracao)).toBe(migracoes.indexOf(antecessora) + 1);
   });
   it('sem duplicata: desliga o filtro de RLS, trava a tabela e cria o índice parcial único', async () => {
     const { query, q } = runner(false);

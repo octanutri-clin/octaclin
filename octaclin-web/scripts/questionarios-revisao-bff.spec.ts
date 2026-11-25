@@ -1,3 +1,5 @@
+import { GET as consultarPagina } from '../app/api/questionarios/[id]/respostas/pagina/route';
+import { POST as exportarEscopo } from '../app/api/questionarios/[id]/respostas/exportacao.csv/route';
 import { GET as completudeHistorica } from '../app/api/questionarios/[id]/respostas/[respostaId]/completude/route';
 import { GET as versaoEditor, POST as conferirEditor } from '../app/api/questionarios/[id]/validacao/route';
 import assert from 'node:assert/strict';
@@ -326,4 +328,46 @@ test('QST10-07 leitura histórica exige sessão e permissão e só projeta conta
     global.fetch=(async()=>new Response(JSON.stringify({interno:'não expor'}),{status:404}))as typeof fetch;
     const negada=await completudeHistorica(req,params);assert.equal(negada.status,404);assert.doesNotMatch(await negada.text(),/interno|não expor/);
   }finally{restaurarFetch(original);__clearCookies();}
+});
+
+test('QST10-08 página exige sessão/permissão e valida contexto antes do backend',async()=>{
+ const original=global.fetch,id='00000000-0000-4000-8000-000000000001',params={params:Promise.resolve({id})};let chamadas=0;
+ try{
+  global.fetch=(async()=>{chamadas++;throw new Error('não consultar');})as typeof fetch;
+  __clearCookies();assert.equal((await consultarPagina(new Request('http://localhost/api/pagina'),params)).status,401);
+  __setCookies(cookiesSessaoValida([]));assert.equal((await consultarPagina(new Request('http://localhost/api/pagina'),params)).status,403);
+  __setCookies(cookiesSessaoValida(['questionarios.ler']));
+  for(const query of ['?tamanho=1000','?inicio=2026-02-30','?fim=2026-04-01&inicio=2026-04-02','?tenantId='+id,'?tamanho=25&tamanho=50','?pacienteId=invalido'])assert.equal((await consultarPagina(new Request('http://localhost/api/pagina'+query),params)).status,400);
+  assert.equal(chamadas,0);
+ }finally{restaurarFetch(original);__clearCookies();}
+});
+
+test('QST10-08 página projeta só fatos autorizados e rejeita inconsistências',async()=>{
+ const original=global.fetch,id='00000000-0000-4000-8000-000000000001',params={params:Promise.resolve({id})};
+ const dados={questionarioId:id,filtros:{tamanho:25},timezone:'America/Sao_Paulo',totalConsulta:30,proximoCursor:'opaco',resumo:{totalRespostas:1,totalPacientes:1,totalPerguntas:1,mediaRespostasPorEnvio:1},pacientes:[{pacienteId:id,totalRespostas:1,totalValoresRespondidos:1,mediaRespostasPorEnvio:1}],perguntas:[{perguntaId:id,enunciado:'Quantidade',tipo:'metrica',totalRespostas:1,mediaNumerica:0,textosRecentes:[],distribuicao:[{valor:'0',total:1}]}],respostas:[{respostaId:id,envioId:id,pacienteId:id,questionarioId:id,totalRespostas:1,respostas:[{perguntaId:id,enunciado:'Quantidade',tipo:'metrica',valor:0}]}]};
+ try{
+  __setCookies(cookiesSessaoValida(['questionarios.ler']));
+  global.fetch=(async(input)=>{assert.equal(new URL(String(input)).pathname,`/questionarios/${id}/respostas/pagina`);return new Response(JSON.stringify({...dados,snapshotEstrutura:'não expor',comprovanteLeitura:'não expor',respostas:dados.respostas.map(r=>({...r,interno:'não expor',respostas:r.respostas.map(v=>({...v,interno:'não expor'}))}))}),{headers:{'Content-Type':'application/json'}});})as typeof fetch;
+  const r=await consultarPagina(new Request('http://localhost/api/pagina'),params);assert.equal(r.status,200);assert.match(r.headers.get('Cache-Control')??'',/no-store/);assert.deepEqual(await r.json(),dados);
+  for(const alteracao of [{questionarioId:'outro'},{respostas:Array(101).fill(dados.respostas[0])},{totalConsulta:-1},{proximoCursor:['errado']},{resumo:{...dados.resumo,totalRespostas:2}},{timezone:'Não existe'}]){
+   global.fetch=(async()=>new Response(JSON.stringify({...dados,...alteracao}),{headers:{'Content-Type':'application/json'}}))as typeof fetch;
+   assert.equal((await consultarPagina(new Request('http://localhost/api/pagina'),params)).status,502);
+  }
+  global.fetch=(async()=>new Response(JSON.stringify({interno:'segredo sintético'}),{status:404}))as typeof fetch;
+  const negada=await consultarPagina(new Request('http://localhost/api/pagina'),params);assert.equal(negada.status,404);assert.doesNotMatch(await negada.text(),/segredo/);
+ }finally{restaurarFetch(original);__clearCookies();}
+});
+
+test('QST10-08 três CSV validam alcance, origem e conteúdo privado',async()=>{
+ const original=global.fetch,id='00000000-0000-4000-8000-000000000001',params={params:Promise.resolve({id})};let chamadas=0;let falhar=false;
+ const req=(body:unknown,origin='http://localhost')=>new Request('http://localhost/api/exportacao',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify(body)});
+ try{
+  global.fetch=(async(input,init)=>{chamadas++;assert.equal(new URL(String(input)).pathname,`/questionarios/${id}/respostas/exportacao.csv`);assert.ok(init?.body);return falhar ? new Response('segredo sintético',{status:400}) : new Response('respostaId\n',{headers:{'Content-Type':'text/csv'}});})as typeof fetch;
+  __clearCookies();assert.equal((await exportarEscopo(req({escopo:'questionario'}),params)).status,401);
+  __setCookies(cookiesSessaoValida(['questionarios.ler']));assert.equal((await exportarEscopo(req({escopo:'questionario'},'https://outra.example.test'),params)).status,403);
+  for(const body of [{escopo:'visiveis'},{escopo:'consulta',respostaIds:[id]},{escopo:'questionario',filtros:{pacienteId:id}},{escopo:'visiveis',respostaIds:[id,id]},{escopo:'consulta',filtros:{timezone:'UTC'}},{escopo:'consulta',filtros:{fim:'2026-02-30'}},{escopo:'questionario',tenantId:id}])assert.equal((await exportarEscopo(req(body),params)).status,400);
+  assert.equal(chamadas,0);
+  for(const body of [{escopo:'visiveis',respostaIds:[id]},{escopo:'consulta',filtros:{inicio:'2026-11-01'}},{escopo:'questionario'}]){const r=await exportarEscopo(req(body),params);assert.equal(r.status,200);assert.match(r.headers.get('Cache-Control')??'',/no-store/);assert.match(r.headers.get('Content-Type')??'',/text\/csv/);}
+  falhar=true;const r=await exportarEscopo(req({escopo:'questionario'}),params);assert.equal(r.status,400);assert.doesNotMatch(await r.text(),/segredo/);
+ }finally{restaurarFetch(original);__clearCookies();}
 });

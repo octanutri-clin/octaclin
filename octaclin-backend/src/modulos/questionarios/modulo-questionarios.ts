@@ -1,3 +1,5 @@
+import { ControladorRespostasPaginadas } from './apresentacao/controlador-respostas-paginadas';
+import { ServicoRespostasPaginadas } from './aplicacao/servico-respostas-paginadas';
 import { Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -45,8 +47,8 @@ import { RespostaValorOrm } from './infraestrutura/resposta-valor.orm';
     ModuloTenancy,
     ModuloMobile
   ],
-  controllers: [ControladorQuestionarios, ControladorFormulariosPublicos],
-  providers: [ServicoQuestionarios, ServicoRevisaoFormularios, CriptografiaDadosSensiveis, ProcessadorAgendamentosQuestionario, ServicoAuditoria],
+  controllers: [ControladorRespostasPaginadas, ControladorQuestionarios, ControladorFormulariosPublicos],
+  providers: [ServicoRespostasPaginadas, ServicoQuestionarios, ServicoRevisaoFormularios, CriptografiaDadosSensiveis, ProcessadorAgendamentosQuestionario, ServicoAuditoria],
   exports: [ServicoQuestionarios]
 })
 export class ModuloQuestionarios {}

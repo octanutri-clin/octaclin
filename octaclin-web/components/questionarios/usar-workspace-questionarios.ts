@@ -4,7 +4,7 @@ import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { DragEndEvent, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import {
   CategoriaPerguntaApi,
-  LeituraClinicaQuestionarioApi,
+  PaginaRespostasApi,
   MatrizLongitudinalRespostasApi,
   ModeloQuestionarioApi,
   PerguntaApi,
@@ -25,7 +25,7 @@ import {
   listarPerguntas,
   listarQuestionarios,
   listarVersoesQuestionario,
-  obterLeituraClinicaQuestionario,
+  obterPaginaRespostas,
   obterMatrizLongitudinalRespostas,
   reordenarPerguntas,
   VersaoQuestionarioApi
@@ -107,11 +107,11 @@ export function formatarValorResposta(valor: unknown): string {
   return JSON.stringify(valor);
 }
 
-export function formatarDataResposta(valor?: string): string {
+export function formatarDataResposta(valor?: string, timezone?: string): string {
   if (!valor) return 'Sem data';
   const data = new Date(valor);
   if (Number.isNaN(data.getTime())) return 'Sem data';
-  return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(data);
+  return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short', ...(timezone?{timeZone:timezone}:{}) }).format(data);
 }
 
 export function useWorkspaceQuestionarios() {
@@ -160,7 +160,7 @@ export function useWorkspaceQuestionarios() {
     if (contextoListaRef.current.id !== questionarioAtual?.id) contextoListaRef.current = { id: questionarioAtual?.id };
   }, [questionarioAtual?.id]);
   const [respostasRecebidas, setRespostasRecebidas] = useState<RespostaQuestionarioRecebidaApi[]>([]);
-  const [leituraClinica, setLeituraClinica] = useState<LeituraClinicaQuestionarioApi | null>(null);
+  const [leituraClinica, setLeituraClinica] = useState<PaginaRespostasApi | null>(null);
   const [versoes, setVersoes] = useState<VersaoQuestionarioApi[]>([]);
   const [carregandoVersoes, setCarregandoVersoes] = useState(false);
   const [erroVersoes, setErroVersoes] = useState<string | null>(null);
@@ -168,6 +168,11 @@ export function useWorkspaceQuestionarios() {
   const [carregandoRespostas, setCarregandoRespostas] = useState(false);
   const [pacienteFiltroRespostas, definirPacienteFiltroRespostas] = useState('');
   const sequenciaLeituraRespostas = useRef(0);
+  const [inicioRespostas, definirInicioRespostas] = useState('');
+  const [fimRespostas, definirFimRespostas] = useState('');
+  const [tamanhoRespostas, setTamanhoRespostas] = useState<25|50|100>(25);
+  const [paginaRespostas, setPaginaRespostas] = useState(0);
+  const [cursoresRespostas, setCursoresRespostas] = useState<(string|undefined)[]>([undefined]);
   const [buscaRespostas, setBuscaRespostas] = useState('');
   const [matrizLongitudinal, setMatrizLongitudinal] = useState<MatrizLongitudinalRespostasApi | null>(null);
   const [carregandoMatriz, setCarregandoMatriz] = useState(false);
@@ -184,12 +189,16 @@ export function useWorkspaceQuestionarios() {
     setRespostasRecebidas([]);
     setLeituraClinica(null);
     setCarregandoRespostas(false);
+    setPaginaRespostas(0);setCursoresRespostas([undefined]);
   }
 
   function setPacienteFiltroRespostas(valor: string) {
     if (valor !== pacienteFiltroRespostas) invalidarLeituraRespostas();
     definirPacienteFiltroRespostas(valor);
   }
+
+  function setInicioRespostas(valor:string) {invalidarLeituraRespostas();definirInicioRespostas(valor);}
+  function setFimRespostas(valor:string) {invalidarLeituraRespostas();definirFimRespostas(valor);}
 
   function invalidarLeituraMatriz() {
     sequenciaLeituraMatriz.current += 1;
@@ -305,7 +314,7 @@ export function useWorkspaceQuestionarios() {
     }
   }
 
-  async function carregarRespostas(questionarioId = questionarioAtual?.id, pacienteId = pacienteFiltroRespostas) {
+  async function carregarRespostas(questionarioId = questionarioAtual?.id, pacienteId = pacienteFiltroRespostas, pagina: {cursor?:string;indice?:number;tamanho?:25|50|100} = {}) {
     const sequencia = ++sequenciaLeituraRespostas.current;
     if (!questionarioId) {
       setRespostasRecebidas([]);
@@ -315,13 +324,22 @@ export function useWorkspaceQuestionarios() {
     }
 
     setCarregandoRespostas(true);
+    const mesmaPagina = leituraClinica?.questionarioId===questionarioId && (pagina.indice??0)===paginaRespostas &&
+      (leituraClinica.filtros.pacienteId??'')===pacienteId && (leituraClinica.filtros.inicio??'')===inicioRespostas &&
+      (leituraClinica.filtros.fim??'')===fimRespostas && leituraClinica.filtros.tamanho===(pagina.tamanho??tamanhoRespostas);
+    if(!mesmaPagina){setRespostasRecebidas([]);setLeituraClinica(null);}
     try {
-      const leitura = await obterLeituraClinicaQuestionario(questionarioId, { pacienteId: pacienteId || undefined });
+      const leitura = await obterPaginaRespostas(questionarioId, { pacienteId: pacienteId || undefined,
+        inicio:inicioRespostas||undefined,fim:fimRespostas||undefined,tamanho:pagina.tamanho??tamanhoRespostas,cursor:pagina.cursor });
       if (sequencia !== sequenciaLeituraRespostas.current) return;
       setLeituraClinica(leitura);
       setRespostasRecebidas(leitura.respostas);
+      const indice=pagina.indice??0;setPaginaRespostas(indice);
+      setCursoresRespostas(atuais=>indice===0?[undefined]:[...atuais.slice(0,indice),pagina.cursor]);
+      return true;
     } catch (erroAtual) {
       if (sequencia !== sequenciaLeituraRespostas.current) return;
+      setRespostasRecebidas([]);setLeituraClinica(null);
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar respostas do formulário.');
     } finally {
       if (sequencia === sequenciaLeituraRespostas.current) setCarregandoRespostas(false);
@@ -915,6 +933,7 @@ export function useWorkspaceQuestionarios() {
     carregarVersoes,
     pacienteFiltroRespostas,
     setPacienteFiltroRespostas,
+    inicioRespostas,setInicioRespostas,fimRespostas,setFimRespostas,tamanhoRespostas,setTamanhoRespostas,paginaRespostas,cursoresRespostas,
     buscaRespostas,
     setBuscaRespostas,
     matrizLongitudinal,

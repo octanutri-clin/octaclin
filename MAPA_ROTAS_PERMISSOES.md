@@ -294,3 +294,16 @@ pacienteId, texto livre, URL de provider ou fonte enviada pelo navegador.
 Sem endpoint de confirmar/salvar em prontuário; remoção de chave mantém o caminho
 individual318existente, disponível mesmo com gates desabilitados. Cadastro/chamada
 sintéticos também exigem direitos próprios, desativados por padrão.
+
+## QST10-08 — respostas paginadas e exportação por alcance
+
+| BFF | Backend | Contrato de acesso |
+| --- | --- | --- |
+| `GET /api/questionarios/[id]/respostas/pagina` | `GET /questionarios/:id/respostas/pagina` | Sessão e `questionarios.ler`; backend revalida tenant/questionário/carteira antes dos valores, páginas25/50/100, período no fuso clínico servidor, cursor cifrado sem autoridade; projeção mínima `private, no-store` |
+| `POST /api/questionarios/[id]/respostas/exportacao.csv` | `POST /questionarios/:id/respostas/exportacao.csv` | Mesma permissão e origem própria da Web; alcances visíveis/consulta/questionário explícitos; todos os pacientes novamente autorizados antes dos valores; até1000 respostas, rejeição sem truncar; CSV privado, sem URL pública |
+
+Papeis do backend: `SuperAdmin`, `Professional`, `Collaborator`; escopo efetivo
+continua resolvido pelo contrato vigente do papel, nunca pelo cursor/filtro.
+Valores e snapshots brutos não aparecem na auditoria. Exportação mantém a ação
+`questionarios.respostas.exportar_csv` e só os metadados já permitidos de tipo/linhas.
+As rotas legadas permanecem compatíveis; a nova página não usa o leitor integral.

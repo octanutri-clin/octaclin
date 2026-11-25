@@ -1,3 +1,4 @@
+import { resumirRespostas } from './resumo-respostas';
 import { calcularCompletudeHistorica, completudeDesconhecida } from '../dominio/completude-historica';
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
@@ -7,7 +8,7 @@ import { createHmac, randomUUID, timingSafeEqual } from 'crypto';
 import { EntityManager, ILike, In, IsNull, LessThanOrEqual } from 'typeorm';
 import { CronExpressionParser } from 'cron-parser';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
-import { montarCsv } from '../../../infraestrutura/exportacao/csv';
+import { formatarCsvRespostas } from './csv-respostas';
 import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
 import { obterSegredoFormularioPublico } from '../../../infraestrutura/seguranca/segredo-formulario-publico';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
@@ -959,6 +960,23 @@ export class ServicoQuestionarios {
     return { resposta, envio, valores };
   }
 
+  /** Internal transaction boundary for bounded readers. Authorization is never conveyed by a cursor. */
+  async lerQuestionarioAutorizado<T>(tenantId: string, questionarioId: string, usuario: UsuarioAutenticado,
+    ler: (gerenciador: EntityManager, profissionalId: string | undefined) => Promise<T>): Promise<T> {
+    return this.executorTenant.executar(tenantId, async gerenciador => {
+      await this.garantirQuestionarioDoProfissional(gerenciador, tenantId, questionarioId, usuario, 'pessimistic_read');
+      const profissionalId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
+      if (profissionalId) {
+        const profissional = await gerenciador.getRepository(ProfissionalOrm).findOne({
+          where: {id: profissionalId, tenantId, usuarioId: usuario.usuarioId, arquivadoEm: IsNull()},
+          select: {id: true}, lock: {mode: 'pessimistic_read'}
+        });
+        if (!profissional) throw new NotFoundException('Questionário indisponível.');
+      }
+      return ler(gerenciador, profissionalId);
+    });
+  }
+
   async listarRespostasQuestionario(
     tenantId: string,
     questionarioId: string,
@@ -1065,30 +1083,7 @@ export class ServicoQuestionarios {
     }
     const respostas = await this.listarRespostasQuestionario(tenantId, questionarioId, usuario, ids);
 
-    const enunciadoPorPergunta = new Map<string, string>();
-    respostas.forEach((resposta) =>
-      resposta.respostas.forEach((item) => {
-        if (!enunciadoPorPergunta.has(item.perguntaId)) enunciadoPorPergunta.set(item.perguntaId, item.enunciado);
-      })
-    );
-    const perguntasIds = [...enunciadoPorPergunta.keys()];
-
-    return montarCsv(
-      ['respostaId', 'pacienteId', 'finalizadoEm', ...perguntasIds.map((id) => enunciadoPorPergunta.get(id) ?? id)],
-      respostas.map((resposta) => {
-        const valores = new Map(resposta.respostas.map((item) => [item.perguntaId, item.valor]));
-        return [
-          resposta.respostaId,
-          resposta.pacienteId,
-          resposta.finalizadoEm?.toISOString() ?? '',
-          ...perguntasIds.map((id) => {
-            const valor = valores.get(id);
-            if (valor === undefined || valor === null) return '';
-            return typeof valor === 'object' ? JSON.stringify(valor) : valor;
-          })
-        ];
-      })
-    );
+    return formatarCsvRespostas(respostas);
   }
 
   async obterLeituraClinicaQuestionario(
@@ -1102,85 +1097,7 @@ export class ServicoQuestionarios {
     const perguntas = await this.executorTenant.executar(tenantId, async (gerenciador) =>
       gerenciador.getRepository(PerguntaOrm).find({ where: { tenantId, questionarioId }, order: { ordem: 'ASC' } })
     );
-    const pacientesPorId = new Map<
-      string,
-      {
-        pacienteId: string;
-        totalRespostas: number;
-        totalValoresRespondidos: number;
-        ultimaRespostaEm?: Date;
-      }
-    >();
-    const valoresPorPergunta = new Map<string, { valor: unknown; finalizadoEm?: Date }[]>();
-    let totalValoresRespondidos = 0;
-
-    respostasFiltradas.forEach((resposta) => {
-      totalValoresRespondidos += resposta.totalRespostas;
-      const paciente = pacientesPorId.get(resposta.pacienteId) ?? {
-        pacienteId: resposta.pacienteId,
-        totalRespostas: 0,
-        totalValoresRespondidos: 0,
-        ultimaRespostaEm: resposta.finalizadoEm
-      };
-      paciente.totalRespostas += 1;
-      paciente.totalValoresRespondidos += resposta.totalRespostas;
-      if ((resposta.finalizadoEm?.getTime() ?? 0) > (paciente.ultimaRespostaEm?.getTime() ?? 0)) {
-        paciente.ultimaRespostaEm = resposta.finalizadoEm;
-      }
-      pacientesPorId.set(resposta.pacienteId, paciente);
-
-      resposta.respostas.forEach((item) => {
-        const valores = valoresPorPergunta.get(item.perguntaId) ?? [];
-        valores.push({ valor: item.valor, finalizadoEm: resposta.finalizadoEm });
-        valoresPorPergunta.set(item.perguntaId, valores);
-      });
-    });
-
-    const pacientes = Array.from(pacientesPorId.values())
-      .sort((a, b) => (b.ultimaRespostaEm?.getTime() ?? 0) - (a.ultimaRespostaEm?.getTime() ?? 0))
-      .map((paciente) => ({
-        ...paciente,
-        mediaRespostasPorEnvio: this.arredondarMedia(paciente.totalValoresRespondidos, paciente.totalRespostas)
-      }));
-
-    const perguntasAgregadas = perguntas.map((pergunta) => {
-      const valores = valoresPorPergunta.get(pergunta.id) ?? [];
-      const permiteMediaNumerica = pergunta.tipo === 'metrica' || pergunta.tipo === 'linear' || pergunta.tipo === 'likert';
-      const numericos = permiteMediaNumerica ? valores.map((item) => Number(item.valor)).filter((valor) => Number.isFinite(valor)) : [];
-      const totalSim = valores.filter((item) => item.valor === true).length;
-      const totalNao = valores.filter((item) => item.valor === false).length;
-
-      return {
-        perguntaId: pergunta.id,
-        enunciado: pergunta.enunciado,
-        tipo: pergunta.tipo,
-        totalRespostas: valores.length,
-        totalSim: pergunta.tipo === 'sim_nao' ? totalSim : undefined,
-        totalNao: pergunta.tipo === 'sim_nao' ? totalNao : undefined,
-        mediaNumerica: numericos.length ? this.arredondarMedia(numericos.reduce((total, valor) => total + valor, 0), numericos.length) : undefined,
-        textosRecentes: valores
-          .filter((item) => typeof item.valor === 'string' && item.valor.trim())
-          .sort((a, b) => (b.finalizadoEm?.getTime() ?? 0) - (a.finalizadoEm?.getTime() ?? 0))
-          .slice(0, 3)
-          .map((item) => String(item.valor)),
-        distribuicao: this.montarDistribuicao(valores.map((item) => item.valor))
-      };
-    });
-
-    return {
-      questionarioId,
-      filtroPacienteId: filtros.pacienteId,
-      resumo: {
-        totalRespostas: respostasFiltradas.length,
-        totalPacientes: pacientes.length,
-        totalPerguntas: perguntas.length,
-        mediaRespostasPorEnvio: this.arredondarMedia(totalValoresRespondidos, respostasFiltradas.length),
-        ultimaRespostaEm: respostasFiltradas[0]?.finalizadoEm
-      },
-      pacientes,
-      perguntas: perguntasAgregadas,
-      respostas: respostasFiltradas
-    };
+    return resumirRespostas(questionarioId, respostasFiltradas, perguntas, filtros.pacienteId);
   }
 
   async obterMatrizLongitudinalRespostas(
@@ -1405,27 +1322,6 @@ export class ServicoQuestionarios {
     return Math.round((total / divisor) * 100) / 100;
   }
 
-  private montarDistribuicao(valores: unknown[]): { valor: string; total: number }[] {
-    const contagem = new Map<string, number>();
-    valores.forEach((valor) => {
-      const itens = Array.isArray(valor) ? valor : [valor];
-      itens.forEach((item) => {
-        const chave = this.valorDistribuicao(item);
-        contagem.set(chave, (contagem.get(chave) ?? 0) + 1);
-      });
-    });
-    return Array.from(contagem.entries())
-      .map(([valor, total]) => ({ valor, total }))
-      .sort((a, b) => b.total - a.total || a.valor.localeCompare(b.valor));
-  }
-
-  private valorDistribuicao(valor: unknown): string {
-    if (valor === true) return 'Sim';
-    if (valor === false) return 'Nao';
-    if (valor === null || valor === undefined || valor === '') return 'Sem resposta';
-    if (typeof valor === 'object') return JSON.stringify(valor);
-    return String(valor);
-  }
 
   gerarTokenFormularioPaciente(tenantId: string, envioId: string): string {
     const assinatura = this.assinarTokenFormulario(tenantId, envioId);

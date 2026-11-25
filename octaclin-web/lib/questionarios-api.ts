@@ -139,6 +139,15 @@ export interface LeituraClinicaQuestionarioApi {
   respostas: RespostaQuestionarioRecebidaApi[];
 }
 
+export interface PaginaRespostasApi extends LeituraClinicaQuestionarioApi {
+  filtros: {pacienteId?: string; inicio?: string; fim?: string; tamanho:25|50|100};
+  timezone:string; totalConsulta:number; proximoCursor:string|null;
+}
+export async function obterPaginaRespostas(questionarioId:string, filtros:{pacienteId?:string;inicio?:string;fim?:string;tamanho?:number;cursor?:string}={}):Promise<PaginaRespostasApi> {
+  const query=new URLSearchParams(Object.entries(filtros).filter(([,v])=>v!==undefined&&v!=='').map(([k,v])=>[k,String(v)]));
+  return requisitar<PaginaRespostasApi>(`/api/questionarios/${encodeURIComponent(questionarioId)}/respostas/pagina?${query}`);
+}
+
 export interface MatrizLongitudinalRespostasApi {
   filtros: {
     pacienteId?: string;

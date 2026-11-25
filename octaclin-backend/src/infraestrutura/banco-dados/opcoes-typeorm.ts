@@ -1,3 +1,4 @@
+import { IndicesConsultaRespostasQuestionario1720000001087 } from './migracoes/1720000001087-IndicesConsultaRespostasQuestionario';
 import { ConcessaoPermissaoUsuarioOrm } from '../../modulos/auth/infraestrutura/concessao-permissao-usuario.orm';
 import { ConcessoesPermissaoUsuario1720000001084 } from './migracoes/1720000001084-ConcessoesPermissaoUsuario';
 import { DelegacoesCarteiraEVinculosRepresentacao1720000001085 } from './migracoes/1720000001085-DelegacoesCarteiraEVinculosRepresentacao';
@@ -515,7 +516,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
         RestricoesAlimentares1720000001083,
         ConcessoesPermissaoUsuario1720000001084,
         DelegacoesCarteiraEVinculosRepresentacao1720000001085,
-        ContaUnicaPaciente1720000001086
+        ContaUnicaPaciente1720000001086,
+        IndicesConsultaRespostasQuestionario1720000001087
       ],
     migrationsRun: executarMigracoesNoBoot(),
     synchronize: false,

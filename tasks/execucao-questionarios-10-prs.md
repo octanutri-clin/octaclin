@@ -264,3 +264,170 @@ CI consultado20SUCCESS/1SKIPPED(SBOM)/Demoemexecução, sem falha naqueleinstant
 08preparada em/workspace/qst10-08-paginacao-exportacoes, base39f1a92,
 apenas leitura, sem código novo. AntesC1 fazerFF explícito só do C4documental
 07.09/10NOTRUN. Sem merge, deploy, operação externa ou mudançasClaude/FOOD06.
+
+## PR lógica08 — checkpoint backend, implementação em andamento
+
+Worktree própria `qst10-08-paginacao-exportacoes`, branch
+`feat/qst10-08-paginacao-exportacoes`, base07 `87dbeeaf`. R4: leitura clínica,
+autorização e migration somente de índices. Nenhum trabalho FOOD06 integrado.
+A indisponibilidade/reinicialização desta rodada preservou arquivos e logs.
+
+C1/C2: normalizador estrito de período/paciente/25–50–100; cursor opaco cifrado
+com o provider AES-GCM existente, vinculado a tenant/ator/questionário/filtros/fuso.
+Keyset conserva microssegundos PostgreSQL e ordena dataDESC NULLSLAST/idDESC.
+Consulta metadata+LIMIT antes dos valores; locks questionário→profissional→
+pacientes→envios→respostas, carteira novamente autorizada antes dos valores.
+Nova API privada e três escopos explícitos de CSV; >1000 rejeitado sem truncar;
+projeção/volume limitados. Reutilizados guardas, ExecutorTenant, fuso clínico,
+CSV canônico e resumo extraído sem alterar o comportamento legado. No resumo
+novo, null/vazio/booleano não viram zero; definições históricas incompatíveis
+não geram média. Leitores integrais legados não montam a página/exportação nova.
+Migration1087 registrada: dois índices aditivos, rollback remove só os índices.
+Não aplicada fora de PostgreSQL Testcontainers descartável owner/runtime.
+
+RED funcional:20falhas/1PASS em filtros/cursor;6falhas de banco;5falhasHTTP/1PASS;
+2falhas de médias históricas com67regressões e1compatibilidadePASS;1falhaíndices.
+GREEN:119/119 em5suítes backend (domínio/serviço/HTTP/registroTypeORM);
+44/44 PostgreSQL15descartável, runtimeNOBYPASSRLS/FORCERLS, incluindo37regressões
++7cenáriosnovos. Não somar reexecuções. Typecheckbackend Node22.21.1 PASS,
+diffcheck e scannerlocal de segredosPASS. Erro intermediário TS de indexsignature
+corrigido: erro de compilação não contado comoRED. Buildglobal NOTRUN nestaetapa.
+
+API/BFF/console/Playwright/UXB-C/R4independente/CI do delta continuam pendentes;
+esta é uma etapa segura de backup, não conclusão da08. Próxima ação: BFF
+allowlist e integração de filtros/páginas/3CSV no console; depois regressões,
+R4 ePRDraft08sobre07.09–10NOTRUN. Sem merge/deploy/migrationexterna.
+
+Leitura GitHub desta rodada: #588HEAD8d06cf24 com21SUCCESS e1SKIPPED(SBOM),
+semfalhas; #589OPEN/Draft87dbeeaf. Resultados dos pais não validam08.
+
+### 08 C3 — integração utilizável, antes de revisão final
+
+BFF aditivo: valida sessão/permissão/origem, query sem duplicatas, escopos CSV
+não ambíguos, limites e allowlist das respostas; não repassa mensagens internas.
+Console usa só página nova, filtros aplicados de paciente/período, fuso servidor,
+25/50/100, cursores apenas em memória e três CSV explícitos. Busca e resumos
+somente da página. Exportação pendente é descartada ao mudar de contexto.
+Atualização da mesma página preserva leitura/recolhimentos; erro vigente limpa
+os fatos. Navegação por teclado leva foco ao estado da nova página somente se
+a resposta ainda for atual. Fonte atual não reinterpreta denominador histórico.
+
+Novas provas:18/18 BFF(15 regressões+3novos),10/10 navegador desktop/mobile
+(paginação,3CSV,respostas tardias,axe/zoom200%/teclado);4/4 regressõesP02 focadas.
+Uma regressão parcial foi interrompida após demonstrar2defeitos de fechar leitor
+na atualização; corrigidos sem reduzir asserts. Novo RED de foco reproduzido
+e corrigido.4falhas intermediárias dos novos testes tardios eram fixture com
+texto duplicado e seletor estrito, corrigida só a fixture, não contadascomoRED.
+
+Backend módulo+registro:220PASS/52SKIPPED, sendo48 de PostgreSQL executados
+separadamente e4 históricos de outro gate aindaSKIPPED nesta rodada. PostgreSQL
+final48/48:11casosnovos+37regressões, incluindo carteira concorrente e limites de
+snapshot/valores antes de materialização. RED adicional: snapshot9MiB era lido;
+agora rejeitado antes do conteúdo, sem regravar dados. Snapshot é carregado uma
+vez por envio, não uma cópia por resposta. Índices ensaiadosup/down sem alterarRLS.
+Demo sintética:1RED404→1GREEN; novo contrato vazio, não prova deautorização/banco.
+Typesbackend/Web,lintWebafetado,linguagem8+scanner,governance de migration e
+segredos/diffPASS Node22.21.1. Tagfora-de-banda adicionada após gate apontar ausência.
+Buildbackend+artefatoPASS antes do ajuste de limite; repetição do build final
+pendente. Regressão90casos navegador em andamento; globalauthz/buildWeb/R4/UX/CI
+pendentes. C3 não é aceite integral da08 e não permiteReady/merge.
+
+PR07#58987dbeeaf agora também21SUCCESS/1SKIPPED(SBOM) na consulta desta rodada.
+
+### 08 C4 — correção P2 da revisão R4
+
+R4 independente estática87dbeeaf..0794da6 (`/root/qst08_r4`) apontou umP2:
+backend media só leitura antes de montar envelope; BFF media corpo completo.
+RED real PostgreSQL com oráculo debytes: leitura isolada cabia em8MiB, envelope
+ultrapassava; backend indevidamente aceitava. GREEN49/49banco após medir payload
+final, incluindo filtros/fuso/contagem/cursor. Não é bypass de limite nem nova
+capacidade.4/4PGlegadoCSV tambémPASS nesta rodada, completando os52cenários
+que ficaramSKIPPED na seleção unitária; sem somar reexecuções. Re-review estática
+da correção e gates globais ainda pendentes neste checkpoint.
+
+### 08 C5 — regressões, reflow e limites das evidências
+
+R4re-revisão0794da6..92821c7 favorável: P2 resolvido tecnicamente, sem novos
+achados; estática, sem testes próprios. Types/buildbackend+artefato pósP2PASS.
+Regressão local completa90casos terminou89PASS/1FAIL: a única divergência era
+GETperiódico do sino de notificações (5s) na lista de requisições do questionário,
+sem regressão de consultas clínicas. Fixtureagora isola somente esseGET externo,
+respondendo vazio; todos os demaisGETs e TODAS as mutações continuam registrados.
+Asserções de ausência de consultas/mutações clínicas foram preservadas.8/8casos
+afetadosP01/P02/abas passaram após o isolamento. Não declarar90/90localnesteHEAD.
+
+Inspeção visual real200% revelou clipping interno não captado por largura global.
+NovoRED confirmou campo início além do cartão e busca comprimida. Grid explícito
+minmax0/colunaúnica e busca empilhada no mobile corrigiram sem mudar contratos.
+20/20testes dirigidos desktop/mobile apósCSS (10novos+10regressões pertinentes),
+incluindo caixa dos controles, busca legível, axe/zoom/teclado/respostas tardias.
+Capturas atualizadas e observadas pelo coordenador; persona só recebeu brief.
+TypesWeb/lintafetadoPASS. Revisão estática dirigida desteCSS/fixture ainda pendente.
+
+Reinício do executor preservou arquivos e logs, mas interrompeu `test:authz`
+global: INCONCLUSIVO, nãoPASS.18/18BFFquestionários separados continuam válidos
+para código inalterado. BuildWebfinal e suíte90integral do HEAD ficam gates a
+comprovar (buildlocal será tentado; CIoficial deve executar tudo). Não aumentar
+timeouts nem modificar segurança/dependências/workflows para contornar ambiente.
+Nenhum lockfile/dependência alterado. Main inspecionada só em leitura aindaaté1086,
+sem colisão observada de1087. Sem PR08 duplicada, merge, deploy ou DDLexterno.
+
+### 08 C6 — checkpoint final local para PR Draft
+
+Código congelado `1f490bebe829bbe5945623b181d80e26a521dcc9`. BuildWeb otimizado
+Next16.4.5/Node22.21.1 terminouPASS, incluindoTypeScript; typecheck/lintWeb afetado
+PASS. Types/buildbackend+artefato no pósP2 tambémPASS. Re-reviewR4dirigida até
+1f490be favorável, sem novos achados: validou o reflow e o isolamento EXATO de
+GET/notificacoes, sem esconder leiturasclínicas/outrosGETs/mutações. R4 é estática,
+não execução independente de testes nem inspeção visual do revisor.
+
+|Gate|Evidência local válida e limite|
+|---|---|
+|Módulo backend/registroTypeORM|220PASS;52SKIPPED na execução unitária histórica0794da6; não somar119focados novamente|
+|PostgreSQL/RLS/runtime|49/49QSTP05 no92821c7 +4/4CSVlegado separado =53provas; incluiRED/GREENP2, concorrência, microssegundos, limites, histórico e rollbackdosíndices|
+|BFFquestionários|18/18 em código0794da6 inalteradoaté1f490be|
+|Browser integral|89/90 no código anterior aoCSS;1FAIL devido ao poll independente, não promover a90/90 por inferência|
+|Browser dirigido final|20/20 desktop/mobile apósCSS e isolamento do poll, incluindo10novos e10regressões;8/8invariantes do poll aprovadas antes e dentro desse escopo|
+|Authzglobal local|INCONCLUSIVO: reinício do executor encerrou o processo antes da conclusão; nãoPASS|
+|CI/scanners HEADfinal|PENDING: aguardar checks oficiais do HEAD documental enviado; sem herdar verde dos pais|
+|Builds/types/lint/linguagem/segredos|PASS nos respectivos escopos e código registrado; PowerShellpreflight/screenreadermanualSKIPPED (não executados neste ambiente)|
+|UXB/C/D|Papel profissional explícito somentebrief; pacienteN/Ajustificado; hipótesesP2 embacklog sem execução automática; capturas reais observadas pelo coordenador|
+
+Relatórios, manifesto, capturas eR4 em
+`docs/agents/ux/reports/QST10-08-BC-2026-11-23/`. Novas rotas registradas no mapa.
+Migration1087 só ensaiada em Testcontainers descartável, não aplicadaexternamente.
+Rollback de código não remove dados; eventualdown da1087 remove só índices e
+exige nova autorização de ambiente/owner. Não executar durante este trabalho.
+PR08 deve ficarDraft até CI/regressões integrais exigidos serem comprovados.
+Sem Readyautomático/merge/deploy, sem alterações de produção ouFOOD06.
+
+09:fundação independente em`feat/qst10-09-recorrencias`, commitdb4dbbc,
+9RED→76GREEN+types; auth/migration/worker/API/UI ainda não implementados. Falta
+a decisão explícita sobre autoria/reconfirmação de agendamentos antigos; ver
+`tasks/questionarios-09-recorrencias-handoff.md` nessa branch.10nãoiniciada,
+respeitando a base dependente planejada. Não inferir resposta por tempo decorrido.
+
+### 08 C7 — corrigir falha do Backend no CI
+
+CI45298755171/job138125746097, HEAD250edd2: únicoFAIL na suíte completa era o
+spec1086 exigir que a1086 fosse a última migration. A inclusão legítima1087
+invalidou essa hipótese; a aplicação de migrations no PostgreSQL deCI passou,
+mas o gate Testcontainers/RLS posterior foiSKIPPED pela falha da suíte.
+
+RED local Node22.21.1:1FAIL/4PASS reproduziu a mesma linha doCI antes da correção.
+Teste1086 agora exige existência única de1085/1086 e a ordem imediata1085→1086;
+não fixa o fim da lista. Novo spec1087 protege sua unicidade e ordem1086→1087,
+sem proibir próximas migrations. Assertivas de RLS, duplicatas, transação e
+rollback da1086 foram mantidas. Nenhuma migration, configuração, workflow,
+dependência, permissão ou código de produção foi alterado para obter verde.
+
+GREEN focado:28/28 em1086/1087/registroTypeORM. Suíte completa local:471suítesPASS,
+18SKIPPED;5603testesPASS,388SKIPPED,0FAIL (5991total,188,988s). Gates condicionais
+não habilitados no perfil local não contam como validação; oCI tem suas próprias
+configurações de integração. Não somar28novamente nem herdar oPASS de um commit
+anterior. Typecheckbackend,diffcheck e scannerlocal de segredosPASS.
+
+A correção é restrita a testes/registro de evidências. Runtime permanece o de
+1f490be; provas PostgreSQL/R4 anteriores mantêm seus escopos e limitações, não
+substituem oCI do novoHEAD. Enviar uma vez e manterPR590Draft; aguardarBackend,
+Testcontainers/RLS e demais checks do novoHEAD, semmerge/deploy/migrationexterna.

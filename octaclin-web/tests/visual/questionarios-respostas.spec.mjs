@@ -15,6 +15,13 @@ const respostas = pacientes.map((paciente, indice) => ({
   respostas: [{ perguntaId: 'pergunta-1', tipo: 'texto', enunciado: 'Como foi a rotina?', valor: indice ? 'Preparei o jantar' : 'Organizei o almoço' }]
 }));
 
+function serializarFixture(v) {
+  if(v && typeof v==='object' && v.questionarioId && v.resumo && Array.isArray(v.respostas)) {
+    return JSON.stringify({filtros:{tamanho:25,...(v.filtroPacienteId?{pacienteId:v.filtroPacienteId}:{})},timezone:'America/Sao_Paulo',totalConsulta:v.respostas.length,proximoCursor:null,...v});
+  }
+  return JSON.stringify(v);
+}
+
 async function preparar(page, respostasDaFixture = respostas, questionariosDaFixture = questionarios) {
   const requisicoes = [];
   await page.context().addCookies([
@@ -34,6 +41,12 @@ async function preparar(page, respostasDaFixture = respostas, questionariosDaFix
   await page.route('**/api/**', async (route) => {
     const url = new URL(route.request().url());
     const caminho = url.pathname;
+    // The independent notification bell polls every 5s. Give it its own synthetic
+    // fixture, outside the questionnaire request invariant. All clinical reads
+    // and every mutation (including notification mutations) remain recorded.
+    if (caminho === '/api/notificacoes' && route.request().method() === 'GET') {
+      return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({naoLidas:0,itens:[],resumos:[]})});
+    }
     requisicoes.push({ caminho, metodo: route.request().method() });
     let corpo;
     if (caminho === '/api/auth/session') {
@@ -49,13 +62,17 @@ async function preparar(page, respostasDaFixture = respostas, questionariosDaFix
       corpo = { itens: [{ id: 'profissional-1', nome: 'Profissional Exemplo' }], total: 1 };
     } else if (caminho === '/api/questionarios') {
       corpo = { itens: questionariosDaFixture, total: questionariosDaFixture.length };
-    } else if (/^\/api\/questionarios\/q-[12]\/respostas\/leitura-clinica$/.test(caminho)) {
+    } else if (/^\/api\/questionarios\/q-[12]\/respostas\/(leitura-clinica|pagina)$/.test(caminho)) {
       const pacienteId = url.searchParams.get('pacienteId');
       const selecionadas = respostasDaFixture.filter((resposta) => !pacienteId || resposta.pacienteId === pacienteId);
+      const tamanho=Number(url.searchParams.get('tamanho')??25),indice=Number(url.searchParams.get('cursor')??0);
+      const pagina=selecionadas.slice(indice,indice+tamanho);
       corpo = {
         questionarioId: caminho.split('/')[3], pacientes: [], perguntas: [],
-        resumo: { totalRespostas: selecionadas.length, totalPacientes: selecionadas.length, totalPerguntas: 1, mediaRespostasPorEnvio: 1 },
-        respostas: selecionadas
+        filtros:{tamanho,...(pacienteId?{pacienteId}:{}),...(url.searchParams.get('inicio')?{inicio:url.searchParams.get('inicio')}:{}),...(url.searchParams.get('fim')?{fim:url.searchParams.get('fim')}:{})},
+        timezone:'America/Sao_Paulo',totalConsulta:selecionadas.length,proximoCursor:indice+tamanho<selecionadas.length?String(indice+tamanho):null,
+        resumo: { totalRespostas: pagina.length, totalPacientes: new Set(pagina.map(r=>r.pacienteId)).size, totalPerguntas: 1, mediaRespostasPorEnvio: 1 },
+        respostas: pagina
       };
     } else if (caminho === '/api/categorias-pergunta') {
       corpo = [{ id: 'categoria-1', nome: 'Rotina', iconeSvg: 'utensils', corHex: '#247BA0', ordem: 1 }];
@@ -64,9 +81,9 @@ async function preparar(page, respostasDaFixture = respostas, questionariosDaFix
     } else if (['/api/biblioteca-perguntas', '/api/questionarios/modelos'].includes(caminho) || /^\/api\/questionarios\/q-[12]\/perguntas$/.test(caminho)) {
       corpo = [];
     } else {
-      return route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ mensagem: 'Rota fora da fixture sintética.' }) });
+      return route.fulfill({ status: 404, contentType: 'application/json', body: serializarFixture({ mensagem: 'Rota fora da fixture sintética.' }) });
     }
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(corpo) });
+    await route.fulfill({ status: 200, contentType: 'application/json', body: serializarFixture(corpo) });
   });
   await page.goto('/questionarios');
   await page.getByRole('tab', { name: 'Respostas', exact: true }).click();
@@ -81,7 +98,7 @@ function envio(page, nome) {
 function leituraSintetica(pacienteId) {
   const selecionadas = respostas.filter(resposta => resposta.pacienteId === pacienteId);
   return {
-    questionarioId: 'q-1', pacientes: [], perguntas: [],
+    questionarioId: 'q-1', filtroPacienteId:pacienteId, pacientes: [], perguntas: [],
     resumo: { totalRespostas: selecionadas.length, totalPacientes: selecionadas.length, totalPerguntas: 1, mediaRespostasPorEnvio: 1 },
     respostas: selecionadas
   };
@@ -93,13 +110,13 @@ async function leituraAdiada(page, erro = false) {
   const recebida = new Promise(resolve => { recebeu = resolve; });
   let liberar;
   const liberada = new Promise(resolve => { liberar = resolve; });
-  await page.route('**/api/questionarios/q-1/respostas/leitura-clinica*', async route => {
+  await page.route('**/api/questionarios/q-1/respostas/pagina*', async route => {
     const paciente = new URL(route.request().url()).searchParams.get('pacienteId');
     if (paciente === 'paciente-a') { recebeu(); await liberada; }
     await route.fulfill({
       status: paciente === 'paciente-a' && erro ? 500 : 200,
       contentType: 'application/json',
-      body: JSON.stringify(paciente === 'paciente-a' && erro ? { mensagem: 'Falha sintética antiga.' } : leituraSintetica(paciente))
+      body: serializarFixture(paciente === 'paciente-a' && erro ? { mensagem: 'Falha sintética antiga.' } : leituraSintetica(paciente))
     });
   });
   return { recebida, liberar };
@@ -147,7 +164,7 @@ test.describe('QPRO-02 — contexto de leitura', () => {
     const liberada = new Promise(resolve => { liberar = resolve; });
     await page.route('**/api/questionarios/matriz-longitudinal*', async route => {
       recebeu(); await liberada;
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+      await route.fulfill({ status: 200, contentType: 'application/json', body: serializarFixture({
         filtros: { pacienteId: 'paciente-a' }, resumo: { totalRespostas: 1, totalIndicadores: 1 },
         indicadores: [{ pacienteId: 'paciente-a', questionarioId: 'q-1', perguntaId: 'metrica-1',
           questionarioTitulo: 'Questionário sintético 1', enunciado: 'Indicador exclusivo de A', tipo: 'metrica',
@@ -172,11 +189,11 @@ test.describe('QPRO-02 — contexto de leitura', () => {
       const liberada = new Promise(resolve => { liberar = resolve; });
       controles[paciente] = { recebeu, recebida, liberar, liberada };
     }
-    await page.route('**/api/questionarios/q-1/respostas/leitura-clinica*', async route => {
+    await page.route('**/api/questionarios/q-1/respostas/pagina*', async route => {
       const paciente = new URL(route.request().url()).searchParams.get('pacienteId');
       const controle = controles[paciente];
       controle.recebeu(); await controle.liberada;
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(leituraSintetica(paciente)) });
+      await route.fulfill({ status: 200, contentType: 'application/json', body: serializarFixture(leituraSintetica(paciente)) });
     });
     await page.locator('#filtro-paciente-respostas').selectOption('paciente-a');
     await controles['paciente-a'].recebida;
@@ -195,14 +212,14 @@ test.describe('QPRO-02 — contexto de leitura', () => {
     const recebida = new Promise(resolve => { recebeu = resolve; });
     const liberada = new Promise(resolve => { liberar = resolve; });
     let primeira = true;
-    await page.route('**/api/questionarios/q-1/respostas/leitura-clinica*', async route => {
+    await page.route('**/api/questionarios/q-1/respostas/pagina*', async route => {
       const paciente = new URL(route.request().url()).searchParams.get('pacienteId');
       const leitura = leituraSintetica(paciente);
       if (paciente === 'paciente-a') {
         if (primeira) { primeira = false; recebeu(); await liberada; }
         else leitura.respostas = [{ ...respostas[0], respostas: [{ ...respostas[0].respostas[0], valor: 'Leitura atualizada de A' }] }];
       }
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(leitura) });
+      await route.fulfill({ status: 200, contentType: 'application/json', body: serializarFixture(leitura) });
     });
     await page.locator('#filtro-paciente-respostas').selectOption('paciente-a');
     await recebida;
@@ -222,7 +239,7 @@ test.describe('QPRO-02 — contexto de leitura', () => {
     test(`alterar ${filtro[0]} remove resultado da matriz até nova consulta`, async ({ page }) => {
       await preparar(page);
       await page.route('**/api/questionarios/matriz-longitudinal*', route => route.fulfill({
-        status: 200, contentType: 'application/json', body: JSON.stringify({
+        status: 200, contentType: 'application/json', body: serializarFixture({
           filtros: {}, resumo: { totalRespostas: 0, totalIndicadores: 0 }, indicadores: []
         })
       }));
@@ -240,8 +257,8 @@ test.describe('QPRO-02 — contexto de leitura', () => {
     const adiada = await leituraAdiada(page);
     await page.locator('#filtro-paciente-respostas').selectOption('paciente-a');
     await adiada.recebida;
-    await page.route('**/api/questionarios/q-2/respostas/leitura-clinica*', route => route.fulfill({
-      status: 200, contentType: 'application/json', body: JSON.stringify({
+    await page.route('**/api/questionarios/q-2/respostas/pagina*', route => route.fulfill({
+      status: 200, contentType: 'application/json', body: serializarFixture({
         ...leituraSintetica('paciente-a'), questionarioId: 'q-2',
         respostas: [{ ...respostas[0], questionarioId: 'q-2',
           respostas: [{ ...respostas[0].respostas[0], valor: 'Resposta do segundo questionário' }] }]
@@ -271,7 +288,7 @@ test.describe('QPRO-02 — contexto de leitura', () => {
         const controle = controles[paciente];
         controle.recebeu(); await controle.liberada;
         await route.fulfill({ status: paciente === 'paciente-a' && erro ? 500 : 200,
-          contentType: 'application/json', body: JSON.stringify(paciente === 'paciente-a' && erro
+          contentType: 'application/json', body: serializarFixture(paciente === 'paciente-a' && erro
             ? { mensagem: 'Falha sintética da matriz antiga.' }
             : { filtros: { pacienteId: paciente }, resumo: { totalRespostas: 0, totalIndicadores: 0 }, indicadores: [] })
         });
@@ -297,26 +314,26 @@ test.describe('QST01 — organização da leitura de respostas', () => {
     await page.locator('#filtro-paciente-respostas').selectOption('paciente-a');
     await page.getByLabel('Busca', { exact: true }).fill('almoço');
     let selecao;
-    await page.route('**/api/questionarios/q-1/respostas/exportar.csv', async route => {
+    await page.route('**/api/questionarios/q-1/respostas/exportacao.csv', async route => {
       selecao = route.request().postDataJSON();
       await route.fulfill({ status: 200, contentType: 'text/csv; charset=utf-8', body: 'respostaId,valor\nresposta-1,0\n' });
     });
     const download = page.waitForEvent('download');
-    await page.getByRole('button', { name: 'Exportar resultados filtrados', exact: true }).focus();
+    await page.getByRole('button', { name: 'Exportar itens visíveis', exact: true }).focus();
     await page.keyboard.press('Enter');
     expect((await download).suggestedFilename()).toBe('octaclin-respostas-filtradas.csv');
-    expect(selecao).toEqual({ respostaIds: ['resposta-1'] });
-    await expect(page.getByRole('link', { name: 'Exportar todas as respostas', exact: true })).toHaveAttribute('href', '/api/questionarios/q-1/respostas/exportar.csv');
-    await expect(page.getByText(/A exportação completa não aplica os filtros/)).toBeVisible();
+    expect(selecao).toEqual({escopo:'visiveis',filtros:{pacienteId:'paciente-a'},respostaIds:['resposta-1']});
+    await expect(page.getByRole('button', {name:'Exportar questionário',exact:true})).toBeEnabled();
+    await expect(page.getByText(/Questionário: todo o conjunto autorizado, sem filtros/)).toBeVisible();
     await page.getByLabel('Busca', { exact: true }).fill('sem resultado sintético');
-    await expect(page.getByRole('button', { name: 'Exportar resultados filtrados', exact: true })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Exportar itens visíveis', exact: true })).toBeDisabled();
   });
   test('QPRO-01 falha de acesso não baixa arquivo nem expõe mensagem interna', async ({ page }) => {
     await preparar(page);
     let downloads = 0;
     page.on('download', () => downloads++);
-    await page.route('**/api/questionarios/q-1/respostas/exportar.csv', route => route.fulfill({ status: 404, body: 'DETALHE_INTERNO_NÃO_MOSTRAR' }));
-    await page.getByRole('button', { name: 'Exportar resultados filtrados', exact: true }).click();
+    await page.route('**/api/questionarios/q-1/respostas/exportacao.csv', route => route.fulfill({ status: 404, body: 'DETALHE_INTERNO_NÃO_MOSTRAR' }));
+    await page.getByRole('button', { name: 'Exportar itens visíveis', exact: true }).click();
     await expect(page.getByText('Não foi possível exportar. Atualize as respostas e tente novamente.')).toBeVisible();
     await expect(page.getByText('DETALHE_INTERNO_NÃO_MOSTRAR')).toHaveCount(0);
     expect(downloads).toBe(0);
@@ -337,16 +354,16 @@ test.describe('QST01 — organização da leitura de respostas', () => {
     const recebida = new Promise(resolve => { recebeu = resolve; });
     let downloads = 0;
     page.on('download', () => downloads++);
-    await page.route('**/api/questionarios/q-1/respostas/exportar.csv', async route => {
+    await page.route('**/api/questionarios/q-1/respostas/exportacao.csv', async route => {
       recebeu(); await liberada;
       await route.fulfill({ status: 200, contentType: 'text/csv', body: 'id,valor\nsintetico,0\n' });
     });
-    await page.getByRole('button', { name: 'Exportar resultados filtrados', exact: true }).click();
+    await page.getByRole('button', { name: 'Exportar itens visíveis', exact: true }).click();
     await recebida;
     await page.getByLabel('Busca', { exact: true }).fill('jantar');
-    await entregarRespostaAntiga(page, liberar, '/exportar.csv');
+    await entregarRespostaAntiga(page, liberar, '/exportacao.csv');
     expect(downloads).toBe(0);
-    await expect(page.getByRole('button', { name: 'Exportar resultados filtrados', exact: true })).toBeEnabled();
+    await expect(page.getByRole('button', { name: 'Exportar itens visíveis', exact: true })).toBeEnabled();
   });
   test('P02 navega sem ciclo e volta ao gatilho com recolhimentos preservados', async ({ page }) => {
     const requisicoes = await preparar(page);
@@ -391,7 +408,7 @@ test.describe('QST01 — organização da leitura de respostas', () => {
   test('P02 mantém identidade após reordenação e sai com foco seguro após remoção', async ({ page }) => {
     await preparar(page);
     let atuais = [respostas[0], { ...respostas[0], respostaId: 'outro-envio', envioId: 'outro', finalizadoEm: '2026-11-21T12:00:00.000Z', respostas: [{ ...respostas[0].respostas[0], valor: 'Outro envio do mesmo paciente' }] }, respostas[1]];
-    await page.route('**/api/questionarios/q-1/respostas/leitura-clinica*', route => route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ questionarioId:'q-1',pacientes:[],perguntas:[],resumo:{totalRespostas:atuais.length,totalPacientes:2,totalPerguntas:1,mediaRespostasPorEnvio:1},respostas:atuais })}));
+    await page.route('**/api/questionarios/q-1/respostas/pagina*', route => route.fulfill({status:200,contentType:'application/json',body:serializarFixture({ questionarioId:'q-1',pacientes:[],perguntas:[],resumo:{totalRespostas:atuais.length,totalPacientes:2,totalPerguntas:1,mediaRespostasPorEnvio:1},respostas:atuais })}));
     await page.getByRole('button', { name: 'Atualizar respostas', exact: true }).click();
     await page.locator('article').filter({ hasText:'Outro envio do mesmo paciente' }).getByRole('button', {name:'Ler envio',exact:true}).click();
     await expect(page.getByText('Envio 2 de 3', {exact:true})).toBeVisible();
@@ -424,9 +441,9 @@ test.describe('QST01 — organização da leitura de respostas', () => {
     await page.getByRole('button',{name:'Ler envio',exact:true}).first().click();
     let liberar;
     const pendente=new Promise(resolve=>{liberar=resolve;});
-    await page.route('**/api/questionarios/q-1/respostas/leitura-clinica*',async route=>{
+    await page.route('**/api/questionarios/q-1/respostas/pagina*',async route=>{
       await pendente;
-      await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({questionarioId:'q-1',pacientes:[],perguntas:[],resumo:{totalRespostas:2,totalPacientes:2,totalPerguntas:1,mediaRespostasPorEnvio:1},respostas})});
+      await route.fulfill({status:200,contentType:'application/json',body:serializarFixture({questionarioId:'q-1',pacientes:[],perguntas:[],resumo:{totalRespostas:2,totalPacientes:2,totalPerguntas:1,mediaRespostasPorEnvio:1},respostas})});
     });
     await page.getByRole('button',{name:'Atualizar respostas',exact:true}).click();
     await expect(page.getByRole('button',{name:'Próximo',exact:true})).toBeDisabled();
@@ -440,7 +457,7 @@ test.describe('QST01 — organização da leitura de respostas', () => {
   test('P02 cabeçalho acompanha rolagem desktop em resposta longa', async ({page},testInfo)=>{
     await preparar(page);
     const longa={...respostas[0],respostas:[{...respostas[0].respostas[0],valor:'Resposta sintética longa para leitura. '.repeat(600)}]};
-    await page.route('**/api/questionarios/q-1/respostas/leitura-clinica*',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({questionarioId:'q-1',pacientes:[],perguntas:[],resumo:{totalRespostas:1,totalPacientes:1,totalPerguntas:1,mediaRespostasPorEnvio:1},respostas:[longa,{...longa,respostaId:"longa-2",envioId:"envio-longo-2"}]})}));
+    await page.route('**/api/questionarios/q-1/respostas/pagina*',route=>route.fulfill({status:200,contentType:'application/json',body:serializarFixture({questionarioId:'q-1',pacientes:[],perguntas:[],resumo:{totalRespostas:1,totalPacientes:1,totalPerguntas:1,mediaRespostasPorEnvio:1},respostas:[longa,{...longa,respostaId:"longa-2",envioId:"envio-longo-2"}]})}));
     await page.getByRole('button',{name:'Atualizar respostas',exact:true}).click();
     await expect(page.locator('article dd').first()).toContainText('Resposta sintética longa');
     await page.getByRole('button',{name:'Ler envio',exact:true}).first().click();
@@ -492,9 +509,9 @@ test.describe('QST01 — organização da leitura de respostas', () => {
     await preparar(page);
     let liberar;
     const aguardar = new Promise(resolve => { liberar = resolve; });
-    await page.route('**/api/questionarios/q-1/respostas/leitura-clinica*', async route => {
+    await page.route('**/api/questionarios/q-1/respostas/pagina*', async route => {
       await aguardar;
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ questionarioId: 'q-1', pacientes: [], perguntas: [], resumo: { totalRespostas: 0, totalPacientes: 0, totalPerguntas: 0, mediaRespostasPorEnvio: 0 }, respostas: [] }) });
+      await route.fulfill({ status: 200, contentType: 'application/json', body: serializarFixture({ questionarioId: 'q-1', pacientes: [], perguntas: [], resumo: { totalRespostas: 0, totalPacientes: 0, totalPerguntas: 0, mediaRespostasPorEnvio: 0 }, respostas: [] }) });
     });
     await page.getByRole('button', { name: 'Atualizar respostas', exact: true }).click();
     const estado = page.locator('[data-qst-p01-contagem] [role="status"]');
@@ -505,8 +522,8 @@ test.describe('QST01 — organização da leitura de respostas', () => {
 
   test('P01 realce mantém Unicode, caracteres especiais e HTML como texto', async ({ page }) => {
     await preparar(page);
-    await page.route('**/api/questionarios/q-1/respostas/leitura-clinica*', route => route.fulfill({
-      status: 200, contentType: 'application/json', body: JSON.stringify({
+    await page.route('**/api/questionarios/q-1/respostas/pagina*', route => route.fulfill({
+      status: 200, contentType: 'application/json', body: serializarFixture({
         questionarioId: 'q-1', pacientes: [], perguntas: [],
         resumo: { totalRespostas: 1, totalPacientes: 1, totalPerguntas: 1, mediaRespostasPorEnvio: 1 },
         respostas: [{ ...respostas[0], respostas: [{ ...respostas[0].respostas[0], valor: 'İ literal .* <img src=x onerror=alert(1)>' }] }]
@@ -528,8 +545,8 @@ test.describe('QST01 — organização da leitura de respostas', () => {
       { ...respostas[0], totalRespostas: 0, respostas: [] },
       { ...respostas[1], totalRespostas: 2, respostas: [respostas[1].respostas[0], { perguntaId: 'pergunta-2', tipo: 'texto', enunciado: 'O que pretende manter?', valor: 'Organização' }] }
     ];
-    await page.route('**/api/questionarios/q-1/respostas/leitura-clinica*', (route) => route.fulfill({
-      status: 200, contentType: 'application/json', body: JSON.stringify({
+    await page.route('**/api/questionarios/q-1/respostas/pagina*', (route) => route.fulfill({
+      status: 200, contentType: 'application/json', body: serializarFixture({
         questionarioId: 'q-1', pacientes: [], perguntas: [],
         resumo: { totalRespostas: 2, totalPacientes: 2, totalPerguntas: 2, mediaRespostasPorEnvio: 1 },
         respostas: atualizadas
@@ -613,7 +630,7 @@ test.describe('QST01 — organização da leitura de respostas', () => {
     expect(requisicoes.filter((item) => item.metodo !== 'GET')).toEqual(antes.filter((item) => item.metodo !== 'GET'));
     expect(await page.evaluate(() => window.__persistenciasQst01)).toBe(persistencias);
     expect(page.url()).toBe(url);
-    await expect(page.getByRole('link', { name: 'Exportar todas as respostas' })).toHaveAttribute('href', '/api/questionarios/q-1/respostas/exportar.csv');
+    await expect(page.getByRole('button', {name:'Exportar questionário',exact:true})).toBeEnabled();
     await page.reload();
     await page.getByRole('tab', { name: 'Respostas', exact: true }).click();
     await expect(page.getByRole('button', { name: /^Recolher respostas/ })).toHaveCount(2);
@@ -630,8 +647,8 @@ test.describe('QST01 — organização da leitura de respostas', () => {
       finalizadoEm: '2026-11-21T12:00:00.000Z',
       respostas: [{ ...respostas[0].respostas[0], valor: 'Nova rotina sintética' }]
     };
-    await page.route('**/api/questionarios/q-1/respostas/leitura-clinica*', (route) => route.fulfill({
-      status: 200, contentType: 'application/json', body: JSON.stringify({
+    await page.route('**/api/questionarios/q-1/respostas/pagina*', (route) => route.fulfill({
+      status: 200, contentType: 'application/json', body: serializarFixture({
         questionarioId: 'q-1', pacientes: [], perguntas: [],
         resumo: { totalRespostas: 3, totalPacientes: 2, totalPerguntas: 1, mediaRespostasPorEnvio: 1 },
         respostas: [respostas[1], nova, respostas[0]]
@@ -830,7 +847,7 @@ test('QST10-02 alterna envios e resumo sem perder leitura ou filtros nem fazer c
   await envio(page, pacientes[0].nome).getByRole('button', { name: 'Ler envio', exact: true }).click();
   await resumo.click();
   await expect(page.getByRole('tabpanel', { name: 'Resumo por pergunta', exact: true })).toBeVisible();
-  await expect(page.getByText('Resumo da consulta', { exact: true })).toBeVisible();
+  await expect(page.getByText('Resumo da página', { exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Leitura individual', exact: true })).not.toBeVisible();
   await page.getByLabel('Busca', { exact: true }).fill('almoço');
   await resumo.focus(); await page.keyboard.press('ArrowLeft');
@@ -856,8 +873,8 @@ test('QST10-02 painéis acessíveis com texto ampliado e contexto novo inicia em
 test('QST10-07 leitura usa contagens históricas sem marcar revisão e mantém incerteza legada', async ({ page }) => {
   const respostasCoerentes=[{...respostas[0],totalRespostas:2,respostas:[...respostas[0].respostas,{perguntaId:'pergunta-2',tipo:'metrica',enunciado:'Indicador sintético',valor:0}]},respostas[1]];
   const requisicoes=await preparar(page,respostasCoerentes,questionarios.map(q=>q.id==='q-1'?{...q,versao:3}:q));
-  await page.route('**/api/questionarios/q-1/respostas/resposta-1/completude',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({respostaId:'resposta-1',completude:{estado:'disponivel',versaoQuestionario:2,totalPerguntas:4,respondidas:2,obrigatorias:2,obrigatoriasRespondidas:2}})}));
-  await page.route('**/api/questionarios/q-1/respostas/resposta-2/completude',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({respostaId:'resposta-2',completude:{estado:'desconhecido',motivo:'snapshot_ausente',versaoQuestionario:null,totalPerguntas:null,respondidas:null,obrigatorias:null,obrigatoriasRespondidas:null}})}));
+  await page.route('**/api/questionarios/q-1/respostas/resposta-1/completude',route=>route.fulfill({status:200,contentType:'application/json',body:serializarFixture({respostaId:'resposta-1',completude:{estado:'disponivel',versaoQuestionario:2,totalPerguntas:4,respondidas:2,obrigatorias:2,obrigatoriasRespondidas:2}})}));
+  await page.route('**/api/questionarios/q-1/respostas/resposta-2/completude',route=>route.fulfill({status:200,contentType:'application/json',body:serializarFixture({respostaId:'resposta-2',completude:{estado:'desconhecido',motivo:'snapshot_ausente',versaoQuestionario:null,totalPerguntas:null,respondidas:null,obrigatorias:null,obrigatoriasRespondidas:null}})}));
   await envio(page,pacientes[0].nome).getByRole('button',{name:'Ler envio',exact:true}).click();
   await page.getByRole('button',{name:'Consultar preenchimento histórico',exact:true}).click();
   const painel=page.getByRole('region',{name:'Preenchimento histórico',exact:true});
@@ -876,9 +893,9 @@ test('QST10-07 leitura usa contagens históricas sem marcar revisão e mantém i
 test('QST10-07 resultado atrasado não invade outro envio e acesso revogado não mantém contagem', async ({ page }) => {
   await preparar(page);let liberar;
   const espera=new Promise(resolve=>{liberar=resolve;});
-  await page.route('**/api/questionarios/q-1/respostas/resposta-1/completude',async route=>{await espera;await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({respostaId:'resposta-1',completude:{estado:'disponivel',versaoQuestionario:1,totalPerguntas:99,respondidas:99,obrigatorias:0,obrigatoriasRespondidas:0}})});});
+  await page.route('**/api/questionarios/q-1/respostas/resposta-1/completude',async route=>{await espera;await route.fulfill({status:200,contentType:'application/json',body:serializarFixture({respostaId:'resposta-1',completude:{estado:'disponivel',versaoQuestionario:1,totalPerguntas:99,respondidas:99,obrigatorias:0,obrigatoriasRespondidas:0}})});});
   let acessoRevogado=false;
-  await page.route('**/api/questionarios/q-1/respostas/resposta-2/completude',route=>{return route.fulfill({status:acessoRevogado?404:200,contentType:'application/json',body:JSON.stringify(!acessoRevogado?{respostaId:'resposta-2',completude:{estado:'disponivel',versaoQuestionario:1,totalPerguntas:0,respondidas:0,obrigatorias:0,obrigatoriasRespondidas:0}}:{mensagem:'Indisponível'})});});
+  await page.route('**/api/questionarios/q-1/respostas/resposta-2/completude',route=>{return route.fulfill({status:acessoRevogado?404:200,contentType:'application/json',body:serializarFixture(!acessoRevogado?{respostaId:'resposta-2',completude:{estado:'disponivel',versaoQuestionario:1,totalPerguntas:0,respondidas:0,obrigatorias:0,obrigatoriasRespondidas:0}}:{mensagem:'Indisponível'})});});
   const requisicaoA=page.waitForRequest(r=>r.url().endsWith('/resposta-1/completude'));
   await envio(page,pacientes[0].nome).getByRole('button',{name:'Ler envio',exact:true}).click();
   await page.getByRole('button',{name:'Consultar preenchimento histórico',exact:true}).click();await requisicaoA;
@@ -894,7 +911,7 @@ test('QST10-07 atualização preserva foco de teclado e não duplica consulta pe
   const espera=new Promise(resolve=>{liberar=resolve;});const iniciada=new Promise(resolve=>{iniciou=resolve;});
   await page.route('**/api/questionarios/q-1/respostas/resposta-1/completude',async route=>{
     if(bloquear){repeticoes++;iniciou();await espera;}
-    await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({respostaId:'resposta-1',completude:{estado:'disponivel',versaoQuestionario:2,totalPerguntas:3,respondidas:2,obrigatorias:2,obrigatoriasRespondidas:2}})});
+    await route.fulfill({status:200,contentType:'application/json',body:serializarFixture({respostaId:'resposta-1',completude:{estado:'disponivel',versaoQuestionario:2,totalPerguntas:3,respondidas:2,obrigatorias:2,obrigatoriasRespondidas:2}})});
   });
   await envio(page,pacientes[0].nome).getByRole('button',{name:'Ler envio',exact:true}).click();
   await page.getByRole('button',{name:'Consultar preenchimento histórico',exact:true}).click();
@@ -905,4 +922,73 @@ test('QST10-07 atualização preserva foco de teclado e não duplica consulta pe
     await page.keyboard.press('Enter');expect(repeticoes).toBe(1);
   }finally{liberar();}
   await expect(botao).toBeFocused();await expect(painel).toContainText('2 de 3');
+});
+
+test('QST10-08 pagina e busca somente os envios da página sem perder o alcance da consulta', async ({page}) => {
+  const trinta=Array.from({length:30},(_,i)=>({...respostas[i%2],respostaId:`resposta-${i+1}`,envioId:`envio-${i+1}`,respostas:[{...respostas[0].respostas[0],valor:i===0?'Organizei o almoço':`Rotina sintética ${i+1}`}]}));
+  await preparar(page,trinta);
+  await expect(page.getByRole('button',{name:'Ler envio',exact:true})).toHaveCount(25);
+  await expect(page.getByText('Página 1 · 30 respostas na consulta',{exact:true})).toBeVisible();
+  await page.getByLabel('Busca', {exact:true}).fill('Rotina sintética 30');
+  await expect(page.getByRole('button',{name:'Ler envio',exact:true})).toHaveCount(0);
+  await page.getByRole('button',{name:'Limpar busca',exact:true}).click();
+  await page.getByRole('button',{name:'Próxima página',exact:true}).focus();await page.keyboard.press('Enter');
+  await expect(page.getByText('Página 2 · 30 respostas na consulta',{exact:true})).toBeVisible();
+  await expect(page.getByRole('group',{name:'Paginação das respostas',exact:true}).getByRole('status')).toBeFocused();
+  await expect(page.getByRole('button',{name:'Ler envio',exact:true})).toHaveCount(5);
+  await page.getByRole('button',{name:'Página anterior',exact:true}).click();
+  await expect(page.getByRole('button',{name:'Ler envio',exact:true})).toHaveCount(25);
+  await page.getByLabel('Respostas por página',{exact:true}).selectOption('50');
+  await expect(page.getByRole('button',{name:'Ler envio',exact:true})).toHaveCount(30);
+  await expect(page.getByText('Página 1 · 30 respostas na consulta',{exact:true})).toBeVisible();
+});
+
+test('QST10-08 separa filtros aplicados e três escopos de CSV', async ({page}) => {
+  await preparar(page);const corpos=[];
+  await page.route('**/api/questionarios/q-1/respostas/exportacao.csv',async route=>{corpos.push(route.request().postDataJSON());await route.fulfill({status:200,contentType:'text/csv',body:'respostaId\n'});});
+  await page.getByLabel('Início do período',{exact:true}).fill('2026-11-01');
+  await expect(page.getByRole('button',{name:'Exportar consulta',exact:true})).toBeDisabled();
+  await page.getByRole('button',{name:'Atualizar respostas',exact:true}).click();
+  await expect(page.getByText('Fuso do período: America/Sao_Paulo. O dia final é incluído.',{exact:true})).toBeVisible();
+  for(const nome of ['Exportar itens visíveis','Exportar consulta','Exportar questionário']){
+    const download=page.waitForEvent('download');await page.getByRole('button',{name:nome,exact:true}).click();await download;
+  }
+  expect(corpos).toEqual([
+    {escopo:'visiveis',filtros:{inicio:'2026-11-01'},respostaIds:['resposta-1','resposta-2']},
+    {escopo:'consulta',filtros:{inicio:'2026-11-01'}},
+    {escopo:'questionario'}
+  ]);
+});
+
+for(const erro of [false,true])test(`QST10-08 página tardia ${erro?'com erro':'com sucesso'} não substitui novo paciente`,async({page})=>{
+ const trinta=Array.from({length:30},(_,i)=>({...respostas[i%2],respostaId:`resposta-${i+1}`,envioId:`envio-${i+1}`,respostas:[{...respostas[0].respostas[0],valor:i===0?'Organizei o almoço':`Rotina tardia ${i+1}`}]}));
+ await preparar(page,trinta);let liberar,recebeu;const pendente=new Promise(r=>liberar=r),recebida=new Promise(r=>recebeu=r);
+ await page.route('**/api/questionarios/q-1/respostas/pagina*',async route=>{
+  const url=new URL(route.request().url());if(url.searchParams.has('cursor')){recebeu();await pendente;await route.fulfill({status:erro?404:200,contentType:'application/json',body:serializarFixture(erro?{mensagem:'Leitura antiga negada.'}:{questionarioId:'q-1',pacientes:[],perguntas:[],resumo:{totalRespostas:5,totalPacientes:2,totalPerguntas:1,mediaRespostasPorEnvio:1},respostas:trinta.slice(25)})});}
+  else await route.fallback();
+ });
+ await page.getByRole('button',{name:'Próxima página',exact:true}).click();await recebida;
+ await page.locator('#filtro-paciente-respostas').selectOption('paciente-a');
+ await expect(page.getByRole('button',{name:'Ler envio',exact:true})).toHaveCount(15);
+ await entregarRespostaAntiga(page,liberar,'cursor=25');
+ await expect(page.getByRole('button',{name:'Ler envio',exact:true})).toHaveCount(15);
+ await expect(page.getByText('Página 1 · 15 respostas na consulta',{exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:'Página anterior',exact:true})).toBeDisabled();
+ await expect(page.getByText('Leitura antiga negada.',{exact:true})).toHaveCount(0);
+});
+
+test('QST10-08 filtros e páginas acessíveis com texto ampliado',async({page},info)=>{
+ await preparar(page);await page.evaluate(()=>{document.documentElement.style.fontSize='200%';});
+ const painel=page.locator('[data-qst10-paginacao]');
+ const borda=await painel.boundingBox();
+ for(const nome of ['Início do período','Fim do período','Respostas por página']){
+   const caixa=await page.getByLabel(nome,{exact:true}).boundingBox();
+   expect(caixa.x+caixa.width,`${nome} precisa caber dentro do cartão`).toBeLessThanOrEqual(borda.x+borda.width+1);
+ }
+ const busca=await page.getByLabel('Busca',{exact:true}).boundingBox();
+ expect(busca.width,'a busca não pode se reduzir a poucos caracteres').toBeGreaterThanOrEqual(Math.min(240,borda.width-32));
+ expect((await new AxeBuilder({page}).include('[data-qst10-paginacao]').analyze()).violations).toEqual([]);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+1)).toBe(true);
+ await page.getByLabel('Início do período',{exact:true}).focus();await expect(page.getByLabel('Início do período',{exact:true})).toBeFocused();
+ await painel.screenshot({path:`../docs/agents/ux/reports/QST10-08-BC-2026-11-23/paginacao-${info.project.name.startsWith('desktop')?'desktop':'mobile'}.png`});
 });
