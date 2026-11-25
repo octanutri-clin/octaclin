@@ -114,3 +114,21 @@ carregamento original(sem alteração desse efeito), não escondido. Segredos/
 diff PASS. Commits40a50dd6(C1)/4748893f(C2). Sem prova de banco/RLS/build
 completo local ou leitor de tela manual(SKIPPED, fronteiras não alteradas).
 UX B/C e revisão final do lote pendentes; nenhuma declaração de aceite final.
+
+## PR lógica04 — índice de seções
+
+Based68607e8. RED: navSeções inexistente. Implementação usa IDs gerados,
+nunca nomes livres; foco noheading e URL preservada, só se maisde1seção.
+Caso desktopdeíndice PASS; regressão20casos e typecheck ainda em execução,
+sem declaração de PASS até resultado. Código congelado para preparar05.
+
+04: regressão20/20 desktop/mobile PASS(1,4min), typecheck/linguagem PASS,
+lint0erros/mesmo warning preexistente no carregamento.
+Ruling: executor ficou sem espaço ao criar05(ENOSPC, não falha funcional);
+removidas só cópias limpas próprias01–03 comSHAremotoidêntico, preservando
+branches/commits/PRs. Reutilizar sequencialmente worktree04 para próximas
+branches próprias, sempre após commit/push/statuslimpo. Custo: caminhos físicos
+antigos deixam de existir; código/evidências permanecem noGit/PRs.
+04 ganha commitdocumental adicional por essa recuperação/evidências finais.
+Fonte/código permanecem inalterados; diretóriosClaude e arquivos históricos
+alheios não foram removidos. Espaço livre169MiB após recuperação.

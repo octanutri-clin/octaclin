@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Send, UploadCloud } from 'lucide-react';
 import {
   carregarFormularioPublico,
@@ -57,6 +57,7 @@ function formatarExpiracao(valor: string) {
 }
 
 export function FormularioPacientePublico({ token }: Props) {
+  const secoesId = useId();
   const [formulario, setFormulario] = useState<FormularioPublico | null>(null);
   const [respostas, setRespostas] = useState<Record<string, ValorResposta>>({});
   const [erro, setErro] = useState<string | null>(null);
@@ -336,6 +337,18 @@ export function FormularioPacientePublico({ token }: Props) {
         ) : null}
 
         <section className="grid gap-4 border border-linha bg-white p-5">
+          {secoes.length > 1 ? (
+            <nav aria-label="Seções do formulário" className="flex min-w-0 flex-wrap gap-2">
+              {secoes.map((secao, indice) => (
+                <a key={indice} href={`#${secoesId}-secao-${indice}`} className="inline-flex min-h-11 max-w-full items-center rounded-md border border-linha px-3 text-sm underline [overflow-wrap:anywhere] focus-visible:outline focus-visible:outline-2 focus-visible:outline-primaria" onClick={event => {
+                  event.preventDefault();
+                  const destino = document.getElementById(`${secoesId}-secao-${indice}`);
+                  destino?.focus(); destino?.scrollIntoView({ block: 'start' });
+                }}>{secao.nome}</a>
+              ))}
+            </nav>
+          ) : null}
+
           {pendencias.length ? (
             <section ref={resumoPendenciasRef} tabIndex={-1} role="alert" aria-labelledby="titulo-pendencias" className="rounded-md border border-alerta-forte bg-white p-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primaria">
               <h2 id="titulo-pendencias" className="font-semibold">Respostas pendentes</h2>
@@ -346,10 +359,10 @@ export function FormularioPacientePublico({ token }: Props) {
             </section>
           ) : null}
 
-          {secoes.map((secao) => (
+          {secoes.map((secao, indice) => (
             <div key={secao.nome} className="grid gap-3">
               <div className="border-b border-linha pb-2">
-                <h2 className="text-sm font-semibold">{secao.nome}</h2>
+                <h2 id={`${secoesId}-secao-${indice}`} tabIndex={-1} className="text-sm font-semibold focus:outline focus:outline-2 focus:outline-primaria">{secao.nome}</h2>
               </div>
               {secao.perguntas.map((pergunta) => (
                 <CampoPergunta
