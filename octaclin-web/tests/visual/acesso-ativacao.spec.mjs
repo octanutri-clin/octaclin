@@ -42,7 +42,7 @@ test.describe('acesso e ativacao - Fase 191', () => {
     await expect(page.getByText('Caps Lock ativado.')).toHaveCount(0);
   });
 
-  test('recuperar-senha: distingue link expirado de link invalido', async ({ page }) => {
+  test('recuperar-senha: distingue link indisponível de link não encontrado', async ({ page }) => {
     await page.route('**/api/auth/recuperar-senha/validar', async (route) => {
       await route.fulfill({
         status: 410,
@@ -52,11 +52,11 @@ test.describe('acesso e ativacao - Fase 191', () => {
     });
 
     await page.goto('/recuperar-senha?token=token-expirado');
-    await expect(page.getByRole('heading', { name: 'Link expirado' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Link indisponível', exact: true })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Solicitar novo link' })).toHaveAttribute('href', '/esqueci-senha');
   });
 
-  test('recuperar-senha: mostra link invalido separado de expirado', async ({ page }) => {
+  test('recuperar-senha: mostra link não encontrado separado de indisponível', async ({ page }) => {
     await page.route('**/api/auth/recuperar-senha/validar', async (route) => {
       await route.fulfill({
         status: 404,

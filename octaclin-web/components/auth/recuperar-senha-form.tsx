@@ -22,9 +22,9 @@ const conteudoFalha: Record<TipoFalhaToken, { titulo: string; mensagem: string; 
     detalhe: 'O link precisa conter o código seguro de redefinicao.'
   },
   expirado: {
-    titulo: 'Link expirado',
-    mensagem: 'Solicite um novo link para redefinir sua senha com segurança.',
-    detalhe: 'Por segurança, links antigos deixam de funcionar automaticamente.'
+    titulo: 'Link indisponível',
+    mensagem: 'Não é possível usar este link para redefinir sua senha. Solicite um novo link.',
+    detalhe: 'O link pode ter expirado ou não estar mais disponível.'
   },
   nao_encontrado: {
     titulo: 'Link não encontrado',
@@ -83,7 +83,7 @@ export function RecuperarSenhaForm({ tokenInicial }: RecuperarSenhaFormProps) {
       .catch((erroAtual) => {
         const falha = classificarFalhaToken(erroAtual, 'Token invalido ou expirado.');
         setFalhaToken(falha.tipo);
-        setErro(falha.mensagem ?? null);
+        setErro(null);
       })
       .finally(() => setCarregando(false));
   }, [token]);
@@ -110,8 +110,8 @@ export function RecuperarSenhaForm({ tokenInicial }: RecuperarSenhaFormProps) {
         ehPrimeiroAcessoStaff ? { aceiteTermosUso, aceitePoliticaPrivacidade } : undefined
       );
       setSucesso(true);
-    } catch (erroAtual) {
-      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao redefinir senha.');
+    } catch {
+      setErro('Não foi possível redefinir a senha agora. Confira os campos e tente novamente.');
     } finally {
       setSalvando(false);
     }
