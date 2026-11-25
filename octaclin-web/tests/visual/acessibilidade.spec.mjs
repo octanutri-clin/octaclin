@@ -1385,7 +1385,7 @@ test.describe('gate de acessibilidade - pacientes (PR 19)', () => {
     await prepararSessaoPacientes(page);
     await prepararListaPacientes(page, { itens: [], total: 0 });
     await page.goto('/pacientes');
-    await expect(page.getByRole('heading', { name: 'Pacientes' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Pacientes', exact: true })).toBeVisible();
     await expect(page.getByText('Nenhum paciente encontrado com estes filtros.').filter({ visible: true })).toBeVisible();
     await rodarChecagensDeAcessibilidade(page);
   });
