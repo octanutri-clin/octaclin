@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Copy, KeyRound, ShieldCheck, ShieldOff } from 'lucide-react';
+import { KeyRound, ShieldCheck, ShieldOff } from 'lucide-react';
 import {
   confirmarConfiguracaoMfa,
   iniciarConfiguracaoMfa,
@@ -12,6 +12,7 @@ import {
   type ConfiguracaoMfaPublica
 } from '@/lib/auth-api';
 import { ModalReautenticacao } from '@/components/auth/modal-reautenticacao';
+import { CopiarConteudoMfa } from '@/components/auth/copiar-conteudo-mfa';
 import { Botao } from '@/components/ui/botao';
 import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoSubtitulo, CartaoTitulo } from '@/components/ui/cartao';
 import { Campo, Rotulo } from '@/components/ui/campo';
@@ -96,9 +97,7 @@ export function MfaConta() {
             <form className="grid gap-3 rounded-md border border-linha p-3" onSubmit={confirmar}>
               <p className="text-sm text-tinta">Adicione esta chave ao aplicativo autenticador:</p>
               <code className="break-all rounded bg-superficie p-2 text-sm font-semibold">{configuracao.segredo}</code>
-              <Botao type="button" tamanho="sm" variante="secundario" onClick={() => void navigator.clipboard.writeText(configuracao.segredo)}>
-                <Copy size={14} aria-hidden="true" /> Copiar chave
-              </Botao>
+              <CopiarConteudoMfa tipo="chave" texto={configuracao.segredo} compacto />
               <div className="grid gap-1.5">
                 <Rotulo htmlFor="codigo-configuracao-mfa">Código gerado</Rotulo>
                 <Campo id="codigo-configuracao-mfa" value={codigo} onChange={(evento) => setCodigo(evento.target.value)} inputMode="numeric" autoComplete="one-time-code" required />
@@ -113,9 +112,7 @@ export function MfaConta() {
               <ul className="grid grid-cols-2 gap-1 font-mono text-sm" aria-label="Novos códigos de recuperação">
                 {codigos.map((item) => <li key={item}>{item}</li>)}
               </ul>
-              <Botao type="button" tamanho="sm" variante="secundario" onClick={() => void navigator.clipboard.writeText(codigos.join('\n'))}>
-                <Copy size={14} aria-hidden="true" /> Copiar códigos
-              </Botao>
+              <CopiarConteudoMfa tipo="codigos" texto={codigos.join('\n')} compacto />
             </div>
           ) : null}
 

@@ -4,11 +4,12 @@ import { FormEvent, useEffect, useId, useRef, useState } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
-import { Copy, LogIn, ShieldCheck } from 'lucide-react';
+import { LogIn, ShieldCheck } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { Campo, Rotulo } from '@/components/ui/campo';
 import { CampoSenha } from '@/components/auth/campo-senha';
 import { AuthShell } from '@/components/auth/auth-shell';
+import { CopiarConteudoMfa } from '@/components/auth/copiar-conteudo-mfa';
 import {
   autenticar,
   concluirLoginMfa,
@@ -122,9 +123,7 @@ export function LoginForm() {
           <ul className="grid grid-cols-2 gap-2 rounded-md border border-linha bg-superficie p-3 font-mono text-sm" aria-label="Códigos de recuperação">
             {codigosRecuperacao.map((item) => <li key={item}>{item}</li>)}
           </ul>
-          <Botao type="button" variante="secundario" onClick={() => void navigator.clipboard.writeText(codigosRecuperacao.join('\n'))}>
-            <Copy size={16} aria-hidden="true" /> Copiar códigos
-          </Botao>
+          <CopiarConteudoMfa tipo="codigos" texto={codigosRecuperacao.join('\n')} />
           <Botao type="button" variante="primario" onClick={() => redirecionar(destinoAposMfa)}>
             Continuar
           </Botao>
@@ -144,9 +143,7 @@ export function LoginForm() {
             <div className="grid gap-2 rounded-md border border-linha bg-superficie p-3">
               <p className="text-xs text-texto-suave">Chave de configuração manual</p>
               <code className="break-all text-sm font-semibold text-tinta">{configuracaoMfa.segredo}</code>
-              <Botao type="button" tamanho="sm" variante="secundario" onClick={() => void navigator.clipboard.writeText(configuracaoMfa.segredo)}>
-                <Copy size={14} aria-hidden="true" /> Copiar chave
-              </Botao>
+              <CopiarConteudoMfa tipo="chave" texto={configuracaoMfa.segredo} compacto />
             </div>
           ) : null}
           <div className="grid gap-1.5">
