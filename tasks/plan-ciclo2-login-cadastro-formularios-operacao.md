@@ -222,7 +222,7 @@ Cobrir clipboard disponível/ausente/negado, operação lenta, repetição delib
 
 Aceite: pessoa consegue distinguir sucesso de falha, há alternativa manual compreensível e nenhum segredo aparece em toast/log/storage adicional. Rollback: remoção do feedback sem mudar códigos ou sessões.
 
-Decisão pendente D02: ratificar apresentação e fallback manual; nenhum método de MFA novo está incluído.
+D02 ratificada no escopo autorizado do ciclo: feedback e fallback manual conforme proposto; nenhum método de MFA novo está incluído.
 
 ## 8. C2-F03 — Recuperação de senha com orientação e nova tentativa
 

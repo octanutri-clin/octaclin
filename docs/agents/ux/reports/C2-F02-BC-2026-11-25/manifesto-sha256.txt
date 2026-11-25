@@ -1,0 +1,10 @@
+be27f1f76bae58f1b2b09d82623ee7edcfe601ebad62fa695181f8bfeff69ff6  docs/agents/ux/reports/C2-F02-BC-2026-11-25/brief.md
+38ec1c86fd3ba8282d432c1e944826a074ad09d6ff430b7c31c2de10d4e28be0  docs/agents/ux/reports/C2-F02-BC-2026-11-25/consolidado.md
+f3bcd660ded8d528e902abdd03c09d240ae14b47a166b07a0684f536bac46cfa  docs/agents/ux/reports/C2-F02-BC-2026-11-25/nutricionista.md
+046951a0893038b2f66fd6ec7e73a41042aeb02132bb90cc2cc5628ff8b71ad2  docs/agents/ux/reports/C2-F02-BC-2026-11-25/paciente.md
+6259b40a98e2c49053cbc6adbc0c59d0312b14e191b228ab73de2f2eac53af6d  .codex/agents/octaclin-nutricionista-ux.toml
+a40b1ded5e47739a2710caa5ec9a9a7871b57be7efc11deefaae0515028ff7d7  .codex/agents/octaclin-paciente-ux.toml
+7a413480502b91096a55596c62799ad2e28413bd18e47f8cc3fec414e0ddc53e  octaclin-web/components/auth/copiar-conteudo-mfa.tsx
+17fa189b786f3b3612f47b2f185949f3ef08e6f1b1eeeba06a4a9f9df7c249fd  octaclin-web/components/auth/login-form.tsx
+24e3a38aaf86f47267294bf6f99ab6bca338e437605d948d863009c5df2f96a6  octaclin-web/components/conta/mfa-conta.tsx
+081c28d8c980ab6662f911bcc495fa863b056a5dd4baabcb75f8444340c2f462  octaclin-web/tests/visual/mfa-copia.spec.mjs
