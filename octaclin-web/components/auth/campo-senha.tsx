@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 type CampoSenhaProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'type'>;
 
 export const CampoSenha = forwardRef<HTMLInputElement, CampoSenhaProps>(function CampoSenha(
-  { className, onKeyUp, onKeyDown, id, ...props },
+  { className, onKeyUp, onKeyDown, id, 'aria-describedby': descricaoExterna, ...props },
   ref
 ) {
   const [visivel, setVisivel] = useState(false);
@@ -29,7 +29,7 @@ export const CampoSenha = forwardRef<HTMLInputElement, CampoSenhaProps>(function
           id={id}
           type={visivel ? 'text' : 'password'}
           className={cn('pr-11', className)}
-          aria-describedby={capsLockAtivo && idAvisoCapsLock ? idAvisoCapsLock : undefined}
+          aria-describedby={[descricaoExterna, capsLockAtivo ? idAvisoCapsLock : undefined].filter(Boolean).join(' ') || undefined}
           onKeyUp={(evento) => {
             detectarCapsLock(evento);
             onKeyUp?.(evento);
