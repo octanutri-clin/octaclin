@@ -1,0 +1,5 @@
+# Brief sintético — A / D C2-F04
+
+Base main 0fd46a01, plano cb39c2c5 seção 9. Rascunho volátil por seção de cadastro: identificação, contato, operação, fiscal conforme permissão. Saídas suportadas pedem Continuar editando/Sair sem salvar. Sem save global: identificação possui duas gravações independentes. ACK confirma somente dados enviados, nunca edição posterior; falhas preservam entrada autorizada. Nenhum storage clínico novo; backend/permissões inalterados. beforeunload sujeito ao navegador, Back/Forward SPA não garantido. Impacto paciente indireto na confiabilidade cadastral, nenhum novo portal. Aprendizado das fases anteriores: mensagens sem detalhes internos, foco previsível e fidelidade às confirmações reais.
+
+Instâncias independentes do runtime, papel fornecido em prompt, fork none, sem ferramentas solicitadas/usadas. Não comprova seleção nativa dos TOMLs, pesquisa com usuários ou validação clínica. Os papéis canônicos deste checkout estão em .codex/agents/. A/B/C não substituem R4.

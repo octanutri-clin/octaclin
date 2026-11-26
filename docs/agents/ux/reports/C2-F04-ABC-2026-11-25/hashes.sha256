@@ -1,0 +1,12 @@
+1c0608be25fd4dedaf9cf07814f3f21cb2a2d945eac3f791a8e2f6ab26b2acb5  docs/agents/ux/reports/C2-F04-ABC-2026-11-25/brief.md
+3176334d10c35f31f0bea66182eed4a7d575f963e6bc6325100c4cd1e530c9d0  docs/agents/ux/reports/C2-F04-ABC-2026-11-25/consolidado.md
+752c5d9fcacdf951240675921388ee7e27df257998b8cfc037d4091c0e551261  docs/agents/ux/reports/C2-F04-ABC-2026-11-25/nutricionista.md
+6efa0e5f736f40d9fe67683581ab6c8d2f4da79e62510077af7b7e650bd7b10b  docs/agents/ux/reports/C2-F04-ABC-2026-11-25/paciente.md
+c5bdcf0be31b9156eca8be13154082d47db0dbd9bd4dede2a42a7336e1e3ada6  docs/agents/ux/reports/C2-F04-ABC-2026-11-25/r4.md
+6259b40a98e2c49053cbc6adbc0c59d0312b14e191b228ab73de2f2eac53af6d  .codex/agents/octaclin-nutricionista-ux.toml
+a40b1ded5e47739a2710caa5ec9a9a7871b57be7efc11deefaae0515028ff7d7  .codex/agents/octaclin-paciente-ux.toml
+00ee799fa4435bbc1af022752fc1a9dbce4a3196cd1b188a9a4b6017c47bff29  docs/agents/ux/PROCEDIMENTO.md
+5ff35da32a911158d43efdf8d33b9899062cb368fd3020fac32ce4e2dab55e31  octaclin-web/components/pacientes/perfil-cadastro-paciente.tsx
+639dd6d29ea8a14f49100dcfca81e5c2e0aea30743bae804925a842a06f2cad0  octaclin-web/lib/cadastros-api.ts
+3a65e1e919fdc3715847ee2b16e6db652c2b858d069899441db911dd9c22d688  octaclin-web/tests/visual/console-regression.spec.mjs
+1eeb135baf004f4e0fc5e7c6fb1dd4a900f3aef477030bf8b7f01da1d225cf88  octaclin-web/tests/visual/acessibilidade.spec.mjs
