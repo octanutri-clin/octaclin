@@ -203,8 +203,8 @@ export async function listarPacientes(filtros: FiltrosPacientes = {}): Promise<R
   return requisitar<RespostaPaginada<PacienteResumo>>(`/api/pacientes?${parametros}`);
 }
 
-export async function obterPaciente(id: string): Promise<PacienteResumo> {
-  return requisitar<PacienteResumo>(`/api/pacientes/${encodeURIComponent(id)}`);
+export async function obterPaciente(id: string, opcoes: { cache?: RequestCache } = {}): Promise<PacienteResumo> {
+  return requisitar<PacienteResumo>(`/api/pacientes/${encodeURIComponent(id)}`, { cache: opcoes.cache });
 }
 
 export async function criarPaciente(entrada: SalvarPacienteEntrada): Promise<PacienteResumo> {

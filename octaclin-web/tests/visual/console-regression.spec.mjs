@@ -1113,6 +1113,13 @@ async function prepararProntuarioMockado(page, {
     { name: 'octaclin_destino_inicial', value: encodeURIComponent('/dashboard'), domain: 'localhost', path: '/' }
   ]);
 
+  await page.route('**/api/pacientes/paciente-1', async (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+      id: 'paciente-1', nome: 'Ana Souza', dataNascimento: '1990-04-12'
+    }) });
+  });
+
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({
       status: 200,
@@ -3083,6 +3090,371 @@ test.describe('prontuario do paciente', () => {
     await expect(abaAcompanhamento).toBeFocused();
     await expect(page.getByLabel('Título da tarefa')).toHaveValue('Revisar diário alimentar');
     await expect(abaAcompanhamento).toHaveAttribute('aria-selected', 'true');
+  });
+
+  test('C2-F04 protege cadastro pendente e restaura foco ao continuar', async ({ page }, testInfo) => {
+    await prepararProntuarioMockado(page);
+    await page.goto('/pacientes/paciente-1');
+    const abrir = page.getByRole('button', { name: 'Editar cadastro do paciente' });
+    const cadastro = page.getByRole('dialog', { name: 'Cadastro do paciente', exact: true });
+    await abrir.click();
+    await expect(cadastro.getByLabel('Nome completo', { exact: true })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(cadastro).toBeHidden();
+    await abrir.click();
+    await cadastro.getByLabel('Nome completo', { exact: true }).fill('Pessoa Sintética Editada');
+    await page.keyboard.press('Escape');
+    const confirmar = page.getByRole('dialog', { name: 'Sair sem salvar cadastro' });
+    await expect(confirmar.getByText('Identificação', { exact: true })).toBeVisible();
+    await expect(confirmar.getByRole('button', { name: 'Continuar editando' })).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(confirmar.getByRole('button', { name: 'Sair sem salvar', exact: true })).toBeFocused();
+    await page.keyboard.press('Shift+Tab');
+    await expect(confirmar.getByRole('button', { name: 'Continuar editando' })).toBeFocused();
+    expect((await new AxeBuilder({ page }).include('[role="dialog"]').withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()).violations).toEqual([]);
+    await page.screenshot({ path: testInfo.outputPath('cadastro-pendente.png') });
+    await page.keyboard.press('Escape');
+    await expect(cadastro.getByLabel('Nome completo', { exact: true })).toHaveValue('Pessoa Sintética Editada');
+    await expect(cadastro.getByLabel('Nome completo', { exact: true })).toBeFocused();
+    await page.keyboard.press('Escape');
+    await confirmar.getByRole('button', { name: 'Sair sem salvar', exact: true }).click();
+    await expect(cadastro).toBeHidden();
+    await abrir.click();
+    await expect(cadastro.getByLabel('Nome completo', { exact: true })).not.toHaveValue('Pessoa Sintética Editada');
+    await assertSemOverflowHorizontal(page);
+  });
+
+  test('C2-F04 cancela link de outro paciente e preserva contato', async ({ page }) => {
+    await prepararProntuarioMockado(page);
+    await page.goto('/pacientes/paciente-1');
+    await page.getByRole('button', { name: 'Editar cadastro do paciente' }).click();
+    const cadastro = page.getByRole('dialog', { name: 'Cadastro do paciente', exact: true });
+    await cadastro.getByLabel('E-mail', { exact: true }).fill('sintetico@example.com');
+    await cadastro.getByRole('link', { name: 'Ana Souza homonima' }).click();
+    const confirmar = page.getByRole('dialog', { name: 'Sair sem salvar cadastro' });
+    await expect(confirmar.getByText('Contato e endereço', { exact: true })).toBeVisible();
+    await confirmar.getByRole('button', { name: 'Continuar editando' }).click();
+    await expect(page).toHaveURL(/paciente-1$/);
+    await expect(cadastro.getByLabel('E-mail', { exact: true })).toHaveValue('sintetico@example.com');
+  });
+
+  test('C2-F04 ACK antigo e falha não descartam edição posterior', async ({ page }) => {
+    await prepararProntuarioMockado(page);
+    let concluir;
+    const resposta = new Promise((resolve) => { concluir = resolve; });
+    let recebeu = false;
+    await page.route('**/api/pacientes/paciente-1/perfil-cadastro/contato', async (route) => {
+      recebeu = true;
+      await resposta;
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(route.request().postDataJSON()) });
+    });
+    await page.goto('/pacientes/paciente-1');
+    await page.getByRole('button', { name: 'Editar cadastro do paciente' }).click();
+    const cadastro = page.getByRole('dialog', { name: 'Cadastro do paciente', exact: true });
+    const contato = cadastro.locator('section').filter({ has: page.getByRole('heading', { name: 'Contato e endereço', exact: true }) });
+    await cadastro.getByLabel('E-mail', { exact: true }).fill('primeiro@example.com');
+    await contato.getByRole('button', { name: 'Salvar seção' }).click();
+    await expect.poll(() => recebeu).toBe(true);
+    await cadastro.getByLabel('E-mail', { exact: true }).fill('segundo@example.com');
+    concluir();
+    await expect(cadastro.getByText('Seção salva com segurança.', { exact: true })).toBeVisible();
+    await page.keyboard.press('Escape');
+    const confirmar = page.getByRole('dialog', { name: 'Sair sem salvar cadastro' });
+    await expect(confirmar).toBeVisible();
+    await confirmar.getByRole('button', { name: 'Continuar editando' }).click();
+    await page.route('**/api/pacientes/paciente-1/perfil-cadastro/contato', (route) => route.fulfill({ status: 503, body: 'Indisponível' }));
+    await contato.getByRole('button', { name: 'Salvar seção' }).click();
+    await expect(cadastro.getByRole('alert')).toBeVisible();
+    await expect(cadastro.getByLabel('E-mail', { exact: true })).toHaveValue('segundo@example.com');
+    await page.keyboard.press('Escape');
+    await expect(confirmar).toBeVisible();
+  });
+
+  test('C2-F04 falha parcial de identificação informa gravação já confirmada', async ({ page }) => {
+    await prepararProntuarioMockado(page);
+    let basicos = 0;
+    let nomePersistido = 'Ana Souza';
+    await page.route('**/api/pacientes/paciente-1', async (route) => {
+      if (route.request().method() !== 'PATCH') {
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: 'paciente-1', nome: nomePersistido, dataNascimento: '1990-04-12' }) });
+      }
+      nomePersistido = route.request().postDataJSON().nome;
+      basicos += 1;
+      await route.fulfill({ status: 204 });
+    });
+    await page.route('**/api/pacientes/paciente-1/perfil-cadastro/identificacao', (route) => route.fulfill({ status: 503, body: 'Indisponível' }));
+    await page.goto('/pacientes/paciente-1');
+    await page.getByRole('button', { name: 'Editar cadastro do paciente' }).click();
+    const cadastro = page.getByRole('dialog', { name: 'Cadastro do paciente', exact: true });
+    await cadastro.getByLabel('Nome completo', { exact: true }).fill('Pessoa Sintética');
+    await cadastro.getByLabel('Apelido ou nome de uso').fill('Uso sintético');
+    const identificacao = cadastro.locator('section').filter({ has: page.getByRole('heading', { name: 'Identificação', exact: true }) });
+    await identificacao.getByRole('button', { name: 'Salvar seção' }).click();
+    await expect(cadastro.getByRole('alert')).toContainText('Nome e data de nascimento foram salvos');
+    expect(basicos).toBe(1);
+    await expect(cadastro.getByLabel('Apelido ou nome de uso')).toHaveValue('Uso sintético');
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog', { name: 'Sair sem salvar cadastro' }).getByText('Identificação', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Sair sem salvar', exact: true }).click();
+    await page.getByRole('button', { name: 'Editar cadastro do paciente' }).click();
+    await expect(cadastro.getByLabel('Nome completo', { exact: true })).toHaveValue('Pessoa Sintética');
+  });
+
+  test('C2-F04 resposta de leitura antiga não substitui cadastro reaberto', async ({ page }) => {
+    await prepararProntuarioMockado(page);
+    let liberar;
+    const espera = new Promise((resolve) => { liberar = resolve; });
+    let leituras = 0;
+    await page.route('**/api/pacientes/paciente-1/perfil-cadastro', async (route) => {
+      leituras += 1;
+      const primeira = leituras === 1;
+      if (primeira) await espera;
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ identificacao: { nomeUso: primeira ? 'Origem antiga' : 'Origem atual' } }) });
+    });
+    await page.goto('/pacientes/paciente-1');
+    const abrir = page.getByRole('button', { name: 'Editar cadastro do paciente' });
+    await abrir.click();
+    await expect.poll(() => leituras).toBe(1);
+    await page.keyboard.press('Escape');
+    await abrir.click();
+    const cadastro = page.getByRole('dialog', { name: 'Cadastro do paciente', exact: true });
+    await expect(cadastro.getByLabel('Apelido ou nome de uso')).toHaveValue('Origem atual');
+    const respostaAntiga = page.waitForResponse(async (resposta) => resposta.url().endsWith('/perfil-cadastro') && (await resposta.json()).identificacao?.nomeUso === 'Origem antiga');
+    liberar();
+    await respostaAntiga;
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(resolve)));
+    await expect(cadastro.getByLabel('Apelido ou nome de uso')).toHaveValue('Origem atual');
+    await cadastro.getByLabel('Nome completo', { exact: true }).fill('Edição atual');
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog', { name: 'Sair sem salvar cadastro' })).toBeVisible();
+  });
+
+  test('C2-F04 fiscal ignora metadados de leitura e preserva campos autorizados', async ({ page }) => {
+    await prepararProntuarioMockado(page, { permissoesExtras: ['agenda.financeiro.ler'] });
+    let enviado;
+    await page.route('**/api/pacientes/paciente-1/perfil-cadastro/fiscal', async (route) => {
+      if (route.request().method() === 'PATCH') enviado = route.request().postDataJSON();
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ nomePagador: 'Pagador sintético', documentoPagador: 'Documento sintético', atualizadoEm: '2026-01-01T00:00:00Z' }) });
+    });
+    await page.goto('/pacientes/paciente-1');
+    await page.getByRole('button', { name: 'Editar cadastro do paciente' }).click();
+    const cadastro = page.getByRole('dialog', { name: 'Cadastro do paciente', exact: true });
+    await cadastro.getByLabel('Nome do pagador', { exact: true }).fill('Outro pagador');
+    await cadastro.getByRole('button', { name: 'Salvar dados fiscais' }).click();
+    await expect(cadastro.getByText('Seção salva com segurança.', { exact: true })).toBeVisible();
+    expect(enviado).toMatchObject({ nomePagador: 'Outro pagador', documentoPagador: 'Documento sintético' });
+    expect(enviado).not.toHaveProperty('atualizadoEm');
+    await page.keyboard.press('Escape');
+    await expect(cadastro).toBeHidden();
+  });
+
+  test('C2-F04 remoção não suportada de nascimento não produz falso save', async ({ page }) => {
+    await prepararProntuarioMockado(page);
+    let gravacoes = 0;
+    await page.route('**/api/pacientes/paciente-1', async (route) => {
+      if (route.request().method() !== 'PATCH') return route.fallback();
+      gravacoes += 1;
+      await route.fulfill({ status: 204 });
+    });
+    await page.goto('/pacientes/paciente-1');
+    await page.getByRole('button', { name: 'Editar cadastro do paciente' }).click();
+    const cadastro = page.getByRole('dialog', { name: 'Cadastro do paciente', exact: true });
+    await cadastro.getByLabel('Data de nascimento', { exact: true }).fill('');
+    const identificacao = cadastro.locator('section').filter({ has: page.getByRole('heading', { name: 'Identificação', exact: true }) });
+    await identificacao.getByRole('button', { name: 'Salvar seção' }).click();
+    await expect(cadastro.getByRole('alert')).toContainText('A remoção da data de nascimento não está disponível');
+    expect(gravacoes).toBe(0);
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog', { name: 'Sair sem salvar cadastro' })).toBeVisible();
+  });
+
+  test('C2-F04 cancelamento nativo não repete navegação descartada anteriormente', async ({ page }) => {
+    await prepararProntuarioMockado(page);
+    await page.goto('/pacientes/paciente-1?area=plano&aba=acompanhamento');
+    await page.getByLabel('Título da tarefa').fill('Tarefa sintética pendente');
+    const abrir = page.getByRole('button', { name: 'Editar cadastro do paciente' });
+    const cadastro = page.getByRole('dialog', { name: 'Cadastro do paciente', exact: true });
+    await abrir.click();
+    await cadastro.getByLabel('E-mail', { exact: true }).fill('sintetico@example.com');
+    await cadastro.getByRole('link', { name: 'Ana Souza homonima' }).click();
+    let dialogos = 0;
+    page.on('dialog', async (dialog) => { dialogos += 1; await dialog.dismiss(); });
+    await page.getByRole('button', { name: 'Sair sem salvar', exact: true }).click();
+    await expect.poll(() => dialogos).toBe(1);
+    await abrir.click();
+    await expect(cadastro.getByLabel('E-mail', { exact: true })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(cadastro).toBeHidden();
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    expect(dialogos).toBe(1);
+    await expect(page.getByLabel('Título da tarefa')).toHaveValue('Tarefa sintética pendente');
+  });
+
+  test('C2-F04 save confirmado não depende da leitura de qualidade nem limpa outra seção', async ({ page }) => {
+    await prepararProntuarioMockado(page);
+    await page.route('**/api/pacientes/paciente-1/perfil-cadastro/contato', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(route.request().postDataJSON()) }));
+    await page.goto('/pacientes/paciente-1');
+    await page.getByRole('button', { name: 'Editar cadastro do paciente' }).click();
+    const cadastro = page.getByRole('dialog', { name: 'Cadastro do paciente', exact: true });
+    await cadastro.getByLabel('E-mail', { exact: true }).fill('sintetico@example.com');
+    await cadastro.getByLabel('Categoria do paciente').fill('Categoria sintética');
+    await page.route('**/api/pacientes/paciente-1/perfil-cadastro/qualidade-acesso', (route) => route.fulfill({ status: 503, body: 'Indisponível' }));
+    const contato = cadastro.locator('section').filter({ has: page.getByRole('heading', { name: 'Contato e endereço', exact: true }) });
+    await contato.getByRole('button', { name: 'Salvar seção' }).click();
+    await expect(cadastro.getByRole('alert')).toContainText('Os dados foram salvos');
+    await page.keyboard.press('Escape');
+    const confirmar = page.getByRole('dialog', { name: 'Sair sem salvar cadastro' });
+    await expect(confirmar.getByText('Operação e responsável', { exact: true })).toBeVisible();
+    await expect(confirmar.getByText('Contato e endereço', { exact: true })).toHaveCount(0);
+  });
+
+  test('C2-F04 carga falha não habilita escrita e não consulta fiscal sem permissão', async ({ page }) => {
+    await prepararProntuarioMockado(page);
+    let fiscal = 0;
+    await page.route('**/api/pacientes/paciente-1/perfil-cadastro/fiscal', async (route) => { fiscal += 1; await route.fulfill({ status: 403 }); });
+    await page.route('**/api/pacientes/paciente-1/perfil-cadastro', (route) => route.fulfill({ status: 503, body: 'Indisponível' }));
+    await page.goto('/pacientes/paciente-1');
+    await page.getByRole('button', { name: 'Editar cadastro do paciente' }).click();
+    const cadastro = page.getByRole('dialog', { name: 'Cadastro do paciente', exact: true });
+    await expect(cadastro.getByRole('alert')).toBeVisible();
+    await expect(cadastro.getByRole('button', { name: /Salvar/ })).toHaveCount(0);
+    await page.keyboard.press('Escape');
+    await expect(cadastro).toBeHidden();
+    expect(fiscal).toBe(0);
+  });
+
+  test('C2-F04 recarga nativa cancelada mantém cadastro pendente', async ({ page }) => {
+    await prepararProntuarioMockado(page);
+    await page.goto('/pacientes/paciente-1');
+    await page.getByRole('button', { name: 'Editar cadastro do paciente' }).click();
+    const cadastro = page.getByRole('dialog', { name: 'Cadastro do paciente', exact: true });
+    await cadastro.getByLabel('Nome completo', { exact: true }).fill('Pessoa Sintética Pendente');
+    let dialogos = 0;
+    page.on('dialog', async (dialog) => { expect(dialog.type()).toBe('beforeunload'); dialogos += 1; await dialog.dismiss(); });
+    await page.evaluate(() => window.location.reload());
+    await expect.poll(() => dialogos).toBe(1);
+    expect(dialogos).toBe(1);
+    await expect(cadastro.getByLabel('Nome completo', { exact: true })).toHaveValue('Pessoa Sintética Pendente');
+  });
+
+  test('C2-F04 reabertura usa básicos atuais autorizados e não props antigas da ficha', async ({ page }) => {
+    await prepararProntuarioMockado(page);
+    let nomePersistido = 'Nome atual confirmado';
+    await page.route('**/api/pacientes/paciente-1', async (route) => {
+      if (route.request().method() === 'PATCH') nomePersistido = route.request().postDataJSON().nome;
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: 'paciente-1', nome: nomePersistido, dataNascimento: '1990-04-12' }) });
+    });
+    await page.route('**/api/pacientes/paciente-1/perfil-cadastro/identificacao', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
+    await page.goto('/pacientes/paciente-1');
+    const abrir = page.getByRole('button', { name: 'Editar cadastro do paciente' });
+    const cadastro = page.getByRole('dialog', { name: 'Cadastro do paciente', exact: true });
+    await abrir.click();
+    await expect(cadastro.getByLabel('Nome completo', { exact: true })).toHaveValue('Nome atual confirmado');
+    const identificacao = cadastro.locator('section').filter({ has: page.getByRole('heading', { name: 'Identificação', exact: true }) });
+    for (const nome of ['Primeiro ACK', 'Segundo ACK']) {
+      await cadastro.getByLabel('Nome completo', { exact: true }).fill(nome);
+      await identificacao.getByRole('button', { name: 'Salvar seção' }).click();
+      await expect(identificacao.getByRole('button', { name: 'Salvar seção' })).toBeEnabled();
+      expect(nomePersistido).toBe(nome);
+    }
+    await page.keyboard.press('Escape');
+    await abrir.click();
+    await expect(cadastro.getByLabel('Nome completo', { exact: true })).toHaveValue('Segundo ACK');
+  });
+
+  for (const caso of [
+    { nome: 'acesso negado', status: 403, corpo: {} },
+    { nome: 'identidade divergente', status: 200, corpo: { id: 'paciente-2', nome: 'Outro sintético' } }
+  ]) {
+    test(`C2-F04 básicos com ${caso.nome} não habilitam edição`, async ({ page }) => {
+      await prepararProntuarioMockado(page);
+      await page.route('**/api/pacientes/paciente-1', (route) => route.fulfill({ status: caso.status, contentType: 'application/json', body: JSON.stringify(caso.corpo) }));
+      await page.goto('/pacientes/paciente-1');
+      await page.getByRole('button', { name: 'Editar cadastro do paciente' }).click();
+      const cadastro = page.getByRole('dialog', { name: 'Cadastro do paciente', exact: true });
+      await expect(cadastro.getByRole('alert')).toBeVisible();
+      await expect(cadastro.getByLabel('Nome completo', { exact: true })).toHaveCount(0);
+      await expect(cadastro.getByRole('button', { name: /Salvar/ })).toHaveCount(0);
+    });
+  }
+
+  test('C2-F04 foco da edição retorna ao campo após qualidade mudar durante confirmação', async ({ page }) => {
+    await prepararProntuarioMockado(page);
+    let concluir;
+    const espera = new Promise((resolve) => { concluir = resolve; });
+    await page.route('**/api/pacientes/paciente-1/perfil-cadastro/contato', async (route) => {
+      await espera;
+      await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+    });
+    await page.goto('/pacientes/paciente-1');
+    await page.getByRole('button', { name: 'Editar cadastro do paciente' }).click();
+    const cadastro = page.getByRole('dialog', { name: 'Cadastro do paciente', exact: true });
+    await cadastro.getByLabel('E-mail', { exact: true }).fill('primeiro@example.com');
+    await page.route('**/api/pacientes/paciente-1/perfil-cadastro/qualidade-acesso', (route) => route.fulfill({ status: 503, body: 'Indisponível' }));
+    const contato = cadastro.locator('section').filter({ has: page.getByRole('heading', { name: 'Contato e endereço', exact: true }) });
+    await contato.getByRole('button', { name: 'Salvar seção' }).click();
+    await cadastro.getByLabel('E-mail', { exact: true }).fill('segundo@example.com');
+    await page.keyboard.press('Escape');
+    const confirmar = page.getByRole('dialog', { name: 'Sair sem salvar cadastro' });
+    await expect(confirmar.getByRole('button', { name: 'Sair sem salvar', exact: true })).toBeDisabled();
+    concluir();
+    await expect(confirmar.getByRole('button', { name: 'Sair sem salvar', exact: true })).toBeEnabled();
+    await confirmar.getByRole('button', { name: 'Continuar editando' }).click();
+    await expect(cadastro.getByLabel('E-mail', { exact: true })).toHaveValue('segundo@example.com');
+    await expect(cadastro.getByLabel('E-mail', { exact: true })).toBeFocused();
+    await expect(cadastro.getByLabel('E-mail', { exact: true })).toBeInViewport();
+  });
+
+  test('C2-F04 lista quatro seções, aceita fonte ampliada e reconhece reversão ao original', async ({ page }) => {
+    await prepararProntuarioMockado(page, { permissoesExtras: ['agenda.financeiro.ler'] });
+    await page.route('**/api/pacientes/paciente-1/perfil-cadastro/fiscal', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ nomePagador: 'Pagador sintético' }) }));
+    await page.goto('/pacientes/paciente-1');
+    await page.getByRole('button', { name: 'Editar cadastro do paciente' }).click();
+    const cadastro = page.getByRole('dialog', { name: 'Cadastro do paciente', exact: true });
+    const campos = [
+      { rotulo: 'Apelido ou nome de uso', novo: 'Nome sintético' },
+      { rotulo: 'E-mail', novo: 'teste@example.com' },
+      { rotulo: 'Categoria do paciente', novo: 'Categoria sintética' },
+      { rotulo: 'Nome do pagador', novo: 'Outro pagador' }
+    ];
+    const originais = [];
+    for (const campo of campos) {
+      const entrada = cadastro.getByLabel(campo.rotulo, { exact: true });
+      originais.push(await entrada.inputValue());
+      await entrada.fill(campo.novo);
+    }
+    await page.keyboard.press('Escape');
+    const confirmar = page.getByRole('dialog', { name: 'Sair sem salvar cadastro' });
+    for (const secao of ['Identificação', 'Contato e endereço', 'Operação e responsável', 'Dados fiscais opcionais']) {
+      await expect(confirmar.getByText(secao, { exact: true })).toBeVisible();
+    }
+    await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
+    await assertSemOverflowHorizontal(page);
+    await expect(confirmar.getByRole('button', { name: 'Continuar editando' })).toBeVisible();
+    expect((await new AxeBuilder({ page }).include('[role="dialog"]').withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()).violations).toEqual([]);
+    await confirmar.getByRole('button', { name: 'Continuar editando' }).click();
+    await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
+    for (let indice = 0; indice < campos.length; indice += 1) {
+      await cadastro.getByLabel(campos[indice].rotulo, { exact: true }).fill(originais[indice]);
+    }
+    await page.keyboard.press('Escape');
+    await expect(cadastro).toBeHidden();
+    await expect(confirmar).toHaveCount(0);
+  });
+
+  test('C2-F04 descarte confirmado navega e não transporta edição para destino negado', async ({ page }) => {
+    await prepararProntuarioMockado(page);
+    await page.route('**/api/pacientes/paciente-2/**', (route) => route.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ mensagem: 'Acesso não autorizado.' }) }));
+    await page.goto('/pacientes/paciente-1');
+    await page.getByRole('button', { name: 'Editar cadastro do paciente' }).click();
+    const cadastro = page.getByRole('dialog', { name: 'Cadastro do paciente', exact: true });
+    await cadastro.getByLabel('Nome completo', { exact: true }).fill('Edição exclusiva do primeiro contexto');
+    await cadastro.getByRole('link', { name: 'Ana Souza homonima' }).click();
+    await page.getByRole('button', { name: 'Sair sem salvar', exact: true }).click();
+    await expect(page).toHaveURL(/\/pacientes\/paciente-2$/);
+    await expect(page.getByLabel('Nome completo', { exact: true })).toHaveCount(0);
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(page.getByText('Edição exclusiva do primeiro contexto', { exact: true })).toHaveCount(0);
   });
 
   test('revisa qualidade cadastral e revoga convite pendente sem expor token anterior', async ({ page }) => {
