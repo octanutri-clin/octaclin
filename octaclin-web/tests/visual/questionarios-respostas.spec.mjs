@@ -725,10 +725,16 @@ async function prepararDistribuicoes(page, quantidades = [6, 5]) {
       total: posicao === 5 ? 0 : 30 - posicao
     }))
   }));
-  await page.route('**/api/questionarios/*/respostas/leitura-clinica*', route => route.fulfill({ json: {
-    ...leituraSintetica('paciente-a'), perguntas,
-    questionarioId: new URL(route.request().url()).pathname.split('/')[3]
-  } }));
+  await page.route('**/api/questionarios/*/respostas/{pagina,leitura-clinica}*', route => {
+    const url = new URL(route.request().url());
+    const pacienteId = url.searchParams.get('pacienteId');
+    return route.fulfill({ json: {
+      ...leituraSintetica(pacienteId ?? 'paciente-a'), perguntas,
+      filtros: { tamanho: 25, ...(pacienteId ? { pacienteId } : {}) },
+      timezone: 'America/Sao_Paulo', totalConsulta: 1, proximoCursor: null,
+      questionarioId: url.pathname.split('/')[3]
+    } });
+  });
   await page.getByRole('button', { name: 'Atualizar respostas', exact: true }).click();
   await page.getByRole('tab', { name: 'Resumo por pergunta', exact: true }).click();
   await expect(page.getByText(perguntas[0].enunciado, { exact: true })).toBeVisible();

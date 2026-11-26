@@ -220,6 +220,9 @@ suite('QST10-09: comandos e gerações autorizadas em PostgreSQL', () => {
   }
   async function autorizarFixture(){await admin.query('update agendamentos_questionario set autorizado_por_usuario_id=$1',[usuarioId]);}
   it('dois workers com candidatos simultâneos geram uma única ocorrência e uma auditoria',async()=>{
+    // O relógio de efetivação precisa corresponder à referência desta fixture.
+    // A barreira usa performance.now e conserva seu prazo real.
+    jest.spyOn(Date,'now').mockReturnValue(agora.getTime());
     await autorizarFixture();await bloquearAgenda();
     const a=gerar();const b=gerar();
     try{await aguardarBloqueados(2);}finally{await admin.query('commit');}
