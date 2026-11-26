@@ -1,0 +1,15 @@
+a81c631df245455ac58f087bd4e312297f7f524e0ab48191cab5cc5eb6dfb7bf  docs/agents/ux/reports/C2-F05-ABC-2026-11-26/brief.md
+666dab0a497220c059c33a81095acb386164b105e42db23e5cd5cc84dbcfe338  docs/agents/ux/reports/C2-F05-ABC-2026-11-26/consolidado.md
+c93d26922d8325feb9d0bcf46bf0f14a6400ce66aa9711af52eb11eb9c416978  docs/agents/ux/reports/C2-F05-ABC-2026-11-26/nutricionista.md
+eeff5f34dd2b76c74d4bce6b4a6069dc63e2d0416ae93612aa977eb87d94cbb6  docs/agents/ux/reports/C2-F05-ABC-2026-11-26/paciente.md
+241c16a1e93c3a6717f789e4af568ad7311e82c26a620dcdb61da84ee1bdbca5  docs/agents/ux/reports/C2-F05-ABC-2026-11-26/r4.md
+6259b40a98e2c49053cbc6adbc0c59d0312b14e191b228ab73de2f2eac53af6d  .codex/agents/octaclin-nutricionista-ux.toml
+a40b1ded5e47739a2710caa5ec9a9a7871b57be7efc11deefaae0515028ff7d7  .codex/agents/octaclin-paciente-ux.toml
+00ee799fa4435bbc1af022752fc1a9dbce4a3196cd1b188a9a4b6017c47bff29  docs/agents/ux/PROCEDIMENTO.md
+1c82c2f35e6eb91ad2e0f9f9cc1088913b5286e1042116d0c89bd22cc5a573f0  octaclin-web/lib/erros-cadastro.mjs
+89260d0c1cdeea0860cf23b82621fd0a6365b4773361b74a1a591cf1bb146013  octaclin-web/lib/erros-cadastro.d.mts
+4f57e242d14dd33452757a92745edbcdc94ca2da3bab3bd144f99a758170a12d  octaclin-web/lib/perfil-cadastro-paciente-api.ts
+e7fd11e8604b61dd9cebe8c3832a9f2b2fa9b95971551104e9c2f3c3e011b7d2  octaclin-web/components/pacientes/perfil-cadastro-paciente.tsx
+5e3caec6bbb05177d331df913d9293f09719fe5d381ca21efcf7262b3726a4f3  octaclin-web/scripts/erros-cadastro.spec.mjs
+95296ca75f0cdf99e4c26181fe0e6d653404c2c4c3b4f73f887765f8c8b4ff03  octaclin-web/tests/visual/console-regression.spec.mjs
+c6e05ef01848067643a283061f1aa15d22605866425f10914e4bff324414c582  octaclin-backend/src/modulos/pacientes/aplicacao/cadastro-campos-validacao.spec.ts
