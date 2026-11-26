@@ -3457,6 +3457,191 @@ test.describe('prontuario do paciente', () => {
     await expect(page.getByText('Edição exclusiva do primeiro contexto', { exact: true })).toHaveCount(0);
   });
 
+  test('C2-F05 resumo navega aos campos, preserva entrada e remove só o erro editado', async ({ page }) => {
+    await prepararProntuarioMockado(page);
+    await page.route('**/api/pacientes/paciente-1/perfil-cadastro/contato', (route) => route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ statusCode: 400, error: 'Bad Request', message: [
+      'email must be an email', 'endereco.cep must be shorter than or equal to 12 characters'
+    ] }) }));
+    await page.goto('/pacientes/paciente-1');
+    await page.getByRole('button', { name: 'Editar cadastro do paciente' }).click();
+    const cadastro = page.getByRole('dialog', { name: 'Cadastro do paciente', exact: true });
+    await cadastro.getByLabel('E-mail', { exact: true }).fill('erro-sintetico');
+    await cadastro.getByLabel('CEP', { exact: true }).fill('1234567890123');
+    const contato = cadastro.locator('section').filter({ has: page.getByRole('heading', { name: 'Contato e endereço', exact: true }) });
+    await contato.getByRole('button', { name: 'Salvar seção' }).click();
+    const resumo = cadastro.getByRole('region', { name: 'Revise os campos indicados' });
+    await expect(resumo).toBeFocused();
+    await expect(cadastro.getByLabel('E-mail', { exact: true })).toHaveAttribute('aria-invalid', 'true');
+    await resumo.getByRole('button', { name: /CEP:/ }).click();
+    await expect(cadastro.getByLabel('CEP', { exact: true })).toBeFocused();
+    await expect(cadastro.getByLabel('CEP', { exact: true })).toBeInViewport();
+    await cadastro.getByLabel('CEP', { exact: true }).fill('12345-678');
+    await expect(resumo.getByRole('button', { name: /CEP:/ })).toHaveCount(0);
+    await expect(resumo.getByRole('button', { name: /E-mail:/ })).toHaveCount(1);
+    await expect(cadastro.getByLabel('E-mail', { exact: true })).toHaveValue('erro-sintetico');
+    await expect(cadastro.getByLabel('CEP', { exact: true })).not.toHaveAttribute('aria-invalid', 'true');
+  });
+
+  test('C2-F05 payload desconhecido não aparece na mensagem pública', async ({ page }) => {
+    await prepararProntuarioMockado(page);
+    await page.route('**/api/pacientes/paciente-1/perfil-cadastro/contato', (route) => route.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ message: 'Detalhe privado sintético, outro prontuário' }) }));
+    await page.goto('/pacientes/paciente-1');
+    await page.getByRole('button', { name: 'Editar cadastro do paciente' }).click();
+    const cadastro = page.getByRole('dialog', { name: 'Cadastro do paciente', exact: true });
+    const contato = cadastro.locator('section').filter({ has: page.getByRole('heading', { name: 'Contato e endereço', exact: true }) });
+    await contato.getByRole('button', { name: 'Salvar seção' }).click();
+    await expect(cadastro.getByRole('alert')).toContainText('Você não tem permissão para salvar esta seção.');
+    await expect(cadastro.getByText('Detalhe privado sintético, outro prontuário')).toHaveCount(0);
+    await expect(cadastro.getByRole('region', { name: 'Revise os campos indicados' })).toHaveCount(0);
+  });
+
+  for (const caso of [
+    { status: 401, texto: 'Sua sessão expirou.' },
+    { status: 404, texto: 'Este cadastro não está disponível' },
+    { status: 409, texto: 'Confira os dados atuais' },
+    { status: 429, texto: 'Muitas tentativas.' },
+    { status: 503, texto: 'Não foi possível concluir a operação agora.' },
+    { status: 400, texto: 'Revise os dados e tente novamente.' }
+  ]) {
+    test(`C2-F05 status ${caso.status} tem alerta público e preserva pendências`, async ({ page }) => {
+      await prepararProntuarioMockado(page);
+      await page.route('**/api/pacientes/paciente-1/perfil-cadastro/contato', (route) => route.fulfill({ status: caso.status, contentType: 'application/json', body: JSON.stringify({ message: 'Mensagem privada sintética' }) }));
+      await page.goto('/pacientes/paciente-1');
+      await page.getByRole('button', { name: 'Editar cadastro do paciente' }).click();
+      const cadastro = page.getByRole('dialog', { name: 'Cadastro do paciente', exact: true });
+      await cadastro.getByLabel('E-mail', { exact: true }).fill('preservado@example.com');
+      const contato = cadastro.locator('section').filter({ has: page.getByRole('heading', { name: 'Contato e endereço', exact: true }) });
+      await contato.getByRole('button', { name: 'Salvar seção' }).click();
+      await expect(cadastro.getByRole('alert')).toContainText(caso.texto);
+      await expect(cadastro.getByText('Mensagem privada sintética')).toHaveCount(0);
+      await expect(cadastro.getByRole('region', { name: 'Revise os campos indicados' })).toHaveCount(0);
+      await expect(cadastro.getByLabel('E-mail', { exact: true })).toHaveValue('preservado@example.com');
+      await page.keyboard.press('Escape');
+      await expect(page.getByRole('dialog', { name: 'Sair sem salvar cadastro' })).toBeVisible();
+    });
+  }
+
+  test('C2-F05 resposta anterior não marca campo editado mesmo com retorno ao valor original', async ({ page }) => {
+    await prepararProntuarioMockado(page);
+    let liberar;
+    const espera = new Promise((resolve) => { liberar = resolve; });
+    let recebeu = false;
+    await page.route('**/api/pacientes/paciente-1/perfil-cadastro/contato', async (route) => {
+      recebeu = true;
+      await espera;
+      await route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ message: ['email must be an email', 'endereco.cep must be shorter than or equal to 12 characters'] }) });
+    });
+    await page.goto('/pacientes/paciente-1');
+    await page.getByRole('button', { name: 'Editar cadastro do paciente' }).click();
+    const cadastro = page.getByRole('dialog', { name: 'Cadastro do paciente', exact: true });
+    await cadastro.getByLabel('E-mail', { exact: true }).fill('primeiro@example.com');
+    await cadastro.getByLabel('CEP', { exact: true }).fill('1234567890123');
+    const contato = cadastro.locator('section').filter({ has: page.getByRole('heading', { name: 'Contato e endereço', exact: true }) });
+    await contato.getByRole('button', { name: 'Salvar seção' }).click();
+    await expect.poll(() => recebeu).toBe(true);
+    await cadastro.getByLabel('E-mail', { exact: true }).fill('segundo@example.com');
+    await cadastro.getByLabel('E-mail', { exact: true }).fill('primeiro@example.com');
+    liberar();
+    const resumo = cadastro.getByRole('region', { name: 'Revise os campos indicados' });
+    await expect(resumo.getByRole('button', { name: /CEP:/ })).toHaveCount(1);
+    await expect(resumo.getByRole('button', { name: /E-mail:/ })).toHaveCount(0);
+    await expect(cadastro.getByLabel('E-mail', { exact: true })).not.toHaveAttribute('aria-invalid', 'true');
+    await expect(cadastro.getByLabel('E-mail', { exact: true })).toBeFocused();
+    await expect(cadastro.getByLabel('E-mail', { exact: true })).toHaveValue('primeiro@example.com');
+  });
+
+  test('C2-F05 erros de seções diferentes preservam vínculos, teclado e descrição acessível', async ({ page }) => {
+    await prepararProntuarioMockado(page);
+    await page.route('**/api/pacientes/paciente-1/perfil-cadastro/contato', (route) => route.fulfill({ status: 400, json: { message: ['email must be an email'] } }));
+    await page.route('**/api/pacientes/paciente-1/perfil-cadastro/operacao', (route) => route.fulfill({ status: 400, json: { message: ['responsavel.nome must be shorter than or equal to 180 characters'] } }));
+    await page.goto('/pacientes/paciente-1');
+    await page.getByRole('button', { name: 'Editar cadastro do paciente' }).click();
+    const cadastro = page.getByRole('dialog', { name: 'Cadastro do paciente', exact: true });
+    for (const titulo of ['Contato e endereço', 'Operação e responsável']) {
+      const secao = cadastro.locator('section').filter({ has: page.getByRole('heading', { name: titulo, exact: true }) });
+      await secao.getByRole('button', { name: 'Salvar seção' }).click();
+      await expect(cadastro.getByRole('region', { name: 'Revise os campos indicados' })).toBeFocused();
+    }
+    const resumo = cadastro.getByRole('region', { name: 'Revise os campos indicados' });
+    await expect(resumo.getByRole('button')).toHaveCount(2);
+    await expect(cadastro.getByLabel('E-mail', { exact: true })).toHaveAccessibleDescription('Informe um e-mail válido.');
+    await page.keyboard.press('Tab');
+    await expect(resumo.getByRole('button', { name: /E-mail:/ })).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(cadastro.getByLabel('E-mail', { exact: true })).toBeFocused();
+    await cadastro.getByLabel('E-mail', { exact: true }).fill('corrigido@example.com');
+    await expect(resumo.getByRole('button')).toHaveCount(1);
+    await expect(cadastro.getByLabel('Responsável', { exact: true })).toHaveAttribute('aria-invalid', 'true');
+    expect((await new AxeBuilder({ page }).include('[role="dialog"]').withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()).violations).toEqual([]);
+  });
+
+  test('C2-F05 identificação parcialmente salva associa erro somente ao campo da segunda escrita', async ({ page }) => {
+    await prepararProntuarioMockado(page);
+    await page.route('**/api/pacientes/paciente-1', async (route) => {
+      if (route.request().method() !== 'PATCH') return route.fallback();
+      await route.fulfill({ status: 204 });
+    });
+    await page.route('**/api/pacientes/paciente-1/perfil-cadastro/identificacao', (route) => route.fulfill({ status: 400, json: { message: ['nomeUso must be shorter than or equal to 180 characters'] } }));
+    await page.goto('/pacientes/paciente-1');
+    await page.getByRole('button', { name: 'Editar cadastro do paciente' }).click();
+    const cadastro = page.getByRole('dialog', { name: 'Cadastro do paciente', exact: true });
+    await cadastro.getByLabel('Apelido ou nome de uso').fill('x'.repeat(181));
+    const identificacao = cadastro.locator('section').filter({ has: page.getByRole('heading', { name: 'Identificação', exact: true }) });
+    await identificacao.getByRole('button', { name: 'Salvar seção' }).click();
+    await expect(cadastro.getByRole('alert')).toContainText('Nome e data de nascimento foram salvos.');
+    await expect(cadastro.getByLabel('Apelido ou nome de uso')).toHaveAttribute('aria-invalid', 'true');
+    await expect(cadastro.getByLabel('Nome completo', { exact: true })).not.toHaveAttribute('aria-invalid', 'true');
+    await expect(cadastro.getByLabel('Apelido ou nome de uso')).toHaveValue('x'.repeat(181));
+  });
+
+  test('C2-F05 erro fiscal fica limitado à seção autorizada e mantém fonte ampliada', async ({ page }, testInfo) => {
+    await prepararProntuarioMockado(page, { permissoesExtras: ['agenda.financeiro.ler'] });
+    await page.route('**/api/pacientes/paciente-1/perfil-cadastro/fiscal', (route) => route.fulfill(route.request().method() === 'PATCH'
+      ? { status: 400, json: { message: ['cpf must match /^\\d{11}$/ regular expression', 'documentoPagador must be a string'] } }
+      : { status: 200, json: {} }));
+    await page.goto('/pacientes/paciente-1');
+    await page.getByRole('button', { name: 'Editar cadastro do paciente' }).click();
+    const cadastro = page.getByRole('dialog', { name: 'Cadastro do paciente', exact: true });
+    await cadastro.getByLabel('CPF do paciente').fill('123');
+    await cadastro.getByRole('button', { name: 'Salvar dados fiscais' }).click();
+    const resumo = cadastro.getByRole('region', { name: 'Revise os campos indicados' });
+    await expect(resumo.getByRole('button', { name: /CPF do paciente:/ })).toBeVisible();
+    await expect(resumo.getByRole('button')).toHaveCount(1);
+    await expect(cadastro.getByText('documentoPagador', { exact: false })).toHaveCount(0);
+    await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
+    await assertSemOverflowHorizontal(page);
+    const medidas = await cadastro.locator('div.overflow-y-auto').last().evaluate((elemento) => ({ largura: elemento.clientWidth, conteudo: elemento.scrollWidth,
+      excessos: Array.from(elemento.querySelectorAll('div, section, button, input, select, p')).filter((item) => item.getBoundingClientRect().right > elemento.getBoundingClientRect().right + 1).map((item) => ({ tag: item.tagName, classes: item.className, largura: Math.round(item.getBoundingClientRect().width) })).slice(-12)
+    }));
+    expect(medidas.conteudo, JSON.stringify(medidas.excessos)).toBeLessThanOrEqual(medidas.largura + 1);
+    await resumo.getByRole('button', { name: /CPF do paciente:/ }).click();
+    await expect(cadastro.getByLabel('CPF do paciente')).toBeFocused();
+    await expect(cadastro.getByLabel('CPF do paciente')).toBeInViewport();
+    const mensagemId = await cadastro.getByLabel('CPF do paciente').getAttribute('aria-describedby');
+    await expect(page.locator(`[id="${mensagemId}"]`)).toBeInViewport();
+    await page.screenshot({ path: testInfo.outputPath('erros-cadastro.png') });
+    expect((await new AxeBuilder({ page }).include('[role="dialog"]').withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()).violations).toEqual([]);
+  });
+
+  test('C2-F05 erro dos básicos aponta ao nome e impede a segunda escrita', async ({ page }) => {
+    await prepararProntuarioMockado(page);
+    let segundaEscrita = 0;
+    await page.route('**/api/pacientes/paciente-1', async (route) => {
+      if (route.request().method() !== 'PATCH') return route.fallback();
+      await route.fulfill({ status: 400, json: { message: ['nome must be shorter than or equal to 180 characters'] } });
+    });
+    await page.route('**/api/pacientes/paciente-1/perfil-cadastro/identificacao', async (route) => { segundaEscrita += 1; await route.fulfill({ status: 200, json: {} }); });
+    await page.goto('/pacientes/paciente-1');
+    await page.getByRole('button', { name: 'Editar cadastro do paciente' }).click();
+    const cadastro = page.getByRole('dialog', { name: 'Cadastro do paciente', exact: true });
+    await cadastro.getByLabel('Nome completo', { exact: true }).fill('x'.repeat(181));
+    const identificacao = cadastro.locator('section').filter({ has: page.getByRole('heading', { name: 'Identificação', exact: true }) });
+    await identificacao.getByRole('button', { name: 'Salvar seção' }).click();
+    await expect(cadastro.getByRole('region', { name: 'Revise os campos indicados' }).getByRole('button', { name: /Nome completo:/ })).toBeVisible();
+    await expect(cadastro.getByLabel('Nome completo', { exact: true })).toHaveAttribute('aria-invalid', 'true');
+    expect(segundaEscrita).toBe(0);
+  });
+
   test('revisa qualidade cadastral e revoga convite pendente sem expor token anterior', async ({ page }) => {
     const prontuario = await prepararProntuarioMockado(page);
     await page.goto('/pacientes/paciente-1');

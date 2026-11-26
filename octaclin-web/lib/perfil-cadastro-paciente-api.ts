@@ -1,3 +1,5 @@
+import { projetarFalhaCadastro, type FalhaPublicaCadastro, type SecaoErroCadastro } from './erros-cadastro.mjs';
+
 export type CanalPreferidoPaciente = 'email' | 'whatsapp' | 'telefone';
 
 export interface EnderecoCadastroPacienteApi {
@@ -79,12 +81,27 @@ export interface QualidadeEAcessoPacienteApi {
   };
 }
 
-async function requisitar<T>(caminho: string, init?: RequestInit): Promise<T> {
+export class ErroCadastroPaciente extends Error {
+  readonly status?: number;
+  constructor(readonly falha: FalhaPublicaCadastro) {
+    super(falha.mensagem);
+    this.name = 'ErroCadastroPaciente';
+    this.status = falha.status;
+  }
+}
+
+async function falhaPublica(resposta: Response, secao?: SecaoErroCadastro) {
+  let corpo: string | undefined;
+  try { corpo = await resposta.text(); } catch { /* O status continua autoritativo. */ }
+  return new ErroCadastroPaciente(projetarFalhaCadastro(resposta.status, corpo, secao));
+}
+
+async function requisitar<T>(caminho: string, init?: RequestInit, secao?: SecaoErroCadastro): Promise<T> {
   const resposta = await fetch(caminho, {
     ...init,
     headers: { ...(init?.body ? { 'Content-Type': 'application/json' } : {}), ...init?.headers }
   });
-  if (!resposta.ok) throw new Error((await resposta.text()) || `Falha HTTP ${resposta.status}`);
+  if (!resposta.ok) throw await falhaPublica(resposta, secao);
   return resposta.json() as Promise<T>;
 }
 
@@ -108,7 +125,7 @@ export function salvarSecaoCadastroPaciente<T extends object>(
   return requisitar(`/api/pacientes/${pacienteId}/perfil-cadastro/${secao}`, {
     method: 'PATCH',
     body: JSON.stringify(dados)
-  });
+  }, secao);
 }
 
 export async function atualizarDadosBasicosPaciente(
@@ -120,5 +137,5 @@ export async function atualizarDadosBasicosPaciente(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(dados)
   });
-  if (!resposta.ok) throw new Error((await resposta.text()) || `Falha HTTP ${resposta.status}`);
+  if (!resposta.ok) throw await falhaPublica(resposta, 'basicos');
 }

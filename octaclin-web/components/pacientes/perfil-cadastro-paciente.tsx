@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { Children, cloneElement, createContext, isValidElement, useContext, useEffect, useId, useRef, useState } from 'react';
 import { AlertTriangle, BadgeDollarSign, CheckCircle2, ContactRound, KeyRound, Link2, Save, ShieldAlert, ShieldCheck, UserRoundX } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { AlertaOperacional, BarraCarregamento } from '@/components/ui/feedback';
@@ -10,8 +10,9 @@ import { useProtecaoAlteracoesNaoSalvas } from '@/lib/usar-protecao-alteracoes-n
 import { obterSessao } from '@/lib/auth-api';
 import { criarConvitePaciente, revogarConvitePaciente } from '@/lib/convites-paciente-api';
 import { obterPaciente, desativarContaAcessoPaciente, solicitarEliminacaoLgpdPaciente, type ResultadoSolicitacaoEliminacaoLgpd } from '@/lib/cadastros-api';
-import { mensagemFalhaInterface } from '@/lib/erros-interface';
+import { CAMPOS_CADASTRO, projetarFalhaCadastro } from '@/lib/erros-cadastro.mjs';
 import {
+  ErroCadastroPaciente,
   FiscalCadastroPacienteApi,
   PerfilCadastroPacienteApi,
   QualidadeEAcessoPacienteApi,
@@ -53,7 +54,9 @@ function formatarDataHora(valor?: string) {
 }
 
 function mensagemErro(erro: unknown) {
-  return mensagemFalhaInterface(erro, 'Não foi possível salvar esta seção.');
+  if (erro instanceof ErroCadastroPaciente) return erro.message;
+  const status = erro && typeof erro === 'object' && 'status' in erro ? erro.status : undefined;
+  return projetarFalhaCadastro(typeof status === 'number' ? status : undefined).mensagem;
 }
 
 function removerCamposVazios<T extends object>(valor: T): T {
@@ -91,6 +94,14 @@ function dadosFiscaisGravaveis(valor: FiscalCadastroPacienteApi) {
   });
 }
 
+interface ContextoErrosCadastro {
+  prefixo: string;
+  erros: Record<string, string>;
+  aoEditar: (campo: string) => void;
+}
+const ContextoCadastro = createContext<ContextoErrosCadastro | null>(null);
+function idCampo(prefixo: string, campo: string) { return `${prefixo}-${campo.replace(/\./g, '-')}`; }
+
 function EditorCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, dataNascimento: nascimentoInicial, aoAtualizarFicha }: Props) {
   const [aberto, setAberto] = useState(false);
   const [podeGerenciar, setPodeGerenciar] = useState(false);
@@ -118,6 +129,41 @@ function EditorCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, dataNas
   const abertoRef = useRef(false);
   const gravandoRef = useRef(false);
   const restaurarFocoRef = useRef(false);
+  const prefixoCampos = useId();
+  const [errosCampos, setErrosCampos] = useState<Record<string, string>>({});
+  const revisoesCamposRef = useRef<Record<string, number>>({});
+  const edicoesRef = useRef(0);
+  const resumoErrosRef = useRef<HTMLDivElement>(null);
+  const focarResumoRef = useRef(false);
+  const errosVisiveis = CAMPOS_CADASTRO.filter(({ campo }) => errosCampos[campo]
+    && (!campo.startsWith('fiscal.') || podeVerFiscal)
+    && (campo !== 'identificacao.condicaoBiologica' || perfil.identificacao?.sexo === 'feminino'));
+
+  function editarCampo(campo: string) {
+    revisoesCamposRef.current[campo] = (revisoesCamposRef.current[campo] ?? 0) + 1;
+    edicoesRef.current += 1;
+    focarResumoRef.current = false;
+    setErrosCampos((anteriores) => Object.fromEntries(Object.entries(anteriores).filter(([chave]) => chave !== campo)));
+    setSucesso(null);
+  }
+  function limparErrosSecoes(secoes: string[]) {
+    setErrosCampos((anteriores) => Object.fromEntries(Object.entries(anteriores).filter(([campo]) => !secoes.includes(campo.split('.')[0]))));
+  }
+  function registrarFalha(erroAtual: unknown, revisoes: Record<string, number>, edicao: number) {
+    setErro(mensagemErro(erroAtual));
+    if (!(erroAtual instanceof ErroCadastroPaciente)) return;
+    const aplicaveis = erroAtual.falha.campos.filter(({ campo }) =>
+      (revisoesCamposRef.current[campo] ?? 0) === (revisoes[campo] ?? 0));
+    setErrosCampos((anteriores) => ({ ...anteriores, ...Object.fromEntries(aplicaveis.map(({ campo, mensagem }) => [campo, mensagem])) }));
+    focarResumoRef.current = aplicaveis.length > 0 && edicoesRef.current === edicao && painelRef.current !== null;
+  }
+  useEffect(() => {
+    if (!focarResumoRef.current) return;
+    focarResumoRef.current = false;
+    resumoErrosRef.current?.focus();
+    resumoErrosRef.current?.scrollIntoView({ block: 'nearest' });
+  });
+
   const basicos = { nome: nomeCompleto.trim(), dataNascimento: dataNascimento || undefined };
   const atuais: BasesCadastro = {
     basicos: retrato(basicos), identificacao: retrato(perfil.identificacao ?? {}),
@@ -138,6 +184,8 @@ function EditorCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, dataNas
     setAberto(false);
     setSaida(null);
     setBases(null);
+    setErrosCampos({});
+    focarResumoRef.current = false;
     setPerfil(vazio);
     setFiscal({});
     setQualidade(null);
@@ -219,6 +267,8 @@ function EditorCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, dataNas
     abertoRef.current = true;
     setAberto(true);
     setBases(null);
+    setErrosCampos({});
+    focarResumoRef.current = false;
     setSaida(null);
     setSucesso(null);
     setErro(null);
@@ -365,6 +415,9 @@ function EditorCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, dataNas
     }
     const epoca = epocaRef.current;
     const enviados = { ...atuais };
+    const revisoesEnviadas = { ...revisoesCamposRef.current };
+    const edicaoEnviada = edicoesRef.current;
+    limparErrosSecoes(['basicos', 'identificacao']);
     const dadosBasicos = { ...basicos };
     const identificacao = removerCamposVazios(perfil.identificacao ?? {});
     gravandoRef.current = true;
@@ -384,9 +437,10 @@ function EditorCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, dataNas
       setSucesso('Identificação salva com segurança.');
       await atualizarQualidade(epoca);
     } catch (erroAtual) {
-      if (vigente(epoca)) setErro(basicosConfirmados
-        ? 'Nome e data de nascimento foram salvos. Os demais dados de identificação não foram confirmados; confira e tente salvar novamente.'
-        : mensagemErro(erroAtual));
+      if (vigente(epoca)) {
+        registrarFalha(erroAtual, revisoesEnviadas, edicaoEnviada);
+        if (basicosConfirmados) setErro(`Nome e data de nascimento foram salvos. ${mensagemErro(erroAtual)}`);
+      }
     } finally {
       gravandoRef.current = false;
       if (vigente(epoca)) setSalvando(null);
@@ -397,6 +451,9 @@ function EditorCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, dataNas
     if (!bases || gravandoRef.current || (secao === 'fiscal' && !podeVerFiscal)) return;
     const epoca = epocaRef.current;
     const enviado = atuais[secao];
+    const revisoesEnviadas = { ...revisoesCamposRef.current };
+    const edicaoEnviada = edicoesRef.current;
+    limparErrosSecoes([secao]);
     const dados = secao === 'fiscal' ? dadosFiscaisGravaveis(fiscal) : removerCamposVazios(perfil[secao] ?? {});
     gravandoRef.current = true;
     setSalvando(secao);
@@ -409,7 +466,7 @@ function EditorCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, dataNas
       setSucesso('Seção salva com segurança.');
       await atualizarQualidade(epoca);
     } catch (erroAtual) {
-      if (vigente(epoca)) setErro(mensagemErro(erroAtual));
+      if (vigente(epoca)) registrarFalha(erroAtual, revisoesEnviadas, edicaoEnviada);
     } finally {
       gravandoRef.current = false;
       if (vigente(epoca)) setSalvando(null);
@@ -441,13 +498,25 @@ function EditorCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, dataNas
             }}>Sair sem salvar</Botao>
           </div>
         </div> : <>
+        {errosVisiveis.length ? <div ref={resumoErrosRef} role="region" aria-labelledby={`${prefixoCampos}-resumo-erros`} tabIndex={-1} className="mb-4 rounded-md border border-perigo p-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">
+          <h3 id={`${prefixoCampos}-resumo-erros`} className="font-semibold">Revise os campos indicados</h3>
+          <p className="text-sm">{errosVisiveis.length} {errosVisiveis.length === 1 ? 'campo identificado para revisão' : 'campos identificados para revisão'}. Os dados preenchidos foram mantidos.</p>
+          <ul className="mt-2 grid gap-2">
+            {errosVisiveis.map(({ campo, rotulo }) => <li key={campo}><button type="button" className="text-left text-sm underline underline-offset-2 focus-visible:outline focus-visible:outline-2" onClick={() => {
+              const entrada = document.getElementById(idCampo(prefixoCampos, campo));
+              entrada?.focus();
+              entrada?.scrollIntoView({ block: 'nearest' });
+            }}>{rotulo}: {errosCampos[campo]}</button></li>)}
+          </ul>
+        </div> : null}
         {temPendencias ? <p role="status" className="mb-4 text-sm">Alterações não salvas: {pendentes.map((secao) => rotulosSecoes[secao]).join(', ')}.</p> : null}
         {carregando ? <BarraCarregamento visivel rotulo="Carregando cadastro" /> : null}
         {erro ? <AlertaOperacional mensagem={erro} className="mb-4" /> : null}
         {sucesso ? <p role="status" className="mb-4 rounded-md border border-sucesso-borda bg-sucesso-suave px-3 py-2 text-sm text-sucesso-forte">{sucesso}</p> : null}
         {!carregando && bases ? (
-          <div ref={painelRef} className="grid max-h-[65vh] gap-6 overflow-y-auto pr-1">
-            {qualidade ? <section className="grid gap-4 rounded-md border border-linha bg-superficie-hover p-4" aria-labelledby="qualidade-cadastro-titulo">
+          <ContextoCadastro.Provider value={{ prefixo: prefixoCampos, erros: errosCampos, aoEditar: editarCampo }}>
+          <div ref={painelRef} style={{ overflowWrap: 'anywhere' }} className="grid min-w-0 grid-cols-1 max-h-[65vh] gap-6 overflow-y-auto pr-1">
+            {qualidade ? <section className="grid min-w-0 grid-cols-1 gap-4 rounded-md border border-linha bg-superficie-hover p-4" aria-labelledby="qualidade-cadastro-titulo">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <h3 id="qualidade-cadastro-titulo" className="text-sm font-semibold text-tinta">Qualidade do cadastro</h3>
@@ -458,7 +527,7 @@ function EditorCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, dataNas
               <div className="h-2 overflow-hidden rounded-full bg-linha" role="progressbar" aria-label="Percentual do cadastro preenchido" aria-valuemin={0} aria-valuemax={100} aria-valuenow={qualidade.percentualPreenchido}>
                 <div className="h-full bg-primaria" style={{ width: `${qualidade.percentualPreenchido}%` }} />
               </div>
-              <div className="grid gap-2 md:grid-cols-2">
+              <div className="grid min-w-0 grid-cols-1 gap-2 md:grid-cols-2">
                 {qualidade.secoes.map((secao) => <div key={secao.secao} className="rounded-md border border-linha bg-superficie px-3 py-2">
                   <p className="text-xs font-semibold text-tinta">{secao.titulo}{secao.opcional ? ' (opcional)' : ''} - {secao.preenchidos}/{secao.total}</p>
                   <p className="mt-1 text-xs text-texto-suave">{secao.camposFaltantes.length ? `Revisar: ${secao.camposFaltantes.join(', ')}` : 'Dados recomendados preenchidos.'}</p>
@@ -478,16 +547,16 @@ function EditorCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, dataNas
 
             <Secao titulo="Identificação" descricao="Dados de identificação do paciente. A condição biológica fica restrita ao contexto clínico autorizado.">
               <div className="grid gap-3 md:grid-cols-2">
-                <Campo rotulo="Nome completo"><input className="campo" autoComplete="name" value={nomeCompleto} onChange={(evento) => setNomeCompleto(evento.target.value)} required /></Campo>
-                <Campo rotulo="Apelido ou nome de uso"><input className="campo" value={perfil.identificacao?.nomeUso ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, identificacao: { ...atual.identificacao, nomeUso: evento.target.value } }))} /></Campo>
-                <Campo rotulo="Data de nascimento"><input className="campo" type="date" value={dataNascimento} onChange={(evento) => setDataNascimento(evento.target.value)} /></Campo>
-                <Campo rotulo="Sexo">
+                <Campo campo="basicos.nome" rotulo="Nome completo"><input className="campo" autoComplete="name" value={nomeCompleto} onChange={(evento) => setNomeCompleto(evento.target.value)} required /></Campo>
+                <Campo campo="identificacao.nomeUso" rotulo="Apelido ou nome de uso"><input className="campo" value={perfil.identificacao?.nomeUso ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, identificacao: { ...atual.identificacao, nomeUso: evento.target.value } }))} /></Campo>
+                <Campo campo="basicos.dataNascimento" rotulo="Data de nascimento"><input className="campo" type="date" value={dataNascimento} onChange={(evento) => setDataNascimento(evento.target.value)} /></Campo>
+                <Campo campo="identificacao.sexo" rotulo="Sexo">
                   <select className="campo" value={perfil.identificacao?.sexo ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, identificacao: { ...atual.identificacao, sexo: evento.target.value as 'feminino' | 'masculino' | 'intersexo' | 'nao_informar' } }))}>
                     <option value="">Não informado</option><option value="feminino">Feminino</option><option value="masculino">Masculino</option><option value="intersexo">Intersexo</option><option value="nao_informar">Prefiro não informar</option>
                   </select>
                 </Campo>
               </div>
-              {perfil.identificacao?.sexo === 'feminino' ? <Campo rotulo="Condição biológica">
+              {perfil.identificacao?.sexo === 'feminino' ? <Campo campo="identificacao.condicaoBiologica" rotulo="Condição biológica">
                 <select className="campo" value={perfil.identificacao?.condicaoBiologica ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, identificacao: { ...atual.identificacao, condicaoBiologica: evento.target.value as 'nao_gestante' | 'gestante' | 'lactante' | 'menopausa' } }))}>
                   <option value="">Não informado</option><option value="nao_gestante">Não gestante</option><option value="gestante">Gestante</option><option value="lactante">Lactante</option><option value="menopausa">Menopausa</option>
                 </select>
@@ -497,37 +566,37 @@ function EditorCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, dataNas
 
             <Secao titulo="Contato e endereço" descricao="Dados usados para comunicação e localização do paciente.">
               <div className="grid gap-3 md:grid-cols-2">
-                <Campo rotulo="E-mail"><input className="campo" type="email" value={perfil.contato?.email ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, contato: { ...atual.contato, email: evento.target.value } }))} /></Campo>
-                <Campo rotulo="Usuário do Instagram"><input className="campo" value={perfil.contato?.instagram ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, contato: { ...atual.contato, instagram: evento.target.value.replace(/^@/, '') } }))} /></Campo>
-                <Campo rotulo="DDI"><input className="campo" inputMode="tel" placeholder="+55" value={perfil.contato?.ddi ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, contato: { ...atual.contato, ddi: evento.target.value } }))} /></Campo>
-                <Campo rotulo="Celular com DDD"><input className="campo" inputMode="tel" placeholder="11999999999" value={perfil.contato?.celular ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, contato: { ...atual.contato, celular: evento.target.value.replace(/\D/g, '') } }))} /></Campo>
+                <Campo campo="contato.email" rotulo="E-mail"><input className="campo" type="email" value={perfil.contato?.email ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, contato: { ...atual.contato, email: evento.target.value } }))} /></Campo>
+                <Campo campo="contato.instagram" rotulo="Usuário do Instagram"><input className="campo" value={perfil.contato?.instagram ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, contato: { ...atual.contato, instagram: evento.target.value.replace(/^@/, '') } }))} /></Campo>
+                <Campo campo="contato.ddi" rotulo="DDI"><input className="campo" inputMode="tel" placeholder="+55" value={perfil.contato?.ddi ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, contato: { ...atual.contato, ddi: evento.target.value } }))} /></Campo>
+                <Campo campo="contato.celular" rotulo="Celular com DDD"><input className="campo" inputMode="tel" placeholder="11999999999" value={perfil.contato?.celular ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, contato: { ...atual.contato, celular: evento.target.value.replace(/\D/g, '') } }))} /></Campo>
               </div>
-              <Campo rotulo="Canal preferido">
+              <Campo campo="contato.canalPreferido" rotulo="Canal preferido">
                 <select className="campo" value={perfil.contato?.canalPreferido ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, contato: { ...atual.contato, canalPreferido: evento.target.value as 'email' | 'whatsapp' | 'telefone' } }))}>
                   <option value="">Não definido</option><option value="email">E-mail</option><option value="whatsapp">WhatsApp</option><option value="telefone">Telefone</option>
                 </select>
               </Campo>
               <div className="grid gap-3 md:grid-cols-2">
-                <Campo rotulo="CEP"><input className="campo" value={perfil.contato?.endereco?.cep ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, contato: { ...atual.contato, endereco: { ...atual.contato?.endereco, cep: evento.target.value } } }))} /></Campo>
-                <Campo rotulo="Endereço"><input className="campo" value={perfil.contato?.endereco?.logradouro ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, contato: { ...atual.contato, endereco: { ...atual.contato?.endereco, logradouro: evento.target.value } } }))} /></Campo>
-                <Campo rotulo="Bairro"><input className="campo" value={perfil.contato?.endereco?.bairro ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, contato: { ...atual.contato, endereco: { ...atual.contato?.endereco, bairro: evento.target.value } } }))} /></Campo>
-                <Campo rotulo="Cidade"><input className="campo" value={perfil.contato?.endereco?.cidade ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, contato: { ...atual.contato, endereco: { ...atual.contato?.endereco, cidade: evento.target.value } } }))} /></Campo>
-                <Campo rotulo="Estado"><input className="campo" maxLength={2} value={perfil.contato?.endereco?.estado ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, contato: { ...atual.contato, endereco: { ...atual.contato?.endereco, estado: evento.target.value.toUpperCase() } } }))} /></Campo>
+                <Campo campo="contato.endereco.cep" rotulo="CEP"><input className="campo" value={perfil.contato?.endereco?.cep ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, contato: { ...atual.contato, endereco: { ...atual.contato?.endereco, cep: evento.target.value } } }))} /></Campo>
+                <Campo campo="contato.endereco.logradouro" rotulo="Endereço"><input className="campo" value={perfil.contato?.endereco?.logradouro ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, contato: { ...atual.contato, endereco: { ...atual.contato?.endereco, logradouro: evento.target.value } } }))} /></Campo>
+                <Campo campo="contato.endereco.bairro" rotulo="Bairro"><input className="campo" value={perfil.contato?.endereco?.bairro ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, contato: { ...atual.contato, endereco: { ...atual.contato?.endereco, bairro: evento.target.value } } }))} /></Campo>
+                <Campo campo="contato.endereco.cidade" rotulo="Cidade"><input className="campo" value={perfil.contato?.endereco?.cidade ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, contato: { ...atual.contato, endereco: { ...atual.contato?.endereco, cidade: evento.target.value } } }))} /></Campo>
+                <Campo campo="contato.endereco.estado" rotulo="Estado"><input className="campo" maxLength={2} value={perfil.contato?.endereco?.estado ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, contato: { ...atual.contato, endereco: { ...atual.contato?.endereco, estado: evento.target.value.toUpperCase() } } }))} /></Campo>
               </div>
               <SalvarSecao carregando={salvando !== null} aoSalvar={() => void salvar('contato')} />
             </Secao>
 
             <Secao titulo="Operação e responsável" descricao="Categoria, etiquetas internas e pessoa responsável quando aplicável.">
               <div className="grid gap-3 md:grid-cols-2">
-                <Campo rotulo="Categoria do paciente"><input className="campo" value={perfil.operacao?.categoria ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, operacao: { ...atual.operacao, categoria: evento.target.value } }))} /></Campo>
-                <Campo rotulo="Origem"><input className="campo" value={perfil.operacao?.origem ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, operacao: { ...atual.operacao, origem: evento.target.value } }))} /></Campo>
-                <Campo rotulo="Próxima revisão"><input className="campo" type="date" value={perfil.operacao?.proximaRevisaoEm ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, operacao: { ...atual.operacao, proximaRevisaoEm: evento.target.value } }))} /><p className="mt-1 text-xs text-texto-suave">Ao salvar, uma tarefa de revisão aparecerá no acompanhamento com vencimento nesta data.</p></Campo>
+                <Campo campo="operacao.categoria" rotulo="Categoria do paciente"><input className="campo" value={perfil.operacao?.categoria ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, operacao: { ...atual.operacao, categoria: evento.target.value } }))} /></Campo>
+                <Campo campo="operacao.origem" rotulo="Origem"><input className="campo" value={perfil.operacao?.origem ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, operacao: { ...atual.operacao, origem: evento.target.value } }))} /></Campo>
+                <Campo campo="operacao.proximaRevisaoEm" rotulo="Próxima revisão"><input className="campo" type="date" value={perfil.operacao?.proximaRevisaoEm ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, operacao: { ...atual.operacao, proximaRevisaoEm: evento.target.value } }))} /><p className="mt-1 text-xs text-texto-suave">Ao salvar, uma tarefa de revisão aparecerá no acompanhamento com vencimento nesta data.</p></Campo>
               </div>
-              <Campo rotulo="Etiquetas"><input className="campo" placeholder="Ex.: retorno, esportivo" value={(perfil.operacao?.tags ?? []).join(', ')} onChange={(evento) => setPerfil((atual) => ({ ...atual, operacao: { ...atual.operacao, tags: evento.target.value.split(',').map((tag) => tag.trim()).filter(Boolean) } }))} /></Campo>
+              <Campo campo="operacao.tags" rotulo="Etiquetas"><input className="campo" placeholder="Ex.: retorno, esportivo" value={(perfil.operacao?.tags ?? []).join(', ')} onChange={(evento) => setPerfil((atual) => ({ ...atual, operacao: { ...atual.operacao, tags: evento.target.value.split(',').map((tag) => tag.trim()).filter(Boolean) } }))} /></Campo>
               <div className="grid gap-3 md:grid-cols-3">
-                <Campo rotulo="Responsável"><input className="campo" value={perfil.operacao?.responsavel?.nome ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, operacao: { ...atual.operacao, responsavel: { ...atual.operacao?.responsavel, nome: evento.target.value } } }))} /></Campo>
-                <Campo rotulo="Parentesco"><input className="campo" value={perfil.operacao?.responsavel?.parentesco ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, operacao: { ...atual.operacao, responsavel: { ...atual.operacao?.responsavel, parentesco: evento.target.value } } }))} /></Campo>
-                <Campo rotulo="Contato do responsável"><input className="campo" value={perfil.operacao?.responsavel?.contato ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, operacao: { ...atual.operacao, responsavel: { ...atual.operacao?.responsavel, contato: evento.target.value } } }))} /></Campo>
+                <Campo campo="operacao.responsavel.nome" rotulo="Responsável"><input className="campo" value={perfil.operacao?.responsavel?.nome ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, operacao: { ...atual.operacao, responsavel: { ...atual.operacao?.responsavel, nome: evento.target.value } } }))} /></Campo>
+                <Campo campo="operacao.responsavel.parentesco" rotulo="Parentesco"><input className="campo" value={perfil.operacao?.responsavel?.parentesco ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, operacao: { ...atual.operacao, responsavel: { ...atual.operacao?.responsavel, parentesco: evento.target.value } } }))} /></Campo>
+                <Campo campo="operacao.responsavel.contato" rotulo="Contato do responsável"><input className="campo" value={perfil.operacao?.responsavel?.contato ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, operacao: { ...atual.operacao, responsavel: { ...atual.operacao?.responsavel, contato: evento.target.value } } }))} /></Campo>
               </div>
               <SalvarSecao carregando={salvando !== null} aoSalvar={() => void salvar('operacao')} />
             </Secao>
@@ -596,13 +665,14 @@ function EditorCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, dataNas
 
             {podeVerFiscal ? <Secao titulo="Dados fiscais opcionais" descricao="Visivel apenas para quem tem permissão financeira.">
               <div className="grid gap-3 md:grid-cols-2">
-                <Campo rotulo="Nome do pagador"><input className="campo" value={fiscal.nomePagador ?? ''} onChange={(evento) => setFiscal((atual) => ({ ...atual, nomePagador: evento.target.value }))} /></Campo>
-                <Campo rotulo="CPF do paciente"><input className="campo" inputMode="numeric" value={fiscal.cpf ?? ''} onChange={(evento) => setFiscal((atual) => ({ ...atual, cpf: evento.target.value.replace(/\D/g, '') }))} /></Campo>
+                <Campo campo="fiscal.nomePagador" rotulo="Nome do pagador"><input className="campo" value={fiscal.nomePagador ?? ''} onChange={(evento) => setFiscal((atual) => ({ ...atual, nomePagador: evento.target.value }))} /></Campo>
+                <Campo campo="fiscal.cpf" rotulo="CPF do paciente"><input className="campo" inputMode="numeric" value={fiscal.cpf ?? ''} onChange={(evento) => setFiscal((atual) => ({ ...atual, cpf: evento.target.value.replace(/\D/g, '') }))} /></Campo>
               </div>
-              <Campo rotulo="E-mail para recibo"><input className="campo" type="email" value={fiscal.emailRecibo ?? ''} onChange={(evento) => setFiscal((atual) => ({ ...atual, emailRecibo: evento.target.value }))} /></Campo>
+              <Campo campo="fiscal.emailRecibo" rotulo="E-mail para recibo"><input className="campo" type="email" value={fiscal.emailRecibo ?? ''} onChange={(evento) => setFiscal((atual) => ({ ...atual, emailRecibo: evento.target.value }))} /></Campo>
               <SalvarSecao carregando={salvando !== null} aoSalvar={() => void salvar('fiscal')} rotulo="Salvar dados fiscais" icone={<BadgeDollarSign size={16} />} />
             </Secao> : null}
           </div>
+          </ContextoCadastro.Provider>
         ) : null}
         </>}
       </Modal>
@@ -638,11 +708,34 @@ function EditorCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, dataNas
 }
 
 function Secao({ titulo, descricao, children }: { titulo: string; descricao: string; children: React.ReactNode }) {
-  return <section data-secao-cadastro={titulo} className="grid gap-3 border-b border-linha pb-5 last:border-b-0"><div><h3 className="text-sm font-semibold text-tinta">{titulo}</h3><p className="mt-1 text-xs text-texto-suave">{descricao}</p></div>{children}</section>;
+  return <section data-secao-cadastro={titulo} className="grid min-w-0 grid-cols-1 gap-3 border-b border-linha pb-5 last:border-b-0"><div><h3 className="text-sm font-semibold text-tinta">{titulo}</h3><p className="mt-1 text-xs text-texto-suave">{descricao}</p></div>{children}</section>;
 }
 
-function Campo({ rotulo, children }: { rotulo: string; children: React.ReactNode }) {
-  return <label data-campo-cadastro={rotulo} className="grid gap-1 text-xs font-semibold text-texto-suave">{rotulo}{children}</label>;
+type PropsControleCadastro = {
+  id?: string;
+  className?: string;
+  onChange?: (evento: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void;
+  'aria-describedby'?: string;
+  'aria-invalid'?: boolean;
+};
+function Campo({ campo, rotulo, children }: { campo: string; rotulo: string; children: React.ReactNode }) {
+  const contexto = useContext(ContextoCadastro);
+  const id = idCampo(contexto?.prefixo ?? 'cadastro', campo);
+  const mensagem = contexto?.erros[campo];
+  return <div data-campo-cadastro={rotulo} className="grid min-w-0 gap-1 break-words text-xs font-semibold text-texto-suave">
+    <label htmlFor={id}>{rotulo}</label>
+    {Children.map(children, (filho) => {
+      if (!isValidElement<PropsControleCadastro>(filho) || !['input', 'select', 'textarea'].includes(String(filho.type))) return filho;
+      return cloneElement(filho, {
+        id,
+        className: `${filho.props.className ?? ''} min-w-0 max-w-full`,
+        'aria-invalid': mensagem ? true : undefined,
+        'aria-describedby': [filho.props['aria-describedby'], mensagem ? `${id}-erro` : null].filter(Boolean).join(' ') || undefined,
+        onChange: (evento) => { filho.props.onChange?.(evento); contexto?.aoEditar(campo); }
+      });
+    })}
+    {mensagem ? <p id={`${id}-erro`} className="text-perigo">{mensagem}</p> : null}
+  </div>;
 }
 
 function SalvarSecao({ carregando, aoSalvar, rotulo = 'Salvar seção', icone = <Save size={16} /> }: { carregando: boolean; aoSalvar: () => void; rotulo?: string; icone?: React.ReactNode }) {
