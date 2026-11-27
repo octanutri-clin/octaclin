@@ -1,0 +1,6 @@
+82a83764fa67a39ca88357948c701a6e37be59d82249516bcd04b33fe6c86335  docs/agents/ux/reports/C2-F01-BC-2026-11-25/brief.md
+2c4ce436260a6f3fa88a86ac86e7fd34d022a334e1019b74ae3488e3adc71223  docs/agents/ux/reports/C2-F01-BC-2026-11-25/consolidado.md
+b41c2db2758fd088860922358c30da1503058c0b69edc0ed919c73aefa86a947  docs/agents/ux/reports/C2-F01-BC-2026-11-25/nutricionista.md
+9ab78b54468ac76d0bf5ff1293857bd35cfa71f29d91143b53dad57694410d5b  docs/agents/ux/reports/C2-F01-BC-2026-11-25/paciente.md
+6259b40a98e2c49053cbc6adbc0c59d0312b14e191b228ab73de2f2eac53af6d  .codex/agents/octaclin-nutricionista-ux.toml
+a40b1ded5e47739a2710caa5ec9a9a7871b57be7efc11deefaae0515028ff7d7  .codex/agents/octaclin-paciente-ux.toml
