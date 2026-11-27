@@ -2,6 +2,15 @@
 
 Não autoriza implementação nem modifica decisões aprovadas. IDs e evidências completas nos relatórios; atualizar por addendum datado, sem apagar discordância/histórico. Estado de recomendação é distinto de decisão humana.
 
+## C2-F02 — avaliações B/C, 25/11/2026
+
+NUX-04/05 e PUX-03 atendidos no escopo automatizado relatado. C2-F02-UX-01:
+AVALIAR anúncio com leitor de tela manual (P2, não executado). C2-F02-UX-02:
+BACKLOG de validação da seleção/cópia por toque após falha (P2 do paciente,
+hipótese de esforço sem prioridade de correção indicada pelo profissional).
+Não há defeito comprovado nem novo controle aprovado automaticamente.
+[Evidências e limites](reports/C2-F02-BC-2026-11-25/consolidado.md).
+
 | ID | Entrega/etapa | Recomendação | Decisão humana | Referência |
 | --- | --- | --- | --- | --- |
 | FOOD07-A-NUX-01/02/04/05 | FOOD07/A | Prévia profissional e confirmação claras | PENDENTE | [Consolidado](reports/FOOD07-A-2026-10-28/consolidado.md) |
