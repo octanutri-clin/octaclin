@@ -1002,9 +1002,8 @@ test.describe('gate de acessibilidade - acesso publico', () => {
     await page.goto('/esqueci-senha');
     await page.getByLabel('Email').fill('paciente@example.com');
     await page.getByRole('button', { name: 'Enviar link' }).click();
-    // getByRole('alert') sozinho colide com o route-announcer do Next
-    // (tambem role="alert"), por isso o texto exato do erro do formulario.
-    await expect(page.getByText('Falha ao solicitar redefinicao.')).toBeVisible();
+    // A mensagem pública não depende do texto retornado pelo servidor.
+    await expect(page.locator('form').getByRole('alert')).toContainText('Não foi possível solicitar a recuperação agora.');
     await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
   });
 
@@ -1013,7 +1012,7 @@ test.describe('gate de acessibilidade - acesso publico', () => {
     await page.goto('/esqueci-senha');
     await page.getByLabel('Email').fill('paciente@example.com');
     await page.getByRole('button', { name: 'Enviar link' }).click();
-    await expect(page.getByText('Se o email estiver cadastrado, enviaremos as instrucoes.')).toBeVisible();
+    await expect(page.locator('form').getByRole('status')).toContainText('Se os dados estiverem corretos, enviaremos um link de redefinição de senha.');
     await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
   });
 

@@ -131,6 +131,32 @@ describe('ServicoRecuperacaoSenha', () => {
     expect(email.enviar).not.toHaveBeenCalled();
   });
 
+  it.each([false, true])('preserva resposta pública indistinguível com falha SMTP=%s no modo sem link de diagnóstico', async (falhaSmtp) => {
+    const exporAnterior = process.env.EXPOR_LINK_RECUPERACAO_SENHA;
+    process.env.NODE_ENV = 'production';
+    process.env.EXPOR_LINK_RECUPERACAO_SENHA = 'false';
+    try {
+      const conhecida = criarServico({
+        tenant: { id: 'tenant-1', slug: 'clinica-carla', status: 'ativo' },
+        usuario: { id: 'usuario-1', tenantId: 'tenant-1', ativo: true, emailHash: 'hash:conta@example.test', emailCriptografado: Buffer.from('cripto:conta@example.test') },
+        tokens: []
+      });
+      if (falhaSmtp) conhecida.email.enviar.mockRejectedValueOnce(new Error('Falha SMTP sintética'));
+      const desconhecida = criarServico({ tenant: { id: 'tenant-1', slug: 'clinica-carla', status: 'ativo' } });
+      const entrada = { tenantSlug: 'clinica-carla', email: 'conta@example.test' };
+      const respostaConhecida = await conhecida.servico.solicitarRecuperacao(entrada);
+      const respostaDesconhecida = await desconhecida.servico.solicitarRecuperacao(entrada);
+      expect(JSON.stringify(respostaConhecida)).toBe(JSON.stringify(respostaDesconhecida));
+      expect(respostaConhecida).toEqual({ mensagem: 'Se os dados estiverem corretos, enviaremos um link de redefinicao de senha.' });
+      expect(conhecida.email.enviar).toHaveBeenCalledTimes(1);
+      expect(desconhecida.email.enviar).not.toHaveBeenCalled();
+    } finally {
+      process.env.NODE_ENV = 'development';
+      if (exporAnterior === undefined) delete process.env.EXPOR_LINK_RECUPERACAO_SENHA;
+      else process.env.EXPOR_LINK_RECUPERACAO_SENHA = exporAnterior;
+    }
+  });
+
   it('deve criar token com hash, expirar em uma hora e enviar email quando usuario existir', async () => {
     const { servico, repositorios, email } = criarServico({
       tenant: { id: 'tenant-1', slug: 'clinica-carla', status: 'ativo' },

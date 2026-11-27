@@ -61,6 +61,15 @@ export interface ContextoAcessoPublico {
   destinoInicial: string;
 }
 
+// O status permite à interface escolher uma mensagem pública sem interpretar
+// ou exibir detalhes do servidor. Outros consumidores mantêm a mensagem atual.
+export class ErroApiAutenticacao extends Error {
+  constructor(readonly status: number, mensagem: string) {
+    super(mensagem);
+    this.name = 'ErroApiAutenticacao';
+  }
+}
+
 async function requisitar<T>(caminho: string, init?: RequestInit): Promise<T> {
   const resposta = await fetch(caminho, {
     ...init,
@@ -81,14 +90,14 @@ async function requisitar<T>(caminho: string, init?: RequestInit): Promise<T> {
     }
 
     if (mensagemJson) {
-      throw new Error(mensagemJson);
+      throw new ErroApiAutenticacao(resposta.status, mensagemJson);
     }
 
     if (detalhe.trim().startsWith('<!DOCTYPE html>') || detalhe.trim().startsWith('<html')) {
-      throw new Error('Falha no servidor web ao autenticar. Recarregue a aplicação e tente novamente.');
+      throw new ErroApiAutenticacao(resposta.status, 'Falha no servidor web ao autenticar. Recarregue a aplicação e tente novamente.');
     }
 
-    throw new Error(detalhe || `Falha HTTP ${resposta.status}`);
+    throw new ErroApiAutenticacao(resposta.status, detalhe || `Falha HTTP ${resposta.status}`);
   }
 
   return resposta.json() as Promise<T>;
