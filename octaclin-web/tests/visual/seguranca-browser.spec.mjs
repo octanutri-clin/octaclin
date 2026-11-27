@@ -75,7 +75,7 @@ test.describe('PR 45 - navegador, BFF e cabecalhos', () => {
     expect(dashboard.headers()['cache-control']).toContain('no-store');
   });
 
-  test('mensagem hostil permanece texto e nao executa XSS', async ({ page }) => {
+  test('mensagem hostil é descartada e nao executa XSS', async ({ page }) => {
     await page.route('**/api/auth/login', (route) => route.fulfill({
       status: 401,
       contentType: 'application/json',
@@ -86,7 +86,8 @@ test.describe('PR 45 - navegador, BFF e cabecalhos', () => {
     await page.locator('#senha').fill('senha-sintetica');
     await page.getByRole('button', { name: /entrar/i }).click();
 
-    await expect(page.locator('form [role="alert"]')).toContainText(payloadXss);
+    await expect(page.locator('form [role="alert"]')).toHaveText('Não foi possível entrar. Confira os dados de acesso e tente novamente.');
+    await expect(page.locator('form [role="alert"]')).not.toContainText(payloadXss);
     expect(await page.evaluate(() => window.__octaclinXss)).toBeUndefined();
     await expect(page.locator('img[src="x"]')).toHaveCount(0);
   });
