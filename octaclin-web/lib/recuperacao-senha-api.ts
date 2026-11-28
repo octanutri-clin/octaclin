@@ -18,7 +18,7 @@ export interface AceitesLegaisPrimeiroAcessoStaff {
   aceitePoliticaPrivacidade: boolean;
 }
 
-class ErroApiRecuperacaoSenha extends Error {
+export class ErroApiRecuperacaoSenha extends Error {
   constructor(
     public readonly status: number,
     mensagem: string

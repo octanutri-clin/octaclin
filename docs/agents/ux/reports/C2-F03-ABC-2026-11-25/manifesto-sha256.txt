@@ -1,0 +1,11 @@
+6c62e7222b0f0036acce9afb7ff5a5c0f558d63ca08738b447a110cb48267691  docs/agents/ux/reports/C2-F03-ABC-2026-11-25/brief.md
+e0e92f7d4f4daadf339b0d418eb8a0cc6cb04691ecbe18cba9483740c64d2f6b  docs/agents/ux/reports/C2-F03-ABC-2026-11-25/consolidado.md
+debe97a0635249c3d2a657703e5cc1c96783d7a7dd02c7e46ae36f980bd97949  docs/agents/ux/reports/C2-F03-ABC-2026-11-25/nutricionista.md
+936d48df305e15c3f0c176ce9e9f1a1b14116785ead6bb1355a9173c778031b7  docs/agents/ux/reports/C2-F03-ABC-2026-11-25/paciente.md
+6259b40a98e2c49053cbc6adbc0c59d0312b14e191b228ab73de2f2eac53af6d  .codex/agents/octaclin-nutricionista-ux.toml
+a40b1ded5e47739a2710caa5ec9a9a7871b57be7efc11deefaae0515028ff7d7  .codex/agents/octaclin-paciente-ux.toml
+6f79594374243e0a174cf4612bbc29da4ab36d6662acbc2b66edb160389d503a  octaclin-web/components/auth/esqueci-senha-form.tsx
+3df1c5754977e5e78e16c2f51e2710798da00a0155a6edd5047d465d2932dc47  octaclin-web/components/auth/recuperar-senha-form.tsx
+c0c5dde77d23e6027d0065dca6e78363b0b6894abc5f109837faf8205f6dcd8f  octaclin-web/lib/recuperacao-senha-api.ts
+7b7dd5c9dd2747613f7be2e4a85e2b5e884512e9af71315ecd7351e79f9e45ba  octaclin-web/tests/visual/recuperacao-experiencia.spec.mjs
+edd6992bb3698aa6b530d448b48a03d7a3a6195048e495ebf0c43ad76bbfcc93  octaclin-backend/src/modulos/auth/aplicacao/servico-recuperacao-senha.spec.ts

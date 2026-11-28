@@ -75,3 +75,12 @@ Aba "Restrições" do prontuário. Sem P0. Corrigidos: NUX-01 (P1, tipo "não se
 ## FOOD06 P3-4a — revisão B, 2026-11-20
 
 Reavaliar, inativar em dois passos e "Corrigir registro". Sem P0 nem P1. Corrigidos: NUX-01 (anterior identificada no passo 3), NUX-02 (parada no passo 3), NUX-04, NUX-05 (parte: como concluir), NUX-06, NUX-07 (parte), NUX-09/PUX-01 (o paciente deixa de ver no portal, sem aviso automático); NUX-03 já atendido. PUX-02 e PUX-04 não se aplicam (verificado na projeção do portal). BACKLOG: NUX-05 (vínculo da correção e causas do 409, exigem backend), NUX-07 (contador), NUX-08 (leitor de tela, ATV-7), PUX-03 (alimento duas vezes no portal enquanto a correção está parada), PUX-05 (para a P3-5) e "substituir" atômico no backend. [Relatórios e limites](reports/FOOD06-P3-4a-B-2026-11-20/consolidado.md).
+
+
+## C2-F03 — A/B/C, 25/11/2026
+
+NUX-01–03 e PUX-F03-01–05 atendidos no escopo automatizado relatado.
+BACKLOG P3: avaliar redação mais específica da confirmação condicional, sem
+defeito comprovado ou mudança automática. AVALIAR P2: leitor de tela manual
+para espera/resultado, não executado; reaproveitar validação das jornadas de auth.
+[Relatórios e limites](reports/C2-F03-ABC-2026-11-25/consolidado.md).

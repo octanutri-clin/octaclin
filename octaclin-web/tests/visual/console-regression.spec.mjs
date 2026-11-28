@@ -610,7 +610,7 @@ test.describe('login do console', () => {
     await page.getByLabel('Email').fill(credenciais.email);
     await page.getByRole('button', { name: 'Enviar link' }).click();
 
-    await expect(page.getByText('Se o email estiver cadastrado, enviaremos as instrucoes.')).toBeVisible();
+    await expect(page.locator('form').getByRole('status')).toContainText('Se os dados estiverem corretos, enviaremos um link de redefinição de senha.');
     expect(payloadRecuperacao).toEqual({ email: credenciais.email });
   });
 });
