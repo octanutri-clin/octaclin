@@ -1,14 +1,15 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, BadgeDollarSign, CheckCircle2, ContactRound, KeyRound, Link2, Save, ShieldAlert, ShieldCheck, UserRoundX } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { AlertaOperacional, BarraCarregamento } from '@/components/ui/feedback';
 import { Modal, ModalConfirmacao } from '@/components/ui/modal';
+import { useProtecaoAlteracoesNaoSalvas } from '@/lib/usar-protecao-alteracoes-nao-salvas';
 import { obterSessao } from '@/lib/auth-api';
 import { criarConvitePaciente, revogarConvitePaciente } from '@/lib/convites-paciente-api';
-import { desativarContaAcessoPaciente, solicitarEliminacaoLgpdPaciente, type ResultadoSolicitacaoEliminacaoLgpd } from '@/lib/cadastros-api';
+import { obterPaciente, desativarContaAcessoPaciente, solicitarEliminacaoLgpdPaciente, type ResultadoSolicitacaoEliminacaoLgpd } from '@/lib/cadastros-api';
 import { mensagemFalhaInterface } from '@/lib/erros-interface';
 import {
   FiscalCadastroPacienteApi,
@@ -56,7 +57,7 @@ function mensagemErro(erro: unknown) {
 }
 
 function removerCamposVazios<T extends object>(valor: T): T {
-  const resultado = Object.entries(valor).reduce<Record<string, unknown>>((acumulado, [chave, campo]) => {
+  const resultado = Object.entries(valor).sort(([a], [b]) => a.localeCompare(b)).reduce<Record<string, unknown>>((acumulado, [chave, campo]) => {
     if (typeof campo === 'string') {
       if (campo.trim()) acumulado[chave] = campo.trim();
       return acumulado;
@@ -76,7 +77,21 @@ function removerCamposVazios<T extends object>(valor: T): T {
   return resultado as T;
 }
 
-export function PerfilCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, dataNascimento: nascimentoInicial, aoAtualizarFicha }: Props) {
+export function PerfilCadastroPaciente(props: Props) {
+  return <EditorCadastroPaciente key={props.pacienteId} {...props} />;
+}
+
+type BasesCadastro = Record<'basicos' | 'identificacao' | 'contato' | 'operacao' | 'fiscal', string>;
+const rotulosSecoes = { identificacao: 'Identificação', contato: 'Contato e endereço', operacao: 'Operação e responsável', fiscal: 'Dados fiscais opcionais' };
+const retrato = (valor: object) => JSON.stringify(removerCamposVazios(valor));
+function dadosFiscaisGravaveis(valor: FiscalCadastroPacienteApi) {
+  return removerCamposVazios({
+    cpf: valor.cpf, nomePagador: valor.nomePagador, documentoPagador: valor.documentoPagador,
+    emailRecibo: valor.emailRecibo, enderecoCobranca: valor.enderecoCobranca
+  });
+}
+
+function EditorCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, dataNascimento: nascimentoInicial, aoAtualizarFicha }: Props) {
   const [aberto, setAberto] = useState(false);
   const [podeGerenciar, setPodeGerenciar] = useState(false);
   const [podeVerFiscal, setPodeVerFiscal] = useState(false);
@@ -94,6 +109,102 @@ export function PerfilCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, 
   const [confirmarDesativacaoConta, setConfirmarDesativacaoConta] = useState(false);
   const [confirmarEliminacaoLgpd, setConfirmarEliminacaoLgpd] = useState(false);
   const [resultadoEliminacaoLgpd, setResultadoEliminacaoLgpd] = useState<ResultadoSolicitacaoEliminacaoLgpd | null>(null);
+  const [bases, setBases] = useState<BasesCadastro | null>(null);
+  const [saida, setSaida] = useState<{ destino?: string } | null>(null);
+  const destinoConfirmadoRef = useRef<string | null>(null);
+  const painelRef = useRef<HTMLDivElement>(null);
+  const focoRef = useRef<{ indice: number; elemento: HTMLElement | null; rolagem: number; campo: string | null; secao: string | null }>({ indice: -1, elemento: null, rolagem: 0, campo: null, secao: null });
+  const epocaRef = useRef(0);
+  const abertoRef = useRef(false);
+  const gravandoRef = useRef(false);
+  const restaurarFocoRef = useRef(false);
+  const basicos = { nome: nomeCompleto.trim(), dataNascimento: dataNascimento || undefined };
+  const atuais: BasesCadastro = {
+    basicos: retrato(basicos), identificacao: retrato(perfil.identificacao ?? {}),
+    contato: retrato(perfil.contato ?? {}), operacao: retrato(perfil.operacao ?? {}),
+    fiscal: retrato(dadosFiscaisGravaveis(fiscal))
+  };
+  const pendentes = bases ? (Object.keys(rotulosSecoes) as (keyof typeof rotulosSecoes)[]).filter((secao) =>
+    atuais[secao] !== bases[secao] || (secao === 'identificacao' && atuais.basicos !== bases.basicos)) : [];
+  const temPendencias = pendentes.length > 0;
+  useProtecaoAlteracoesNaoSalvas(aberto && (temPendencias || salvando !== null));
+
+  useEffect(() => () => { abertoRef.current = false; epocaRef.current += 1; }, []);
+
+  function vigente(epoca: number) { return abertoRef.current && epocaRef.current === epoca; }
+  function fechar() {
+    abertoRef.current = false;
+    epocaRef.current += 1;
+    setAberto(false);
+    setSaida(null);
+    setBases(null);
+    setPerfil(vazio);
+    setFiscal({});
+    setQualidade(null);
+    setNomeCompleto('');
+    setDataNascimento('');
+    setLinkConvite(null);
+    setErro(null);
+    setSucesso(null);
+  }
+  function pedirSaida(destino?: string) {
+    if (!temPendencias && !gravandoRef.current) {
+      fechar();
+      if (destino) destinoConfirmadoRef.current = destino;
+      return;
+    }
+    const painel = painelRef.current;
+    const elemento = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const secao = elemento?.closest('[data-secao-cadastro]');
+    const escopo = secao ?? painel;
+    focoRef.current = {
+      elemento, indice: escopo ? Array.from(escopo.querySelectorAll('input, select, textarea, button, a')).indexOf(elemento as Element) : -1,
+      rolagem: painel?.scrollTop ?? 0, campo: elemento?.closest('[data-campo-cadastro]')?.getAttribute('data-campo-cadastro') ?? null,
+      secao: secao?.getAttribute('data-secao-cadastro') ?? null
+    };
+    setSaida({ destino });
+  }
+  function continuarEditando() {
+    restaurarFocoRef.current = true;
+    setSaida(null);
+  }
+  useEffect(() => {
+    if (saida || !restaurarFocoRef.current) return;
+    restaurarFocoRef.current = false;
+    const painel = painelRef.current;
+    if (painel) painel.scrollTop = focoRef.current.rolagem;
+    const anterior = focoRef.current;
+    const campo = Array.from(painel?.querySelectorAll<HTMLElement>('[data-campo-cadastro]') ?? []).find((item) => item.getAttribute('data-campo-cadastro') === anterior.campo);
+    const secao = Array.from(painel?.querySelectorAll<HTMLElement>('[data-secao-cadastro]') ?? []).find((item) => item.getAttribute('data-secao-cadastro') === anterior.secao);
+    const alvo = anterior.elemento?.isConnected ? anterior.elemento
+      : campo?.querySelector<HTMLElement>('input, select, textarea') ?? (secao ?? painel)?.querySelectorAll<HTMLElement>('input, select, textarea, button, a')[anterior.indice];
+    alvo?.focus({ preventScroll: true });
+    alvo?.scrollIntoView({ block: 'nearest' });
+  }, [saida]);
+  useEffect(() => {
+    if (aberto) return;
+    // Consumir antes de navegar: cancelar outra proteção não repete o destino.
+    const destino = destinoConfirmadoRef.current;
+    destinoConfirmadoRef.current = null;
+    if (destino) window.location.assign(destino);
+  }, [aberto]);
+  useEffect(() => {
+    if (!aberto || (!temPendencias && salvando === null) || saida) return;
+    function aoClicar(evento: MouseEvent) {
+      if (evento.defaultPrevented || evento.button !== 0 || evento.ctrlKey || evento.metaKey || evento.shiftKey || evento.altKey) return;
+      const link = evento.target instanceof Element ? evento.target.closest('a[href]') : null;
+      if (!(link instanceof HTMLAnchorElement) || link.hasAttribute('download') || (link.target && link.target !== '_self')) return;
+      const destino = new URL(link.href, window.location.href);
+      if (destino.origin !== window.location.origin || !['http:', 'https:'].includes(destino.protocol)) return;
+      if (destino.pathname === window.location.pathname && destino.search === window.location.search) return;
+      evento.preventDefault();
+      evento.stopPropagation();
+      pedirSaida(destino.pathname + destino.search + destino.hash);
+    }
+    document.addEventListener('click', aoClicar, true);
+    return () => document.removeEventListener('click', aoClicar, true);
+  });
+
 
   useEffect(() => {
     void obterSessao().then((sessao) => {
@@ -103,43 +214,53 @@ export function PerfilCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, 
     });
   }, []);
 
-  const carregar = useCallback(async () => {
-    setCarregando(true);
+  async function abrir() {
+    const epoca = ++epocaRef.current;
+    abertoRef.current = true;
+    setAberto(true);
+    setBases(null);
+    setSaida(null);
+    setSucesso(null);
     setErro(null);
+    setCarregando(true);
+    setNomeCompleto('');
+    setDataNascimento('');
+    setLinkConvite(null);
     try {
-      const [perfilAtual, qualidadeAtual] = await Promise.all([
-        obterPerfilCadastroPaciente(pacienteId),
-        obterQualidadeEAcessoPaciente(pacienteId)
+      const [perfilAtual, qualidadeAtual, fiscalAtual, pacienteAtual] = await Promise.all([
+        obterPerfilCadastroPaciente(pacienteId), obterQualidadeEAcessoPaciente(pacienteId),
+        podeVerFiscal ? obterFiscalCadastroPaciente(pacienteId) : Promise.resolve({}),
+        obterPaciente(pacienteId, { cache: 'no-store' })
       ]);
+      if (!vigente(epoca)) return;
+      if (pacienteAtual.id !== pacienteId || typeof pacienteAtual.nome !== 'string') {
+        throw new Error('Não foi possível carregar o cadastro.');
+      }
+      const dadosIniciais = { nome: pacienteAtual.nome, dataNascimento: pacienteAtual.dataNascimento || undefined };
+      setNomeCompleto(dadosIniciais.nome);
+      setDataNascimento(dadosIniciais.dataNascimento ?? '');
       setPerfil({ identificacao: {}, contato: {}, operacao: {}, ...perfilAtual });
       setQualidade(qualidadeAtual);
-      if (podeVerFiscal) setFiscal(await obterFiscalCadastroPaciente(pacienteId));
+      setFiscal(fiscalAtual);
+      setBases({ basicos: retrato(dadosIniciais),
+        identificacao: retrato(perfilAtual.identificacao ?? {}), contato: retrato(perfilAtual.contato ?? {}),
+        operacao: retrato(perfilAtual.operacao ?? {}), fiscal: retrato(dadosFiscaisGravaveis(fiscalAtual)) });
     } catch (erroAtual) {
-      setErro(mensagemErro(erroAtual));
+      if (vigente(epoca)) setErro(mensagemErro(erroAtual));
     } finally {
-      setCarregando(false);
+      if (vigente(epoca)) setCarregando(false);
     }
-  }, [pacienteId, podeVerFiscal]);
-
-  useEffect(() => {
-    if (aberto) void carregar();
-  }, [aberto, carregar]);
-
-  function abrir() {
-    setAberto(true);
-    setSucesso(null);
-    setNomeCompleto(nomeInicial);
-    setDataNascimento(nascimentoInicial ?? '');
-    setLinkConvite(null);
   }
 
   async function criarConvitePortal() {
+    if (gravandoRef.current || salvando !== null) return;
     const email = perfil.contato?.email?.trim();
     if (!email) {
       setErro('Salve um e-mail de contato antes de criar o convite de acesso.');
       return;
     }
 
+    gravandoRef.current = true;
     setSalvando('portal');
     setErro(null);
     setSucesso(null);
@@ -157,11 +278,14 @@ export function PerfilCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, 
     } catch (erroAtual) {
       setErro(mensagemErro(erroAtual));
     } finally {
+      gravandoRef.current = false;
       setSalvando(null);
     }
   }
 
   async function revogarConvitePortal() {
+    if (gravandoRef.current || salvando !== null) return;
+    gravandoRef.current = true;
     setSalvando('revogar-portal');
     setErro(null);
     setSucesso(null);
@@ -174,11 +298,14 @@ export function PerfilCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, 
     } catch (erroAtual) {
       setErro(mensagemErro(erroAtual));
     } finally {
+      gravandoRef.current = false;
       setSalvando(null);
     }
   }
 
   async function desativarConta() {
+    if (gravandoRef.current || salvando !== null) return;
+    gravandoRef.current = true;
     setSalvando('desativar-conta');
     setErro(null);
     setSucesso(null);
@@ -190,11 +317,14 @@ export function PerfilCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, 
     } catch (erroAtual) {
       setErro(mensagemErro(erroAtual));
     } finally {
+      gravandoRef.current = false;
       setSalvando(null);
     }
   }
 
   async function solicitarEliminacaoLgpd() {
+    if (gravandoRef.current || salvando !== null) return;
+    gravandoRef.current = true;
     setSalvando('eliminacao-lgpd');
     setErro(null);
     setSucesso(null);
@@ -210,45 +340,79 @@ export function PerfilCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, 
     } catch (erroAtual) {
       setErro(mensagemErro(erroAtual));
     } finally {
+      gravandoRef.current = false;
       setSalvando(null);
+    }
+  }
+
+  async function atualizarQualidade(epoca: number) {
+    try {
+      const atual = await obterQualidadeEAcessoPaciente(pacienteId);
+      if (vigente(epoca)) setQualidade(atual);
+    } catch {
+      if (vigente(epoca)) {
+        setQualidade(null);
+        setErro('Os dados foram salvos, mas não foi possível atualizar a qualidade do cadastro.');
+      }
     }
   }
 
   async function salvarIdentificacao() {
+    if (!bases || gravandoRef.current) return;
+    if (JSON.parse(bases.basicos).dataNascimento && !dataNascimento) {
+      setErro('A remoção da data de nascimento não está disponível neste cadastro. A alteração ainda não foi salva.');
+      return;
+    }
+    const epoca = epocaRef.current;
+    const enviados = { ...atuais };
+    const dadosBasicos = { ...basicos };
+    const identificacao = removerCamposVazios(perfil.identificacao ?? {});
+    gravandoRef.current = true;
     setSalvando('identificacao');
     setErro(null);
     setSucesso(null);
+    let basicosConfirmados = false;
     try {
-      await atualizarDadosBasicosPaciente(pacienteId, {
-        nome: nomeCompleto.trim(),
-        dataNascimento: dataNascimento || undefined
-      });
-      await salvarSecaoCadastroPaciente(pacienteId, 'identificacao', removerCamposVazios(perfil.identificacao ?? {}));
-      setQualidade(await obterQualidadeEAcessoPaciente(pacienteId));
+      await atualizarDadosBasicosPaciente(pacienteId, dadosBasicos);
+      if (!vigente(epoca)) return;
+      basicosConfirmados = true;
       aoAtualizarFicha();
+      setBases((atual) => atual ? { ...atual, basicos: enviados.basicos } : atual);
+      await salvarSecaoCadastroPaciente(pacienteId, 'identificacao', identificacao);
+      if (!vigente(epoca)) return;
+      setBases((atual) => atual ? { ...atual, identificacao: enviados.identificacao } : atual);
       setSucesso('Identificação salva com segurança.');
+      await atualizarQualidade(epoca);
     } catch (erroAtual) {
-      setErro(mensagemErro(erroAtual));
+      if (vigente(epoca)) setErro(basicosConfirmados
+        ? 'Nome e data de nascimento foram salvos. Os demais dados de identificação não foram confirmados; confira e tente salvar novamente.'
+        : mensagemErro(erroAtual));
     } finally {
-      setSalvando(null);
+      gravandoRef.current = false;
+      if (vigente(epoca)) setSalvando(null);
     }
   }
 
-  async function salvar(secao: 'identificacao' | 'contato' | 'operacao' | 'fiscal') {
+  async function salvar(secao: 'contato' | 'operacao' | 'fiscal') {
+    if (!bases || gravandoRef.current || (secao === 'fiscal' && !podeVerFiscal)) return;
+    const epoca = epocaRef.current;
+    const enviado = atuais[secao];
+    const dados = secao === 'fiscal' ? dadosFiscaisGravaveis(fiscal) : removerCamposVazios(perfil[secao] ?? {});
+    gravandoRef.current = true;
     setSalvando(secao);
     setErro(null);
     setSucesso(null);
     try {
-      if (secao === 'identificacao') await salvarSecaoCadastroPaciente(pacienteId, secao, perfil.identificacao ?? {});
-      if (secao === 'contato') await salvarSecaoCadastroPaciente(pacienteId, secao, removerCamposVazios(perfil.contato ?? {}));
-      if (secao === 'operacao') await salvarSecaoCadastroPaciente(pacienteId, secao, removerCamposVazios(perfil.operacao ?? {}));
-      if (secao === 'fiscal') await salvarSecaoCadastroPaciente(pacienteId, secao, removerCamposVazios(fiscal));
-      setQualidade(await obterQualidadeEAcessoPaciente(pacienteId));
+      await salvarSecaoCadastroPaciente(pacienteId, secao, dados);
+      if (!vigente(epoca)) return;
+      setBases((atual) => atual ? { ...atual, [secao]: enviado } : atual);
       setSucesso('Seção salva com segurança.');
+      await atualizarQualidade(epoca);
     } catch (erroAtual) {
-      setErro(mensagemErro(erroAtual));
+      if (vigente(epoca)) setErro(mensagemErro(erroAtual));
     } finally {
-      setSalvando(null);
+      gravandoRef.current = false;
+      if (vigente(epoca)) setSalvando(null);
     }
   }
 
@@ -256,15 +420,33 @@ export function PerfilCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, 
 
   return (
     <>
-      <Botao type="button" variante="secundario" onClick={abrir} aria-label="Editar cadastro do paciente">
+      <Botao type="button" variante="secundario" onClick={() => void abrir()} aria-label="Editar cadastro do paciente">
         <ContactRound size={16} /> Cadastro
       </Botao>
-      <Modal aberto={aberto} aoFechar={() => setAberto(false)} titulo="Cadastro do paciente" descricao="Salve cada seção separadamente. Dados clínicos pertencem à avaliação e à anamnese.">
+      <Modal aberto={aberto} aoFechar={() => {
+        if (confirmarRevogacao || confirmarDesativacaoConta || confirmarEliminacaoLgpd) return;
+        if (saida) continuarEditando(); else pedirSaida();
+      }} titulo={saida ? 'Sair sem salvar cadastro' : 'Cadastro do paciente'} descricao={saida ? 'Confira as alterações pendentes antes de sair.' : 'Salve cada seção separadamente. Dados clínicos pertencem à avaliação e à anamnese.'}>
+        {saida ? <div className="grid gap-4">
+          <p>As alterações pendentes nas seções abaixo serão descartadas. O que já foi salvo será mantido.</p>
+          <ul>{pendentes.map((secao) => <li key={secao}>{rotulosSecoes[secao]}</li>)}</ul>
+          {salvando ? <p role="status">Aguarde a conclusão do salvamento antes de sair.</p> : null}
+          <div className="flex flex-wrap gap-3">
+            <Botao autoFocus type="button" onClick={continuarEditando}>Continuar editando</Botao>
+            <Botao type="button" variante="secundario" disabled={salvando !== null} onClick={() => {
+              if (gravandoRef.current || salvando !== null) return;
+              const destino = saida.destino;
+              fechar();
+              if (destino) destinoConfirmadoRef.current = destino;
+            }}>Sair sem salvar</Botao>
+          </div>
+        </div> : <>
+        {temPendencias ? <p role="status" className="mb-4 text-sm">Alterações não salvas: {pendentes.map((secao) => rotulosSecoes[secao]).join(', ')}.</p> : null}
         {carregando ? <BarraCarregamento visivel rotulo="Carregando cadastro" /> : null}
         {erro ? <AlertaOperacional mensagem={erro} className="mb-4" /> : null}
         {sucesso ? <p role="status" className="mb-4 rounded-md border border-sucesso-borda bg-sucesso-suave px-3 py-2 text-sm text-sucesso-forte">{sucesso}</p> : null}
-        {!carregando ? (
-          <div className="grid max-h-[65vh] gap-6 overflow-y-auto pr-1">
+        {!carregando && bases ? (
+          <div ref={painelRef} className="grid max-h-[65vh] gap-6 overflow-y-auto pr-1">
             {qualidade ? <section className="grid gap-4 rounded-md border border-linha bg-superficie-hover p-4" aria-labelledby="qualidade-cadastro-titulo">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -310,7 +492,7 @@ export function PerfilCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, 
                   <option value="">Não informado</option><option value="nao_gestante">Não gestante</option><option value="gestante">Gestante</option><option value="lactante">Lactante</option><option value="menopausa">Menopausa</option>
                 </select>
               </Campo> : null}
-              <SalvarSecao carregando={salvando === 'identificacao'} aoSalvar={() => void salvarIdentificacao()} />
+              <SalvarSecao carregando={salvando !== null} aoSalvar={() => void salvarIdentificacao()} />
             </Secao>
 
             <Secao titulo="Contato e endereço" descricao="Dados usados para comunicação e localização do paciente.">
@@ -332,7 +514,7 @@ export function PerfilCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, 
                 <Campo rotulo="Cidade"><input className="campo" value={perfil.contato?.endereco?.cidade ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, contato: { ...atual.contato, endereco: { ...atual.contato?.endereco, cidade: evento.target.value } } }))} /></Campo>
                 <Campo rotulo="Estado"><input className="campo" maxLength={2} value={perfil.contato?.endereco?.estado ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, contato: { ...atual.contato, endereco: { ...atual.contato?.endereco, estado: evento.target.value.toUpperCase() } } }))} /></Campo>
               </div>
-              <SalvarSecao carregando={salvando === 'contato'} aoSalvar={() => void salvar('contato')} />
+              <SalvarSecao carregando={salvando !== null} aoSalvar={() => void salvar('contato')} />
             </Secao>
 
             <Secao titulo="Operação e responsável" descricao="Categoria, etiquetas internas e pessoa responsável quando aplicável.">
@@ -347,7 +529,7 @@ export function PerfilCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, 
                 <Campo rotulo="Parentesco"><input className="campo" value={perfil.operacao?.responsavel?.parentesco ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, operacao: { ...atual.operacao, responsavel: { ...atual.operacao?.responsavel, parentesco: evento.target.value } } }))} /></Campo>
                 <Campo rotulo="Contato do responsável"><input className="campo" value={perfil.operacao?.responsavel?.contato ?? ''} onChange={(evento) => setPerfil((atual) => ({ ...atual, operacao: { ...atual.operacao, responsavel: { ...atual.operacao?.responsavel, contato: evento.target.value } } }))} /></Campo>
               </div>
-              <SalvarSecao carregando={salvando === 'operacao'} aoSalvar={() => void salvar('operacao')} />
+              <SalvarSecao carregando={salvando !== null} aoSalvar={() => void salvar('operacao')} />
             </Secao>
 
             <Secao titulo="Acesso ao portal" descricao="Acompanhe o ciclo de acesso sem reexibir tokens antigos. Uma nova emissao invalida o convite pendente anterior.">
@@ -382,7 +564,7 @@ export function PerfilCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, 
               <div className="flex flex-wrap justify-end gap-2">
                 {linkConvite ? <Botao type="button" variante="secundario" onClick={() => void navigator.clipboard.writeText(linkConvite)}><Link2 size={16} /> Copiar link</Botao> : null}
                 {qualidade?.acessoPortal.status === 'convite_pendente' ? <Botao type="button" variante="perigo" onClick={() => setConfirmarRevogacao(true)} disabled={Boolean(salvando)}><UserRoundX size={16} /> Revogar convite</Botao> : null}
-                {qualidade?.acessoPortal.status !== 'acesso_ativo' && qualidade?.acessoPortal.status !== 'acesso_desativado' ? <Botao type="button" variante="secundario" onClick={() => void criarConvitePortal()} disabled={salvando === 'portal'}>
+                {qualidade?.acessoPortal.status !== 'acesso_ativo' && qualidade?.acessoPortal.status !== 'acesso_desativado' ? <Botao type="button" variante="secundario" onClick={() => void criarConvitePortal()} disabled={salvando !== null}>
                   <KeyRound size={16} /> {salvando === 'portal' ? 'Criando convite' : qualidade?.acessoPortal.status === 'nao_convidado' ? 'Criar convite seguro' : 'Reenviar convite'}
                 </Botao> : null}
               </div>
@@ -418,10 +600,11 @@ export function PerfilCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, 
                 <Campo rotulo="CPF do paciente"><input className="campo" inputMode="numeric" value={fiscal.cpf ?? ''} onChange={(evento) => setFiscal((atual) => ({ ...atual, cpf: evento.target.value.replace(/\D/g, '') }))} /></Campo>
               </div>
               <Campo rotulo="E-mail para recibo"><input className="campo" type="email" value={fiscal.emailRecibo ?? ''} onChange={(evento) => setFiscal((atual) => ({ ...atual, emailRecibo: evento.target.value }))} /></Campo>
-              <SalvarSecao carregando={salvando === 'fiscal'} aoSalvar={() => void salvar('fiscal')} rotulo="Salvar dados fiscais" icone={<BadgeDollarSign size={16} />} />
+              <SalvarSecao carregando={salvando !== null} aoSalvar={() => void salvar('fiscal')} rotulo="Salvar dados fiscais" icone={<BadgeDollarSign size={16} />} />
             </Secao> : null}
           </div>
         ) : null}
+        </>}
       </Modal>
       <ModalConfirmacao
         aberto={confirmarRevogacao}
@@ -455,13 +638,13 @@ export function PerfilCadastroPaciente({ pacienteId, nomeCompleto: nomeInicial, 
 }
 
 function Secao({ titulo, descricao, children }: { titulo: string; descricao: string; children: React.ReactNode }) {
-  return <section className="grid gap-3 border-b border-linha pb-5 last:border-b-0"><div><h3 className="text-sm font-semibold text-tinta">{titulo}</h3><p className="mt-1 text-xs text-texto-suave">{descricao}</p></div>{children}</section>;
+  return <section data-secao-cadastro={titulo} className="grid gap-3 border-b border-linha pb-5 last:border-b-0"><div><h3 className="text-sm font-semibold text-tinta">{titulo}</h3><p className="mt-1 text-xs text-texto-suave">{descricao}</p></div>{children}</section>;
 }
 
 function Campo({ rotulo, children }: { rotulo: string; children: React.ReactNode }) {
-  return <label className="grid gap-1 text-xs font-semibold text-texto-suave">{rotulo}{children}</label>;
+  return <label data-campo-cadastro={rotulo} className="grid gap-1 text-xs font-semibold text-texto-suave">{rotulo}{children}</label>;
 }
 
-function SalvarSecao({ carregando, aoSalvar, rotulo = 'Salvar secao', icone = <Save size={16} /> }: { carregando: boolean; aoSalvar: () => void; rotulo?: string; icone?: React.ReactNode }) {
+function SalvarSecao({ carregando, aoSalvar, rotulo = 'Salvar seção', icone = <Save size={16} /> }: { carregando: boolean; aoSalvar: () => void; rotulo?: string; icone?: React.ReactNode }) {
   return <div className="flex justify-end"><Botao type="button" variante="secundario" onClick={aoSalvar} disabled={carregando}>{icone}{carregando ? 'Salvando' : rotulo}</Botao></div>;
 }
